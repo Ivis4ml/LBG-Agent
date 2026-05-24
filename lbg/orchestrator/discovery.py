@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from backtest import run_backtest
+from lbg.alpha_cards import AlphaCardWriter, match_dossier_by_name
 from lbg.builder import CandidateBuilder, CandidateBuildError
 from lbg.data.loader import load_split
 from lbg.dsl import load_strategy
@@ -39,6 +40,7 @@ from lbg.orchestrator.role_runner import RoleRunner, RoleRunnerError
 from lbg.schemas import (
     AgentCompute,
     Decision,
+    EditType,
     HypothesisBlock,
     RoleOutputs,
     TrainMetrics,
@@ -89,6 +91,7 @@ class Discovery:
             recent_trials_limit=recent_trials_limit,
         )
         self.curator = Curator(self.runner, self.memory, git=self.git)
+        self.alpha_writer = AlphaCardWriter(self.repo_root)
         self.gate_config = gate_config or GateConfig()
         self.timeout_sec = timeout_sec
         self.prefix_n = prefix_stability_n_samples
@@ -355,6 +358,28 @@ class Discovery:
         self.memory.append_to_md("open_questions.md", refl_result.record.open_questions_updates)
         self.memory.append_to_md("do_not_repeat.md", refl_result.record.do_not_repeat_updates)
 
+        # Alpha card: emit on accepted add_indicator trials only (PROPOSAL §6.6).
+        # H1 (PROPOSAL §4) counts cards whose sealed_summary clears the CI bar;
+        # the per-trial card pins the artifact at the moment of acceptance.
+        alpha_card_path: Path | None = None
+        if record.decision == Decision.ACCEPT and record.edit.type == EditType.ADD_INDICATOR:
+            change = editor_result.proposal.proposed_edit.change
+            indicator_name = getattr(change, "name", None)
+            if indicator_name:
+                try:
+                    alpha_card_path = self.alpha_writer.write_for_added_indicator(
+                        trial_id=trial_id,
+                        source_commit=parent_commit,
+                        added_indicator_name=indicator_name,
+                        strategy=apply_result.new_strategy,
+                        train_metrics=record.train_metrics,
+                        validation_signal=record.validation_signal,
+                        hypothesis_outcome=record.hypothesis_outcome,
+                        dossier_link=match_dossier_by_name(getattr(change, "fn", indicator_name)),
+                    )
+                except (ValueError, OSError) as e:
+                    logger.warning("trial %d alpha card emit failed: %s", trial_id, e)
+
         # Git commit.
         files = [
             *(str(p.relative_to(self.repo_root)) for p in apply_result.touched_paths),
@@ -364,6 +389,9 @@ class Discovery:
             str(editor_yaml_path.relative_to(self.repo_root)),
             str(reflector_yaml_path.relative_to(self.repo_root)),
         ]
+        if alpha_card_path is not None:
+            files.append(str(alpha_card_path.relative_to(self.repo_root)))
+            files.append(str(self.alpha_writer.index_path.relative_to(self.repo_root)))
         for md_name in (
             "accepted_rules.md",
             "failed_directions.md",
