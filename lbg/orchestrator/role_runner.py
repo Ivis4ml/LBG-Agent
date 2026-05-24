@@ -26,7 +26,7 @@ from lbg.memory.records import (
     ReflectionRecord,
     ReflectorOutputPayload,
 )
-from lbg.orchestrator.context_builder import EditorContext, PastTrialSummary
+from lbg.orchestrator.context_builder import EditorContext, FactorHint, PastTrialSummary
 from lbg.orchestrator.redaction import assert_redacted
 from lbg.parser import ProposalParseError, parse_proposal
 from lbg.schemas import (
@@ -309,6 +309,11 @@ def _render_editor_user_prompt(context: EditorContext, *, trial_id: int) -> str:
     parts: list[str] = []
     parts.append(f"## Current trial id\n\ntrial_id: {trial_id}\n")
     parts.append("## Current strategy\n\n```yaml\n" + context.strategy_yaml + "```\n")
+    if context.factor_hints:
+        parts.append(
+            "## Candidate factors from knowledge base\n\n"
+            + _format_factor_hints(context.factor_hints)
+        )
     parts.append("## Recent trial history\n\n" + _format_recent_trials(context.recent_trials))
     if context.semantic_memory:
         parts.append("## Semantic memory\n\n" + _format_semantic_memory(context.semantic_memory))
@@ -368,6 +373,26 @@ def _render_reflector_user_prompt(
         "prompt. Explain mechanically; do not re-judge the hypothesis."
     )
     return "\n".join(parts)
+
+
+def _format_factor_hints(hints: list[FactorHint]) -> str:
+    """Render the read-only factor library shortlist for the Editor.
+
+    Each hint is a bullet with name, short category, and the (already
+    year-scrubbed and truncated) one-line summary.
+    """
+    lines: list[str] = []
+    for h in hints:
+        category = h.category.strip() or "(no category)"
+        lines.append(f"- **{h.name}** [{category}]")
+        if h.one_line.strip():
+            lines.append(f"  - {h.one_line.strip()}")
+    lines.append(
+        "\nThese are hints from the read-only seed library, not authority. "
+        "If you author an `add_indicator`, citing one of these names in the "
+        "hypothesis is encouraged but not required. Invariants run regardless."
+    )
+    return "\n".join(lines) + "\n"
 
 
 def _format_recent_trials(trials: list[PastTrialSummary]) -> str:

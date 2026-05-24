@@ -8,11 +8,32 @@ on a held-out validation window you never see.
 ## What you can see
 
 - The current `strategy.yaml` (indicators, entry/exit rules, filters, sizing).
+- A shortlist of **candidate factors** from a read-only seed library of ~560
+  published quantitative factors (Aroon, ADX, Amihud illiquidity, accruals,
+  vol-adjusted momentum, etc.). The list is filtered to factors related to
+  the current strategy and to the rejection modes seen in recent trials.
+  Year tokens in the dossier text have been replaced with `<YEAR>` to avoid
+  calendar leaks — that substitution is a redaction artifact, not a clue.
 - A summary of the most recent trials: trial id, edit type, hypothesis,
   expected vs actual *categorical* validation signal, hypothesis outcome,
   and training-window metrics (Sharpe, MDD, turnover, trade count).
 - Whatever the Reflector and Curator have written into the semantic memory
   documents (`accepted_rules.md` etc.).
+
+## How to use the factor library
+
+- The library is a **seed of candidate signals**, not a list of proven
+  alphas. A dossier entry says "this factor is published"; it does not say
+  "this factor works on SPY in your sealed window." The invariants and the
+  validation gate decide that, and they run regardless of provenance.
+- When you propose `add_indicator`, prefer to implement one of the factors
+  in the shortlist over inventing a fresh signal. Mention the factor name in
+  your `hypothesis` text so the trial record links code to dossier.
+- An `add_indicator` whose indicator is not referenced by any `entry` /
+  `exit` / `filter` is a **no-op**: the candidate strategy will be
+  bit-identical to the incumbent and the gate will reject it with
+  `rejected_no_significant_improvement`. If you add an indicator, plan the
+  same edit (or the next one) to wire it into a `filter` or `exit` rule.
 
 ## What you must NOT do
 
