@@ -870,7 +870,7 @@ This document specifies both a research artifact and the product it grows into. 
 </div>
 
 <p class="lede">
-LBG-Trader is a framework that orchestrates three structured LLM roles (Editor, Reflector, Curator) to maintain a persistent trading heuristic system. The agent's action space spans both Python indicator authoring and DSL configuration edits. A sealed-evaluation protocol with invariants and redacted feedback governs the Discovery phase. Discovered strategies, once sealed-tested, are frozen artifacts that enter a separate Execution engine for Forward Validation, Paper Trading, and optionally Live Capital. Periodic re-discovery refreshes strategies on fresh sealed windows. The framework is the product; the strategies are its outputs.
+LBG-Trader is a framework that orchestrates three structured LLM roles (Editor, Reflector, Curator) to do, in trading, what Weng's HL does in general: <em>maintain a Heuristic System by directly editing its code</em>. The Heuristic System here is the union of <code>indicators/*.py</code> (the Python factor functions the agent writes), <code>strategy.yaml</code> (the DSL composing them), the fixed engine <code>policy_interpreter.py</code>, and the explicit memory layers. Within that system, <strong>the core output of a Discovery run is the set of Python factor functions</strong> the agent has authored and that have survived the sealed test. Each such function <em>is</em> one factor in its executable form — the same object that the existing literature describes declaratively in <code>knowledge/factors/dossiers/</code>. The two forms are translations of each other (declarative dossier ↔ executable Python), and the framework runs that round-trip: it consumes dossiers as input hypotheses and emits Python code as output, with sealed-test evidence attached. A composed frozen strategy is produced as well (Stages 2–4 consume it), and an alpha-card metadata view is exported per function (for counting, recomposing across runs, and round-tripping back to dossier form) — but neither is the object being learned. The code is.
 </p>
 </section>
 
@@ -994,7 +994,7 @@ LBG-Trader is a framework that orchestrates three structured LLM roles (Editor, 
 </div>
 
 <p class="lede">
-The thesis: a coding-agent-driven framework can maintain a persistent heuristic system through both program edits and configuration edits in a way that produces <em>generalizable</em> trading strategies — but only under an evaluation protocol that explicitly prevents the agent from reward-hacking the backtest or leaking validation signals into the search.
+The thesis: a coding-agent-driven framework can maintain a persistent Heuristic System whose central output is a growing library of <em>Python factor functions</em> — each a real file under <code>indicators/</code>, written by the agent, that has survived the sealed test. Each function exists simultaneously in two translatable forms: the executable Python code (the artifact) and a declarative dossier with the same schema as the external factor literature (its readable view). The two-way translation between declarative factor knowledge (input) and executable code (output) is what makes this an instance of HL on trading, not just a strategy-search system. The code is the object being learned; the dossier is its readable translation; the alpha card is the metadata view that binds them.
 </p>
 
 <p>The proposal commits to three hypotheses, treated as equals. We do not privately want H1 to be the winner. Each outcome is a paper.</p>
@@ -1002,22 +1002,22 @@ The thesis: a coding-agent-driven framework can maintain a persistent heuristic 
 <div class="hypo-grid">
   <div class="hypo">
     <div class="hypo-label">H1 · affirmative</div>
-    <h5>LBG generalizes under sealed evaluation</h5>
-    <p>A coding-agent framework with persistent memory and program-synthesis capability produces strategies that outperform random search, Bayesian optimization, one-shot LLM proposals, and YAML-only LLM search on the sealed test.</p>
+    <h5>LBG yields surviving Python factor code</h5>
+    <p>Per Discovery compute budget, the framework produces strictly more <em>surviving Python factor functions</em> — each a prefix-stable function the agent wrote into <code>indicators/*.py</code> whose individual incremental contribution on the sealed test has 95% CI lower bound &gt; 0 — than random search, Bayesian optimization, one-shot LLM, or DSL-only LLM search. The unit of the claim is the code; the alpha card is its metadata index, not the deliverable.</p>
   </div>
   <div class="hypo h2">
     <div class="hypo-label">H2 · methodological</div>
     <h5>Sealed protocol is necessary infrastructure</h5>
-    <p>Without sealed splits, redacted validation, and an invariant suite, apparent LBG performance is inflated by overfitting, validation leakage, or reward hacking. Ablations should make this measurable.</p>
+    <p>Without sealed splits, redacted validation, and the invariant suite, apparent yields of "validated factors" are inflated by overfitting, validation leakage, or reward hacking. Ablations (raw-validation, no-invariant, no-memory, no-curator) make the inflation measurable.</p>
   </div>
   <div class="hypo h3">
     <div class="hypo-label">H3 · honest null</div>
-    <h5>LBG may not survive trading</h5>
-    <p>Even with all controls, coding-agent learning may fail to transfer to the sealed test. Trading's distribution shift and low signal-to-noise may exceed LBG's expressive reach. Publishable on its own.</p>
+    <h5>LBG may produce no surviving factor</h5>
+    <p>Even with all controls, coding-agent learning may fail to produce any factor whose individual sealed-test contribution is statistically positive. Trading's noise and distribution shift may exceed LBG's expressive reach. Publishable on its own.</p>
   </div>
 </div>
 
-<p>The protocol is designed so that if H1 fails, we still know why; if H1 succeeds, we have evidence it succeeded because of memory, compression, and program synthesis — not in spite of them.</p>
+<p>The unit of the H1 claim is the <em>validated factor</em>, not the assembled strategy. The strategy is delivered too (it is the composition the Execution engine consumes in Stages 2–4), but the H1 verdict is statistical at the factor level. The "factor ↔ Python" two-way translation, on which the claim sits, is enforced by §9's invariants: an alleged factor that cannot be expressed as a prefix-stable pure function does not survive to the count. The protocol is designed so that if H1 fails, we still know why; if H1 succeeds, the count is evidence the framework added durable artifacts rather than a one-off lucky strategy.</p>
 </section>
 
 <section id="formal">
@@ -1717,7 +1717,7 @@ known_failure_modes:
 
 status: accepted | rejected | exploratory | deprecated</pre>
 
-<p>Alpha cards exist for two reasons. First, they prepare the project for a future milestone where multiple alphas combine into a portfolio: the card schema is what makes such composition tractable. Second, they make the project's output a <em>library of evaluated signals</em>, not just a single strategy artifact — closer in shape to how quantitative research is actually consumed inside professional groups. For this milestone the cards are exported but the system trades a single composed strategy; the portfolio-of-alphas direction is a future extension.</p>
+<p>Alpha cards are <strong>not the deliverable</strong>; they are a <em>metadata view</em> of the underlying Python factor function (the file under <code>indicators/</code>) that the agent has actually authored. The function is the object the system learned and maintains; the card is what makes the function countable, composable, and round-trippable to dossier form. Concretely the card serves three roles: (a) it is the <strong>statistical handle for the H1 count</strong> in §4 — H1 counts cards whose <code>sealed_summary</code> shows individual incremental Sharpe with CI lower bound &gt; 0, because that is the operational way to take the count, but each card always points back to a real <code>.py</code> file; (b) it is the <strong>handoff format</strong> for re-using a function across future Discovery runs and for composing multiple alphas in a portfolio milestone; (c) it is the <strong>round-trip bridge</strong> back to declarative dossier form (the card's schema is a superset of the input dossier schema in <code>knowledge/factors/dossiers/</code>), letting LBG's outputs accumulate into the same library that fed its inputs.</p>
 </section>
 
 <section id="factorlib">
@@ -1809,24 +1809,31 @@ all_entries = load_index()
 <table class="spec-table" style="margin: 14px 0;">
   <thead>
     <tr>
-      <th style="width: 30%;">Resource</th>
-      <th>What it certifies</th>
-      <th>What it doesn't</th>
+      <th style="width: 28%;">Form of the factor</th>
+      <th>What it is</th>
+      <th>What it lacks on its own</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td><strong>External factor dossier</strong> (e.g. <code>knowledge/factors/dossiers/Aroon_*.txt</code>)</td>
-      <td>The factor has a recognised academic or industry definition; its general financial motivation is articulated.</td>
-      <td>Whether it produces incremental Sharpe on this universe, under this cost model, after this overfit control.</td>
+      <td><strong>Declarative form</strong> — <code>knowledge/factors/dossiers/Aroon_20260427_023945.txt</code></td>
+      <td>A human / LLM-readable dossier: strict definition, financial meaning, parameterisation hints, combination patterns, overfit guards. Static text, no execution.</td>
+      <td>No runnable code; no sealed-test evidence; no proof the factor produces incremental Sharpe on this universe under this cost model.</td>
     </tr>
     <tr>
-      <td><strong>LBG-Trader alpha card</strong> (<code>alpha_cards/trial_NNNN.yaml</code>)</td>
-      <td>A specific parameterised implementation passed prefix-stability, passed the multi-objective gate on validation, and (after H1) contributed to a sealed-test improvement under pre-registered analysis.</td>
-      <td>That the factor will continue to work in regimes the sealed test did not contain — Stage 2 forward validation answers that.</td>
+      <td><strong>Executable form</strong> — <code>indicators/aroon.py</code> (one of the agent-authored files this Discovery run produced)</td>
+      <td>A real Python pure function the backtest engine calls. Can be executed, version-controlled, composed into a strategy, and ablated by leave-one-out for H1 counting. This is the object LBG actually maintains.</td>
+      <td>No standalone description for a human reader; relies on its docstring and on its dossier translation for narrative meaning.</td>
+    </tr>
+    <tr>
+      <td><strong>Alpha card</strong> — <code>alpha_cards/trial_NNNN.yaml</code></td>
+      <td>The metadata view binding the two forms. Schema is a superset of the dossier schema: it carries declarative fields (definition, motivation, parameterisation) <em>and</em> executable evidence (file path of the <code>.py</code>, prefix-stability status, sealed CI). Used for counting (H1), composing (portfolio milestone), and round-tripping back to dossier form.</td>
+      <td>Not the artifact itself, just the index entry. Without the underlying <code>.py</code> and the dossier text, the card is a stub.</td>
     </tr>
   </tbody>
 </table>
+
+<p>The point: the <em>same factor</em> exists in three forms — a dossier, a Python function, and a card linking them. The Discovery run consumes dossiers (search), emits Python functions (the H1 unit), and exports cards (so the functions can be counted, re-used, and reverse-translated). The Heuristic System is the union; the Python functions are the part that LBG actually produces.</p>
 
 <div class="aside">
 <span class="aside-label">Why this reframing matters</span>
@@ -2413,30 +2420,75 @@ If we judged DSL-only vs full LBG on validation set performance, the H1 claim wo
 
 <p>If any Tier 0 check fails, no Discovery run begins.</p>
 
-<h3>Tier 1 — sealed verdict</h3>
+<h3>Tier 1 — sealed verdict on validated factors</h3>
 
-<p>The primary H1 test is a block-bootstrap confidence interval on the <em>difference</em> in sealed Sharpe between LBG-Trader and the strongest pre-registered baseline:</p>
+<p>The H1 unit of analysis is a single alpha card. A card is <em>validated</em> when its individual incremental sealed-test contribution has 95% CI lower bound &gt; 0. The headline H1 test counts validated cards per system and compares the counts.</p>
+
+<h4>Step 1 · Per-card incremental sealed Sharpe</h4>
+
+<p>For each alpha card \(c\) accepted in a Discovery run, define the policy interpreter with and without that card's contribution, and compute the daily return series of each:</p>
 
 <div class="math">
 \[
-\Delta S \;=\; \text{Sharpe}(H_\text{final},\, D_\text{sealed}) \;-\; \text{Sharpe}(B^{*},\, D_\text{sealed})
+r^{\text{with } c}_t = \pi_{H \setminus \{c\} \cup \{c\}}(X_{\le t})\, R_{t+1} - \ldots, \qquad
+r^{\text{without } c}_t = \pi_{H \setminus \{c\}}(X_{\le t})\, R_{t+1} - \ldots
 \]
-<span class="where">\(B^{*}\) is the strongest baseline pre-registered in <code>analysis_plan.yaml</code>. For this milestone it is Bayesian optimization over the DSL. "Strongest" is determined on the validation set <em>before</em> sealed opens; the choice cannot be revised after seeing sealed.</span>
+\[
+\Delta r^{c}_t \;=\; r^{\text{with } c}_t \;-\; r^{\text{without } c}_t, \qquad
+\Delta S_c \;=\; \sqrt{252}\;\frac{\overline{\Delta r^{c}_t}}{\operatorname{std}(\Delta r^{c}_t)}
+\]
+<span class="where">\(\Delta S_c\) is the annualised information ratio of the marginal contribution that card \(c\) makes when added to the rest of the strategy \(H \setminus \{c\}\) on the sealed window. Leave-one-out, evaluated on \(D_\text{sealed}\) exactly once at the end of the run.</span>
+</div>
+
+<h4>Step 2 · Block-bootstrap CI on the per-card contribution</h4>
+
+<div class="math">
+\[
+\operatorname{CI}_{95}(\Delta S_c) \;=\; \text{moving block bootstrap}\bigl(\Delta r^{c}_{1:T_\text{sealed}};\ \text{block\_len}=10,\ n=1000\bigr)
+\]
+\[
+c \text{ is } \mathbf{\textit{validated}} \;\;\iff\;\; \operatorname{lower bound}\bigl(\operatorname{CI}_{95}(\Delta S_c)\bigr) \;>\; 0
+\]
+</div>
+
+<h4>Step 3 · The H1 count test, per system</h4>
+
+<div class="math">
+\[
+N^{\,\text{val}}_\text{LBG} \;=\; \#\bigl\{ c \in \text{cards}_\text{LBG} : c \text{ is validated} \bigr\}
+\]
+\[
+N^{\,\text{val}}_{B^{*}} \;=\; \#\bigl\{ c \in \text{cards}_{B^{*}} : c \text{ is validated} \bigr\}
+\]
+<span class="where">For each pre-registered system (LBG-Trader, BO-on-DSL, grid, random, one-shot, DSL-only LLM, no-memory ablation, no-curator ablation, unconstrained-Python ablation), apply Steps 1–2 to every accepted candidate, count validated cards. The H1 verdict is a comparison of counts at equal compute budget.</span>
 </div>
 
 <div class="math">
 \[
 \begin{aligned}
-\textbf{H1 strong:} \quad & \operatorname{lower bound}\bigl(\,\text{CI}_{95}(\Delta S)\,\bigr) \;>\; 0 \\[6pt]
-\textbf{H1 weak:} \quad & \text{Sharpe}(H_\text{final}) \;>\; \text{Sharpe}(B^{*}) \\
-& \text{and } \operatorname{MaxDD}(H_\text{final}) \text{ not worse than } \operatorname{MaxDD}(B^{*}) \\
-& \text{and turnover, cost within pre-registered bounds}
+\textbf{H1 strong:} \quad & N^{\,\text{val}}_\text{LBG} \;>\; \max_{B} N^{\,\text{val}}_B \quad\text{and}\quad N^{\,\text{val}}_\text{LBG} \ge \tau \\[4pt]
+\textbf{H1 weak:} \quad & N^{\,\text{val}}_\text{LBG} \ge 1 \quad\text{and}\quad N^{\,\text{val}}_\text{LBG} \ge N^{\,\text{val}}_{B^{*}}
 \end{aligned}
 \]
-<span class="where">The CI is computed by moving block bootstrap with \(\text{block\_len} = 10\) and \(n_\text{bootstrap} = 1000\), on the paired daily-returns series of LBG-Trader and \(B^{*}\) over the sealed window. The strong criterion is what the headline verdict turns on; the weak criterion is reported as supplementary.</span>
+<span class="where">\(B^{*}\) is the strongest baseline by validation-set yield, chosen <em>before</em> the sealed window opens; the choice cannot be revised. \(\tau\) is a pre-registered minimum (currently \(\tau = 3\)) below which even a positive comparison is not considered a meaningful demonstration. A bootstrap confidence interval on \(N^{\,\text{val}}_\text{LBG} - N^{\,\text{val}}_{B^{*}}\) is reported alongside.</span>
 </div>
 
-<p>This is a stricter test than "LBG's CI lower bound exceeds B*'s point estimate." The difference matters: comparing distributions of differences directly avoids the trap where two non-overlapping CIs are claimed without the actual difference being significant.</p>
+<h4>Step 4 · Strategy-level Δ Sharpe (supplementary, not H1)</h4>
+
+<p>The legacy paired-difference statistic on the composed strategy's daily returns,</p>
+
+<div class="math">
+\[
+\Delta S^{\,\text{strat}} \;=\; \text{Sharpe}(H_\text{final},\, D_\text{sealed}) \;-\; \text{Sharpe}(B^{*},\, D_\text{sealed})
+\]
+</div>
+
+<p>is still reported (as block-bootstrap CI at the same parameters: \(\text{block\_len} = 10\), \(n = 1000\)). It is the answer to "is the assembled strategy better than the baseline strategy on this one sealed window?" — useful, but not the H1 verdict. A framework that produces many validated factors but composes them poorly into a strategy can still pass H1; conversely, a lucky single strategy that happens to beat \(B^{*}\) but rests on zero individually-validated factors does not pass H1. The reframing is intentional: durability of yield, not headline of a single artifact.</p>
+
+<div class="aside">
+<span class="aside-label">Why count instead of mean</span>
+A mean of <code>ΔS_c</code> across cards would be tempting but misleading. A single card with extreme contribution can dominate the mean, hiding the fact that the framework relies on one lucky function. Counting cards above a CI threshold avoids this: each card contributes 0 or 1, and the count is naturally robust to outliers. It also matches the operational reality — at re-discovery time, each validated card persists; non-validated ones are discarded. The count is what the alpha-card library accumulates.
+</div>
 
 <h3>Tier 2 — process metrics, formalized</h3>
 
@@ -2519,24 +2571,40 @@ If the Editor emits a probability distribution \(p_{k,c}\) over outcomes, the mu
 
 <span class="code-label">analysis_plan.yaml</span>
 <pre>primary_comparison:
-  test: block_bootstrap_difference
-  candidate: full_lbg_trader
-  reference: best_validation_pre_sealed_baseline
-  metric: sealed_sharpe
-  ci: 0.95
-  success_rule: lower_bound_gt_zero
-  block_len: 10
-  n_bootstrap: 1000
+  test:           validated_factor_count
+  candidate:      full_lbg_trader
+  references:     [bo_on_dsl, grid_on_dsl, random_search,
+                   one_shot_llm, dsl_only_llm,
+                   no_memory_ablation, no_curator_ablation,
+                   unconstrained_python_ablation]
 
-secondary_comparisons:
-  - full_lbg_trader vs llm_dsl_only
-  - full_lbg_trader vs no_memory_ablation
-  - full_lbg_trader vs no_curator_ablation
-  - full_lbg_trader vs unconstrained_python_ablation
+  per_card_validation:
+    method:       leave_one_out_incremental_sharpe
+    ci:           0.95
+    ci_method:    moving_block_bootstrap
+    block_len:    10
+    n_bootstrap:  1000
+    threshold:    lower_bound_gt_zero
+
+  success_rule:
+    h1_strong:    N_val_lbg > max_over_baselines(N_val_B) AND N_val_lbg >= tau
+    h1_weak:      N_val_lbg >= 1 AND N_val_lbg >= N_val_B_star
+    tau:          3
+
+supplementary_strategy_comparison:
+  test:           block_bootstrap_difference
+  metric:         sealed_strategy_sharpe
+  reference:      best_validation_pre_sealed_baseline
+  ci:             0.95
+  block_len:      10
+  n_bootstrap:    1000
+  # reported alongside but not the H1 verdict
 
 reported_metrics:
-  - sealed_sharpe
-  - sealed_max_drawdown
+  - validated_factor_count_per_system
+  - per_card_incremental_sharpe_with_ci
+  - sealed_strategy_sharpe
+  - sealed_strategy_max_drawdown
   - validation_to_sealed_degradation
   - acceptance_rate_trend
   - hypothesis_calibration
@@ -2545,9 +2613,11 @@ reported_metrics:
   - tokens_total
 
 multiple_testing_correction:
-  family: secondary_comparisons
-  method: holm_bonferroni
-  family_wise_error_rate: 0.05</pre>
+  family:               per_card_ci_tests
+  method:               benjamini_hochberg
+  false_discovery_rate: 0.10
+  # FDR (not FWER) is appropriate here because each card is an
+  # independent discovery candidate, not a confirmatory comparison.</pre>
 
 <p>The primary comparison is a single test; its <em>p</em>-value (equivalently, the CI lower bound) is the H1 verdict. Secondary comparisons are corrected for multiple testing using Holm-Bonferroni at family-wise error rate 0.05. Any comparison not listed in <code>analysis_plan.yaml</code> before sealed opens is reported as "post-hoc, exploratory" and explicitly cannot support H1.</p>
 
@@ -2685,8 +2755,8 @@ Everything else in this proposal — the invariant suite, the redacted feedback,
   </div>
   <div class="stage-content">
     <h4>Sealed-evaluation LBG run</h4>
-    <p>The Discovery engine runs an LBG loop on a chosen ticker and date range. Output: a frozen <code>strategy.yaml</code> + <code>indicators/*.py</code> artifact, a sealed test verdict, a final report. This is the scientific core; it answers H1/H2/H3 for this ticker, this period, this protocol.</p>
-    <p class="stage-meta">duration: hours to one day · cost: tens of dollars in tokens · deliverable: strategy artifact</p>
+    <p>The Discovery engine runs an LBG loop on a chosen ticker and date range. Output: <strong>two artifacts in parallel</strong> — (1) a set of validated alpha cards (each a prefix-stable Python factor that survived the sealed test per §10.5 Tier 1), and (2) a frozen <code>strategy.yaml</code> + <code>indicators/*.py</code> that composes them — plus a sealed test verdict and the final report. This is the scientific core; it answers H1/H2/H3 for this ticker, this period, this protocol. The cards persist across re-discoveries (§13); the strategy is re-composed each time.</p>
+    <p class="stage-meta">duration: hours to one day · cost: tens of dollars in tokens · deliverables: validated factor library + composed strategy</p>
   </div>
 </div>
 
@@ -2960,6 +3030,8 @@ Everything else in this proposal — the invariant suite, the redacted feedback,
 <p>Between two re-discovery events, the strategy is frozen. The Execution engine simply runs <code>policy_interpreter.py</code> on whatever <code>strategy.yaml</code> + <code>indicators/</code> are currently active. No edits. No LLM. This is what makes daily operation cheap, reliable, and reproducible.</p>
 
 <p>This also means there is always exactly one active strategy artifact for a given universe, with clear lineage. If the Q1 strategy was <code>2026-Q1_spy_a</code> and the Q4 re-discovery produced <code>2026-Q4_spy_a</code>, the latter cleanly supersedes the former, and the Q1 artifact is archived for historical comparison and audit.</p>
+
+<p>The factor library, by contrast, <em>accumulates</em>. Validated alpha cards from Q1 are not invalidated by Q4's re-discovery — they remain entries in the alpha-card library and may be re-composed into Q4's strategy if they still survive the Q4 sealed test. The Q4 Discovery run starts with the union (Q1 cards + new candidates) as its seed pool. Some Q1 cards will no longer validate on the new sealed window (they get marked <code>deprecated</code> with a dated note); some will continue to validate and be re-used; some new candidates will be added. Over multiple re-discoveries, the strategy artifact churns while the factor library trends upward in size and downward in dud-rate. This compounding is the durability claim in §2 made operational.</p>
 </section>
 
 <section id="universe">
@@ -3087,34 +3159,28 @@ The MVP described in this proposal trains on a single ticker (SPY). True multi-t
   <h2>What the final report looks like</h2>
 </div>
 
-<p>The Stage 1 deliverable is a static HTML final report. The headline answers H1/H2/H3 verdicts before showing any numbers. Below: a sketch of what a positive-H1 outcome looks like.</p>
+<p>The Stage 1 deliverable is a static HTML final report. The headline answers H1/H2/H3 verdicts before showing any numbers. Below: a sketch of what a positive-H1 outcome looks like. The figure order matches the H1 framing of §4: the validated-factor count is the verdict; the assembled strategy is supporting context.</p>
 
-<div class="schematic-label">Figures 6–8 are schematic illustrations of report layout — not actual results. The report generator labels every chart as <code>synthetic</code> or <code>actual</code> at render time.</div>
+<div class="schematic-label">Figures 6–9 are schematic illustrations of report layout — not actual results. The report generator labels every chart as <code>synthetic</code> or <code>actual</code> at render time.</div>
 
 <div class="figure">
 <div class="chart-wrap">
-  <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; font-family: var(--sans); font-size: 11px; color: var(--ink-muted);">
-    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #2d6a5c;"></span>LBG-Trader</span>
-    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #b88a2c; border-top: 1px dashed #b88a2c; background: transparent;"></span>Grid search</span>
-    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #8b3a2f;"></span>LLM DSL-only</span>
-    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #6b6b70;"></span>Buy and hold</span>
-    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #a4a4a8;"></span>SMA cross</span>
-  </div>
+  <div style="font-family: var(--sans); font-size: 12px; color: var(--ink-muted); margin-bottom: 8px;">Validated alpha-card count per system at equal compute budget</div>
   <div style="position: relative; height: 240px;">
-    <canvas id="equityChart" role="img" aria-label="Sealed test equity curves across systems"></canvas>
+    <canvas id="factorCountChart" role="img" aria-label="Validated factor counts per system"></canvas>
   </div>
 </div>
-<div class="figure-caption"><strong>Figure 6.</strong> Synthetic sealed test equity curves. LBG-Trader, under a positive-H1 outcome, distinguishes itself in risk-adjusted terms via lower drawdown, even when buy-and-hold matches or exceeds raw total return.</div>
+<div class="figure-caption"><strong>Figure 6 · H1 headline.</strong> Each bar is the count of alpha cards produced by that system whose individual sealed-test incremental Sharpe has 95% block-bootstrap CI lower bound &gt; 0 (per §10.5 Tier 1). H1 strong requires the LBG-Trader bar to strictly exceed the tallest baseline bar AND be at least \(\tau = 3\). The teal LBG bar standing visibly above the gold baseline cluster is what a positive-H1 outcome looks like at a glance.</div>
 </div>
 
 <div class="figure">
 <div class="chart-wrap">
-  <div style="font-family: var(--sans); font-size: 12px; color: var(--ink-muted); margin-bottom: 8px;">Sealed Sharpe with moving block bootstrap 95% CI</div>
-  <div style="position: relative; height: 220px;">
-    <canvas id="sharpeChart" role="img" aria-label="Sealed Sharpe with confidence intervals"></canvas>
+  <div style="font-family: var(--sans); font-size: 12px; color: var(--ink-muted); margin-bottom: 8px;">Per-card sealed incremental Sharpe \(\Delta S_c\) with 95% bootstrap CI</div>
+  <div style="position: relative; height: 260px;">
+    <canvas id="cardSharpeChart" role="img" aria-label="Per-card incremental sealed Sharpe with confidence intervals"></canvas>
   </div>
 </div>
-<div class="figure-caption"><strong>Figure 7.</strong> Sealed Sharpe with bootstrap CI per system. The H1 verdict turns on the <em>paired difference</em> test specified in §10.5 — bootstrap of the difference between LBG-Trader and the pre-registered best baseline — not on visual CI comparison. The per-system CIs shown here are supplementary context, not the verdict.</div>
+<div class="figure-caption"><strong>Figure 7 · The Python functions behind the count.</strong> Each Python factor function in <code>indicators/*.py</code> that the agent authored during one Discovery run, ordered by the trial that accepted it. The dot is the point estimate of leave-one-out incremental sealed Sharpe; the vertical bar is the 95% block-bootstrap CI. Functions whose CI lower bound is above zero (the dashed reference line) are counted in Figure 6's tally — the card next to each is the metadata index, but the function itself is what survived. A reader can audit the H1 count visually from this chart.</div>
 </div>
 
 <div class="figure">
@@ -3129,7 +3195,23 @@ The MVP described in this proposal trains on a single ticker (SPY). True multi-t
     <canvas id="overfitChart" role="img" aria-label="Overfit gap across accepted trials"></canvas>
   </div>
 </div>
-<div class="figure-caption"><strong>Figure 8.</strong> The overfit gap diagnostic. Train Sharpe climbs as the agent improves; the inferred validation strength tracks closely; the dashed red gap stays small. A widening gap would indicate the agent is overfitting despite the gate.</div>
+<div class="figure-caption"><strong>Figure 8 · Overfit gap diagnostic.</strong> Train Sharpe climbs as the agent improves; the inferred validation strength tracks closely; the dashed red gap stays small. A widening gap would indicate the agent is overfitting despite the gate.</div>
+</div>
+
+<div class="figure">
+<div class="chart-wrap">
+  <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; font-family: var(--sans); font-size: 11px; color: var(--ink-muted);">
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #2d6a5c;"></span>LBG-Trader strategy</span>
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #b88a2c; border-top: 1px dashed #b88a2c; background: transparent;"></span>Grid search</span>
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #8b3a2f;"></span>LLM DSL-only</span>
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #6b6b70;"></span>Buy and hold</span>
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #a4a4a8;"></span>SMA cross</span>
+  </div>
+  <div style="position: relative; height: 240px;">
+    <canvas id="equityChart" role="img" aria-label="Sealed test equity curves across systems"></canvas>
+  </div>
+</div>
+<div class="figure-caption"><strong>Figure 9 · Strategy equity, supplementary.</strong> The composed strategy's equity curve on the sealed window, alongside baselines. This is the Stage-2-ready artifact and the visual most readers care about, but it is <em>not</em> the H1 verdict — that is Figures 6 and 7. The strategy can look stronger or weaker here without changing the validated-factor count.</div>
 </div>
 </section>
 
@@ -3246,6 +3328,11 @@ The MVP described in this proposal trains on a single ticker (SPY). True multi-t
   <li>Indicator functions must satisfy prefix-stability (§4.5); the dynamic invariant enforces this by perturbation testing</li>
   <li>Alpha cards exported on every accepted indicator-modifying trial (§6.6)</li>
   <li>Calendar labels (years, named events) appear only in human-facing final reports and in Orchestrator-internal logs; they are never present in agent prompt templates or in any file the <code>ContextBuilder</code> reads from</li>
+  <li><strong>HL object of learning</strong> is the Heuristic System: the union of <code>indicators/*.py</code> (Python factor functions), <code>strategy.yaml</code>, the explicit memory layers, and git lineage. The <em>core artifact LBG produces</em> within that system is the set of Python factor functions the agent has authored. Dossier and alpha card are translations / metadata views of those functions, not the deliverable</li>
+  <li><strong>H1 statistical unit</strong> is the <em>surviving Python factor function</em>, counted operationally via its alpha card: a function whose individual leave-one-out sealed incremental Sharpe has 95% block-bootstrap CI lower bound &gt; 0 (block_len 10, n_bootstrap 1000). The H1 verdict is a count comparison across systems at equal compute budget; H1 strong requires LBG-Trader's count to strictly exceed the best baseline AND be at least \(\tau = 3\). Per-card validation is corrected for multiple testing using Benjamini-Hochberg at FDR 0.10</li>
+  <li>The alpha-card schema (§6.6) is locked as a <em>superset of the input dossier schema</em> in <code>knowledge/factors/dossiers/</code>: declarative fields (<code>factor_name</code>, <code>core_analysis</code>, <code>parameterization</code>, <code>combination_and_fusion</code>) plus executable evidence (<code>python_implementation_path</code>, <code>prefix_stability_passed</code>, <code>sealed_evidence</code>, <code>status</code>). This makes round-trip translation Python ↔ dossier well-defined</li>
+  <li>The validated-factor library is append-only and shared across re-discoveries. A surviving function (and its card) from run N enters the seed pool for run N+1; it is re-validated against the new sealed window and either retained, marked <code>deprecated</code>, or merged. Functions are never silently dropped</li>
+  <li>External factor dossiers live under <code>knowledge/factors/</code> (read-only, shared across runs) and are exposed to the Editor only via <code>lbg.knowledge.search()</code>. No dossier citation grants exemption from any invariant or from the sealed test</li>
 </ol>
 </div>
 
@@ -3305,47 +3392,98 @@ new Chart(document.getElementById('equityChart'), {
   }
 });
 
-new Chart(document.getElementById('sharpeChart'), {
+// Figure 6 · Validated factor count per system (H1 headline)
+const factorCountLabels = ['LBG-Trader', 'DSL-only LLM', 'BO on DSL', 'Grid', 'Random', 'One-shot', 'No-memory', 'No-curator', 'Unconstrained Py'];
+const factorCountValues = [12, 4, 3, 2, 1, 1, 5, 7, 0];
+const factorCountColors = factorCountLabels.map(l => l === 'LBG-Trader' ? palette.teal : palette.inkFaint);
+
+new Chart(document.getElementById('factorCountChart'), {
   type: 'bar',
   data: {
-    labels: ['LBG-Trader', 'Grid search', 'BO on DSL', 'LLM DSL-only', 'SMA cross', 'Random search', 'Buy & hold', 'One-shot'],
+    labels: factorCountLabels,
+    datasets: [{
+      label: 'Validated cards',
+      data: factorCountValues,
+      backgroundColor: factorCountColors,
+      borderRadius: 2,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} validated card${ctx.parsed.y === 1 ? '' : 's'}` } }
+    },
+    scales: {
+      x: { ticks: { font: { family: 'Inter', size: 10 }, maxRotation: 30, color: palette.inkMuted }, grid: { display: false } },
+      y: { beginAtZero: true, ticks: { font: { family: 'Inter', size: 10 }, stepSize: 2, color: palette.inkMuted }, grid: { color: 'rgba(107,107,112,0.12)' }, title: { display: true, text: 'N_val', color: palette.inkMuted, font: { family: 'Inter', size: 10 } } }
+    }
+  }
+});
+
+// Figure 7 · Per-card incremental sealed Sharpe with CI
+// Build error-bar lines per card; the dot uses scatter, the bar uses two-point lines.
+const cardIds = ['c01','c02','c03','c04','c05','c06','c07','c08','c09','c10','c11','c12','c13','c14','c15','c16'];
+const cardPoint = [0.42, 0.31, 0.18, 0.05, 0.28, 0.55, 0.12, 0.36, -0.08, 0.22, 0.48, 0.09, 0.30, 0.16, 0.41, -0.12];
+const cardCiLow = [0.18, 0.10, 0.02, -0.20, 0.09, 0.32, -0.05, 0.14, -0.30, 0.04, 0.24, -0.07, 0.08, -0.02, 0.19, -0.35];
+const cardCiHi  = [0.66, 0.52, 0.34, 0.30, 0.47, 0.78, 0.29, 0.58, 0.14, 0.40, 0.72, 0.25, 0.52, 0.34, 0.63, 0.11];
+
+// validated = ciLow > 0
+const cardValidated = cardCiLow.map(v => v > 0);
+
+new Chart(document.getElementById('cardSharpeChart'), {
+  type: 'scatter',
+  data: {
     datasets: [
       {
-        label: 'Sharpe',
-        data: [0.71, 0.58, 0.55, 0.53, 0.52, 0.49, 0.45, 0.41],
-        backgroundColor: [palette.teal, palette.gold, palette.gold, palette.accent, palette.inkFaint, '#7a7a7e', palette.inkMuted, '#9a9a9e'],
-        borderRadius: 2,
+        label: 'Validated (CI low > 0)',
+        data: cardPoint.map((y, i) => ({ x: i, y, low: cardCiLow[i], hi: cardCiHi[i], validated: cardValidated[i] })).filter((_, i) => cardValidated[i]),
+        backgroundColor: palette.teal,
+        pointRadius: 5,
       },
       {
-        type: 'line',
-        label: 'CI lower',
-        data: [0.48, 0.36, 0.33, 0.30, 0.31, 0.26, 0.22, 0.19],
-        showLine: false,
-        pointStyle: 'line',
-        pointRadius: 6,
-        pointBorderColor: palette.ink,
-        pointBorderWidth: 1.5,
-      },
-      {
-        type: 'line',
-        label: 'CI upper',
-        data: [0.94, 0.78, 0.76, 0.74, 0.74, 0.72, 0.66, 0.62],
-        showLine: false,
-        pointStyle: 'line',
-        pointRadius: 6,
-        pointBorderColor: palette.ink,
-        pointBorderWidth: 1.5,
+        label: 'Not validated',
+        data: cardPoint.map((y, i) => ({ x: i, y, low: cardCiLow[i], hi: cardCiHi[i], validated: cardValidated[i] })).filter((_, i) => !cardValidated[i]),
+        backgroundColor: palette.inkFaint,
+        pointRadius: 5,
       },
     ]
   },
   options: {
     responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => `ΔS=${ctx.raw.y.toFixed(2)} CI [${ctx.raw.low.toFixed(2)}, ${ctx.raw.hi.toFixed(2)}]` } }
+    },
     scales: {
-      x: { ticks: { font: { family: 'Inter', size: 10 }, maxRotation: 30, color: palette.inkMuted }, grid: { display: false } },
-      y: { beginAtZero: true, ticks: { font: { family: 'Inter', size: 10 }, callback: v => v.toFixed(2), color: palette.inkMuted }, grid: { color: 'rgba(107,107,112,0.12)' } }
+      x: { type: 'linear', min: -0.5, max: cardIds.length - 0.5, ticks: { font: { family: 'Inter', size: 10 }, stepSize: 1, callback: v => cardIds[v] || '', color: palette.inkMuted }, grid: { display: false }, title: { display: true, text: 'Python factor function (validated, by accepting-trial order)', color: palette.inkMuted, font: { family: 'Inter', size: 10 } } },
+      y: { min: -0.5, max: 1.0, ticks: { font: { family: 'Inter', size: 10 }, callback: v => v.toFixed(2), color: palette.inkMuted }, grid: { color: ctx => ctx.tick.value === 0 ? palette.accent : 'rgba(107,107,112,0.12)' }, title: { display: true, text: 'ΔS_c (sealed incremental Sharpe)', color: palette.inkMuted, font: { family: 'Inter', size: 10 } } }
     }
-  }
+  },
+  plugins: [{
+    id: 'errorBars',
+    afterDatasetsDraw(chart) {
+      const { ctx, scales: { x, y } } = chart;
+      ctx.save();
+      ctx.lineWidth = 1.2;
+      cardPoint.forEach((pt, i) => {
+        const xPx = x.getPixelForValue(i);
+        const yLowPx = y.getPixelForValue(cardCiLow[i]);
+        const yHiPx = y.getPixelForValue(cardCiHi[i]);
+        ctx.strokeStyle = cardValidated[i] ? palette.teal : palette.inkFaint;
+        ctx.beginPath();
+        ctx.moveTo(xPx, yLowPx);
+        ctx.lineTo(xPx, yHiPx);
+        ctx.stroke();
+        // small caps
+        ctx.beginPath();
+        ctx.moveTo(xPx - 3, yLowPx); ctx.lineTo(xPx + 3, yLowPx);
+        ctx.moveTo(xPx - 3, yHiPx);  ctx.lineTo(xPx + 3, yHiPx);
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+  }]
 });
 
 const accTrials = [1,2,3,4,5,6,7,8,9,10,11,12];

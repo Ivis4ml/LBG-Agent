@@ -871,7 +871,7 @@ window.MathJax = {
 </div>
 
 <p class="lede">
-LBG-Trader 是一个框架，它调度三类结构化的 LLM 角色（编辑器、反思器、策展器）来维护一个持久的交易启发式系统。智能体的动作空间同时覆盖 Python 指标编写与 DSL 配置编辑。一套包含不变量与脱敏反馈的密封评测协议管控发现阶段。已通过密封测试的策略成为冻结产物，进入独立的执行引擎，依次走完前向验证、模拟交易，以及（可选的）实盘资金阶段。周期性的重新发现在新的密封窗口上刷新策略。框架本身是产品；策略是框架的输出。
+LBG-Trader 是一个框架，它调度三类结构化的 LLM 角色（编辑器、反思器、策展器）在交易场景下完成 Weng 所说的 HL：<em>通过直接编辑代码来维护一个启发式系统</em>。本项目中的启发式系统是 <code>indicators/*.py</code>（智能体编写的 Python 因子函数）、<code>strategy.yaml</code>（组合它们的 DSL 配置）、固定引擎 <code>policy_interpreter.py</code>，以及若干显式记忆层的并集。在这一系统内，<strong>一次发现运行的核心产出，是智能体编写且通过密封测试的 Python 因子函数集合</strong>。每个这样的函数 <em>就是</em> 一个因子的可执行形态，与既有文献在 <code>knowledge/factors/dossiers/</code> 中以声明式描述的对象，是同一对象的两种翻译形态（声明式 dossier ↔ 可执行 Python）。框架维持这一双向往返：以 dossier 为输入假设，以 Python 代码为输出，并附带密封测试证据。同时也产出一个组合后的冻结策略（第二至四阶段消费它），并为每个函数导出一份因子卡片元数据视图（便于计数、跨运行重组、并反向翻译回 dossier 形式）；但二者都不是被学习的对象。代码才是。
 </p>
 </section>
 
@@ -995,7 +995,7 @@ LBG-Trader 是一个框架，它调度三类结构化的 LLM 角色（编辑器�
 </div>
 
 <p class="lede">
-论点：一个由编码型智能体驱动的框架，能通过程序编辑与配置编辑两条路径维护一个持久的启发式系统，进而产生 <em>可泛化</em> 的交易策略；但这一结论只有在一个明确阻止智能体奖励黑客回测、阻止验证信号渗入搜索过程的评测协议下，才可能成立。
+论点：一个由编码型智能体驱动的框架，能维护一个持久的启发式系统，其核心产出是一份持续增长的 <em>Python 因子函数库</em>，即智能体亲手写入 <code>indicators/</code> 下、且在密封测试中幸存的真实文件。每个函数同时以两种可互译的形态存在：可执行的 Python 代码（产物本身），以及与外部因子文献同结构的声明式 dossier（它的可读视图）。在"声明式因子知识"（输入）与"可执行代码"（智能体的输出）之间的双向转化，正是把 HL 范式落入交易场景、而非沦为普通策略搜索的核心机制。被学习的对象是代码；dossier 是它的可读翻译；因子卡片是把两者绑定的元数据视图。
 </p>
 
 <p>本提案承诺三个假设，并将其视作等价。我们并不私下偏好 H1 胜出。任意一种结局都可成稿。</p>
@@ -1003,22 +1003,22 @@ LBG-Trader 是一个框架，它调度三类结构化的 LLM 角色（编辑器�
 <div class="hypo-grid">
   <div class="hypo">
     <div class="hypo-label">H1 · 肯定结论</div>
-    <h5>LBG 在密封评测下可泛化</h5>
-    <p>具备持久记忆与程序合成能力的编码型智能体框架，在密封测试上所产出的策略，优于随机搜索、贝叶斯优化、单次 LLM 提案以及仅编辑 YAML 的 LLM 搜索基线。</p>
+    <h5>LBG 产出在密封测试中幸存的 Python 因子代码</h5>
+    <p>在等同发现预算下，本框架产出的 <em>幸存 Python 因子函数</em> 数量严格多于随机搜索、贝叶斯优化、单次 LLM 提案与仅 DSL 的 LLM 搜索。幸存因子函数定义为：智能体写入 <code>indicators/*.py</code> 的一个前缀稳定函数，其个体在密封测试上的增量贡献 95% 置信区间下界 &gt; 0。论断的单位是代码本身；每个幸存函数所附的因子卡片是它的元数据索引，而非交付物。</p>
   </div>
   <div class="hypo h2">
     <div class="hypo-label">H2 · 方法论结论</div>
     <h5>密封协议是必需的基础设施</h5>
-    <p>如果缺乏密封划分、脱敏验证与不变量套件，LBG 的表观表现将被过拟合、验证泄漏或奖励黑客所夸大。各项消融实验应使这一夸大幅度可被量化。</p>
+    <p>如果缺乏密封划分、脱敏验证与不变量套件，"已验证因子"的表观产量将被过拟合、验证泄漏或奖励黑客所夸大。各项消融（原始验证、无不变量、无记忆、无策展器）使这一夸大幅度可被量化。</p>
   </div>
   <div class="hypo h3">
     <div class="hypo-label">H3 · 诚实零假设</div>
-    <h5>LBG 可能在交易上不成立</h5>
-    <p>即便所有控制都已就位，编码型智能体的学习仍可能无法迁移到密封测试。交易的分布漂移与低信噪比也许已经超出 LBG 的表达能力。这一结论本身可独立成稿。</p>
+    <h5>LBG 可能未必产出任何幸存因子</h5>
+    <p>即便所有控制都已就位，编码型智能体的学习仍可能无法产出任何在密封测试上个体增量统计显著的因子。交易的噪声与分布漂移也许已经超出 LBG 的表达能力。这一结论本身可独立成稿。</p>
   </div>
 </div>
 
-<p>协议被设计为：若 H1 失败，我们仍然知道为何失败；若 H1 成立，我们有证据说明它正是因为记忆、压缩与程序合成而成立，而不是尽管有这些机制仍然成立。</p>
+<p>H1 论断的统计单位是 <em>已验证因子</em>，而非组合后的策略。策略仍然交付（它是执行引擎在第二至四阶段消费的组合产物），但 H1 裁定在因子层级做统计。论断所立足的"因子 ↔ Python"双向转化由 §9 的不变量强制：声称是因子、却无法表达为前缀稳定纯函数的对象，不会进入计数。协议被设计为：若 H1 失败，我们仍然知道为何失败；若 H1 成立，因子计数本身就是框架产出的是持久产物、而非一次性幸运策略的证据。</p>
 </section>
 
 <section id="formal">
@@ -1235,7 +1235,7 @@ r_{t+1}(H) \;=\; p_{t+1} \cdot R_{t+1} \;-\; c \cdot \lvert\, p_{t+1} - p_t \,\r
   <div class="col-card">
     <h4>动作空间 A · DSL 编辑</h4>
     <p style="font-family: var(--sans); font-size: 13px; color: var(--ink-soft); margin-bottom: 12px;">编辑类型：<code>parameter_change</code>。编辑器调整 <code>strategy.yaml</code> 中的一个数字，不写任何新代码。</p>
-    <p style="font-family: var(--sans); font-size: 12.5px; color: var(--ink-muted); margin-bottom: 4px;">编辑前 —— <code>strategy.yaml</code> 片段：</p>
+    <p style="font-family: var(--sans); font-size: 12.5px; color: var(--ink-muted); margin-bottom: 4px;">编辑前：<code>strategy.yaml</code> 片段：</p>
     <pre style="font-size: 11.5px; line-height: 1.55; margin: 0 0 14px;">filters:
   - name: above_sma
     indicator: sma
@@ -1257,7 +1257,7 @@ hypothesis: |
   <div class="col-card alt">
     <h4>动作空间 B · 程序合成</h4>
     <p style="font-family: var(--sans); font-size: 13px; color: var(--ink-soft); margin-bottom: 12px;">编辑类型：<code>add_indicator</code>。编辑器在 <code>indicators/</code> 中写入一个新 Python 函数，并在 <code>strategy.yaml</code> 中引用。</p>
-    <p style="font-family: var(--sans); font-size: 12.5px; color: var(--ink-muted); margin-bottom: 4px;">新文件 —— <code>indicators/vol_adj_momentum.py</code>：</p>
+    <p style="font-family: var(--sans); font-size: 12.5px; color: var(--ink-muted); margin-bottom: 4px;">新文件：<code>indicators/vol_adj_momentum.py</code>：</p>
     <pre style="font-size: 11.5px; line-height: 1.55; margin: 0 0 14px;">def vol_adj_momentum(df, lookback=60,
                      vol_lookback=20):
     """Prefix-stable: uses only past."""
@@ -1720,7 +1720,7 @@ known_failure_modes:
 
 status: accepted | rejected | exploratory | deprecated</pre>
 
-<p>因子卡片之所以存在，有两个原因。其一，它为后续里程碑（多个 alpha 组合为投资组合）预先准备好抽象：卡片 schema 使这种组合可被自动化处理。其二，它使项目的产出成为一个 <em>已评测信号的图书馆</em>，而不仅仅是单一策略产物。这种形态更接近专业量化研究小组实际消费研究成果的方式。本里程碑下，卡片被导出，但系统只交易一个组合后的单一策略；多 alpha 组合方向作为未来扩展。</p>
+<p>因子卡片 <strong>不是交付物</strong>；它是底层 Python 因子函数（智能体写入 <code>indicators/</code> 下的文件）的一份 <em>元数据视图</em>。函数才是系统学习与维护的对象；卡片让函数变得可计数、可组合、可反向翻译为 dossier。具体而言，卡片承担三项职能：(a) 作为 §4 中 H1 计数的 <strong>统计载体</strong>：H1 对 <code>sealed_summary</code> 中个体增量夏普置信区间下界 &gt; 0 的卡片计数，因为这是计数的可操作形式，但每张卡片始终指回一个真实的 <code>.py</code> 文件；(b) 作为跨多次发现运行 <strong>函数复用</strong> 与未来里程碑中 <strong>多 alpha 组合</strong> 的交接格式；(c) 作为反向回到声明式 dossier 的 <strong>双向桥梁</strong>（卡片 schema 是 <code>knowledge/factors/dossiers/</code> 中输入 dossier schema 的超集），使 LBG 的输出累积到与其输入共用的同一图书馆里。</p>
 </section>
 
 <section id="factorlib">
@@ -1729,7 +1729,7 @@ status: accepted | rejected | exploratory | deprecated</pre>
   <h2>因子库作为原材料</h2>
 </div>
 
-<p>一个能把本提案大部分内容串起来的观察：<strong>几乎每一个已发表的量化因子，本质上都是历史 K 线的一个前缀稳定纯函数</strong>。Aroon、RSI、ADX、应计盈余、Amihud 流动性、订单流不平衡、波动率调整动量——输入不同，动机不同，但目标形态相同：一个从"价格+量"历史映射到逐 K 线数值的函数。一个无法写成此形态的因子，几乎必然违反无前瞻规则，本不该被发表。</p>
+<p>一个能把本提案大部分内容串起来的观察：<strong>几乎每一个已发表的量化因子，本质上都是历史 K 线的一个前缀稳定纯函数</strong>。Aroon、RSI、ADX、应计盈余、Amihud 流动性、订单流不平衡、波动率调整动量：输入不同，动机不同，但目标形态相同：一个从"价格+量"历史映射到逐 K 线数值的函数。一个无法写成此形态的因子，几乎必然违反无前瞻规则，本不该被发表。</p>
 
 <p>这正是智能体 <code>add_indicator</code> 编辑类型瞄准的形态。编辑器的编写契约（§9）、AST 检查、沙箱、前缀稳定性，全部对准同一目标。这意味着既有的量化因子文献，从 LBG-Trader 的视角看，就是一份候选 Python 函数的 <em>种子库</em>，编辑器可从中汲取。本项目不必从空白页起步。</p>
 
@@ -1779,7 +1779,7 @@ status: accepted | rejected | exploratory | deprecated</pre>
 
 <h3>追加式设计</h3>
 
-<p>索引文件是 <em>仅追加</em> 的，刻意效仿 <code>memory/trials.jsonl</code>（§6.6）的纪律。新增一份档案——或为已有因子的研究新增一个版本——只有一个动作：在 <code>index.jsonl</code> 追加一行，并在 <code>dossiers/</code> 下放入一份新的不可变文件。废弃某因子则在新追加的行上设 <code>status: deprecated</code> 字段，而不是改写旧行。其好处与任何追加式日志一致：天然崩溃安全、grep 友好、保留完整版本历史、并发扩展无合并冲突。</p>
+<p>索引文件是 <em>仅追加</em> 的，刻意效仿 <code>memory/trials.jsonl</code>（§6.6）的纪律。新增一份档案（或为已有因子的研究新增一个版本）只需一个动作：在 <code>index.jsonl</code> 追加一行，并在 <code>dossiers/</code> 下放入一份新的不可变文件。废弃某因子则在新追加的行上设 <code>status: deprecated</code> 字段，而不是改写旧行。其好处与任何追加式日志一致：天然崩溃安全、grep 友好、保留完整版本历史、并发扩展无合并冲突。</p>
 
 <p>两点值得指出。其一，<em>档案本身不可变</em>：下季度重新研究 Aroon 因子会产出新文件 <code>Aroon_20260815_xxxxxx.txt</code>，而不是覆盖。检索按时间戳选最新版本；旧版本仍是可被引用的历史产物。其二，<em>索引可无限增长</em>；当前 564 行约 420 KB；即便 50,000 行也只有约 35 MB，仍可 grep、仍可在内存中缓存。</p>
 
@@ -1799,7 +1799,7 @@ all_entries = load_index()
 # → 全部 564 条元数据；进程内缓存
 </pre>
 
-<p>检索是对 factor_name / category / one_line 三字段的子串匹配。在 564 条规模下用嵌入是过度工程。若语料规模将来上升到几千条，可在不改变外部接口的前提下替换为真正的检索索引——这正是它独立成模块的理由。</p>
+<p>检索是对 factor_name / category / one_line 三字段的子串匹配。在 564 条规模下用嵌入是过度工程。若语料规模将来上升到几千条，可在不改变外部接口的前提下替换为真正的检索索引；这正是它独立成模块的理由。</p>
 
 <p><code>ContextBuilder</code> 用当前试验上下文（最近的拒绝、在位策略的过滤条件）派生的关键词调用 <code>search()</code>，取前几条命中，把它们的 <code>one_line</code> 摘要塞进编辑器提示。编辑器若需完整档案，可按 factor_name 引用，<code>get_dossier</code> 按需取出。要点：<em>每次试验编辑器只看到小而相关的切片，从不把 564 份档案当批量上下文</em>。</p>
 
@@ -1807,29 +1807,36 @@ all_entries = load_index()
 
 <h3>那么 LBG-Trader 的真正产出是什么</h3>
 
-<p>若框架按设计运行，因子卡片导出流程（§6.6）在多次发现运行积累后，将产出种子库的 <em>已验证子集</em>——一个在所研究标的池上、在锁定协议下确实展示出在密封测试上有增量贡献的因子库。对照如下：</p>
+<p>若框架按设计运行，因子卡片导出流程（§6.6）在多次发现运行积累后，将产出种子库的 <em>已验证子集</em>：一个在所研究标的池上、在锁定协议下确实展示出在密封测试上有增量贡献的因子库。对照如下：</p>
 
 <table class="spec-table" style="margin: 14px 0;">
   <thead>
     <tr>
-      <th style="width: 30%;">资源</th>
-      <th>认证了什么</th>
-      <th>没有认证什么</th>
+      <th style="width: 28%;">因子的形态</th>
+      <th>它是什么</th>
+      <th>它独自缺什么</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td><strong>外部因子档案</strong>（如 <code>knowledge/factors/dossiers/Aroon_*.txt</code>）</td>
-      <td>该因子有公认的学术或行业定义；其一般金融动机已被阐述。</td>
-      <td>是否在本标的池上、在本成本模型下、经过本过拟合控制后，产生增量夏普。</td>
+      <td><strong>声明式形态</strong>，<code>knowledge/factors/dossiers/Aroon_20260427_023945.txt</code></td>
+      <td>一份人/LLM 可读的因子档案：严格定义、金融意义、参数化提示、组合模式、过拟合提醒。静态文本，不可执行。</td>
+      <td>不可运行；无密封测试证据；无法证明该因子在本标的池、本成本模型下产生增量夏普。</td>
     </tr>
     <tr>
-      <td><strong>LBG-Trader 因子卡片</strong>（<code>alpha_cards/trial_NNNN.yaml</code>）</td>
-      <td>一份具体的参数化实现已通过前缀稳定性、已通过验证集多目标门控；且（H1 成立后）在预注册分析下对密封测试改进有贡献。</td>
-      <td>该因子在密封测试未含的制度下能否持续生效——由第二阶段前向验证回答。</td>
+      <td><strong>可执行形态</strong>，<code>indicators/aroon.py</code>（本次发现运行中智能体亲手编写的文件之一）</td>
+      <td>一个真实的 Python 纯函数，回测引擎直接调用它。可被执行、可被版本化、可被组合进策略、可被 leave-one-out 消融以支撑 H1 计数。这才是 LBG 真正维护的对象。</td>
+      <td>独自缺乏面向人的描述；其叙事意义依赖于 docstring 与对应 dossier 翻译。</td>
+    </tr>
+    <tr>
+      <td><strong>因子卡片</strong>，<code>alpha_cards/trial_NNNN.yaml</code></td>
+      <td>把上述两种形态绑定起来的元数据视图。Schema 是 dossier schema 的超集：既携带声明式字段（定义、动机、参数化），又携带可执行证据（<code>.py</code> 的文件路径、前缀稳定性状态、密封 CI）。用于计数（H1）、组合（投资组合里程碑）、反向翻译回 dossier 形式。</td>
+      <td>不是产物本身，只是索引条目。没有底层的 <code>.py</code> 与 dossier 文本，卡片只是个空壳。</td>
     </tr>
   </tbody>
 </table>
+
+<p>要点：<em>同一因子</em>以三种形态存在：dossier、Python 函数、把二者链接的卡片。发现运行消费 dossier（检索）、产出 Python 函数（H1 的统计单位）、导出卡片（让函数可被计数、可复用、可反向翻译）。启发式系统是三者的并集；Python 函数是其中 LBG 真正产出的那部分。</p>
 
 <div class="aside">
 <span class="aside-label">这一重新构造为何重要</span>
@@ -1842,8 +1849,8 @@ all_entries = load_index()
 <p>这一重新构造影响四处工程选择，其中两处已经在代码树中：</p>
 
 <ul>
-  <li><strong>检索助手</strong>——<em>已交付。</em><code>lbg/knowledge/factors.py</code> 暴露 <code>search()</code>、<code>get_dossier()</code>、<code>load_index()</code>。当前规模下子串匹配足够；接口稳定到将来可在不改调用方的前提下替换为嵌入检索。</li>
-  <li><strong>追加式索引</strong>——<em>已交付。</em><code>scripts/migrate_factors.py</code> 从 <code>knowledge/factors/dossiers/</code> 重建 <code>knowledge/factors/index.jsonl</code>。新档案可丢入 <code>dossiers/</code> 后重建索引；稳态下也可在上游研究流程产出时直接追加一行。</li>
+  <li><strong>检索助手</strong>：<em>已交付。</em><code>lbg/knowledge/factors.py</code> 暴露 <code>search()</code>、<code>get_dossier()</code>、<code>load_index()</code>。当前规模下子串匹配足够；接口稳定到将来可在不改调用方的前提下替换为嵌入检索。</li>
+  <li><strong>追加式索引</strong>：<em>已交付。</em><code>scripts/migrate_factors.py</code> 从 <code>knowledge/factors/dossiers/</code> 重建 <code>knowledge/factors/index.jsonl</code>。新档案可丢入 <code>dossiers/</code> 后重建索引；稳态下也可在上游研究流程产出时直接追加一行。</li>
   <li><strong>因子卡片 schema 锁定。</strong> 因子卡片旨在比其源策略更长寿，其 schema 因而承重。§6.6 中的 schema 现在被视作锁定清单（§20）的一部分，而非实现细节。</li>
   <li><strong>跨策略因子复用。</strong> 后续里程碑可把现有因子卡片作为新一次发现运行的启发式系统起点。密封性仍然保持（采用新的密封窗口），框架得以把过往优秀发现摊销使用。</li>
 </ul>
@@ -1963,7 +1970,7 @@ result: 5/5 passed → prefix_stability: pass</pre>
 
 <h3>步骤 7–8 · 门控与假设评分</h3>
 
-<p>门控按 §9 的规则运行。交易数高于下限；验证 MaxDD（−0.09）优于在位者（−0.11），故回撤恶化规则不触发；换手率在范围内；复杂度上升 1.0（新增一个指标）。效用 LCB 大致持平（改进真实但微小），但候选在 (Sharpe, drawdown) 上构成帕累托改进——两个指标都向有利方向移动。判定：<strong>接受 · pareto_improvement</strong>。脱敏层把这一结果压缩为单一类别 <code>accepted</code>，作为后续编辑器调用的可见信号。</p>
+<p>门控按 §9 的规则运行。交易数高于下限；验证 MaxDD（−0.09）优于在位者（−0.11），故回撤恶化规则不触发；换手率在范围内；复杂度上升 1.0（新增一个指标）。效用 LCB 大致持平（改进真实但微小），但候选在 (Sharpe, drawdown) 上构成帕累托改进，两个指标都向有利方向移动。判定：<strong>接受 · pareto_improvement</strong>。脱敏层把这一结果压缩为单一类别 <code>accepted</code>，作为后续编辑器调用的可见信号。</p>
 
 <p><code>HypothesisScorer</code> 比较：编辑器声明 <code>expected_validation_signal: accept</code>；实际为 <code>accepted</code>。匹配。<code>hypothesis_outcome: confirmed</code>。</p>
 
@@ -2194,13 +2201,13 @@ memory_updates:
   <h2>五种攻击与对应的拦截</h2>
 </div>
 
-<p>抽象的不变量清单难以评估其价值。本节走过一个足够强的编码型智能体可能尝试的五种 <em>具体攻击</em>，每一种对应的不变量或检查，以及编辑器看到的拒绝信号。它们都不是假想——其变体已在多份关于 LLM 编码型智能体滥用评测框架的公开报告中出现。本节意在让读者直观看到：不变量套件不是可有可无的装饰，它正是允许 H1 裁定具有任何含义的全部前提。</p>
+<p>抽象的不变量清单难以评估其价值。本节走过一个足够强的编码型智能体可能尝试的五种 <em>具体攻击</em>，每一种对应的不变量或检查，以及编辑器看到的拒绝信号。它们都不是假想；其变体已在多份关于 LLM 编码型智能体滥用评测框架的公开报告中出现。本节意在让读者直观看到：不变量套件不是可有可无的装饰，它正是允许 H1 裁定具有任何含义的全部前提。</p>
 
 <h3>攻击 1 · 最常见的：把目标前移用作特征</h3>
 
 <p>最简单也最尴尬的攻击：把目标变量向前 shift，再当作特征使用。</p>
 
-<span class="code-label">indicators/clever_signal.py —— 坏指标</span>
+<span class="code-label">indicators/clever_signal.py：坏指标</span>
 <pre>def clever_signal(df):
     """A 'predictive' signal."""
     future_return = df['AdjC'].pct_change().shift(-1)
@@ -2214,7 +2221,7 @@ memory_updates:
 
 <p>已经内化了静态规则的智能体可能尝试用归一化技巧规避检查。下例能通过 AST 检查，因为没有出现 <code>.shift(-N)</code>。</p>
 
-<span class="code-label">indicators/zscore_momentum.py —— 看似无害</span>
+<span class="code-label">indicators/zscore_momentum.py：看似无害</span>
 <pre>def zscore_momentum(df, lookback=60):
     raw = df['AdjC'].pct_change().rolling(lookback).sum()
     # Normalise across the full series for "stability"
@@ -2230,7 +2237,7 @@ memory_updates:
 
 <p>面临指标压力的智能体可能尝试在 <code>try/except</code> 块内吞掉亏损交易，期望门控只统计幸存下来的交易。</p>
 
-<span class="code-label">对仓位逻辑的提议改动 —— 坏</span>
+<span class="code-label">对仓位逻辑的提议改动：坏</span>
 <pre>def position(signal, ret):
     try:
         # Only count this bar if return is positive
@@ -2247,7 +2254,7 @@ memory_updates:
 
 <p>编辑器的上下文本来应是脱敏的，但一个 Python 指标可能尝试在执行期间直接读取数据文件以绕过脱敏。</p>
 
-<span class="code-label">indicators/cheater.py —— 坏</span>
+<span class="code-label">indicators/cheater.py：坏</span>
 <pre>import pandas as pd
 def cheater(df):
     real = pd.read_parquet('data/spy.parquet')
@@ -2261,7 +2268,7 @@ def cheater(df):
 
 <p>编辑器看不到日历年份，但它可能在假设文本中提出引导性问题，期望反思器（确实能看到一些指标摘要）补全空白。</p>
 
-<span class="code-label">runs/00NN/editor.yaml —— 探测式假设</span>
+<span class="code-label">runs/00NN/editor.yaml：探测式假设</span>
 <pre>hypothesis: |
   Was the most recent drawdown caused by the 2020 COVID
   crash? If so we need a vol-target sizing layer.
@@ -2384,8 +2391,8 @@ proposed_edit:
 <ul>
   <li><strong>接受率不同。</strong> 这一截面中，仅 DSL 系统 10 次试验只接受 2 次；完整 LBG 接受 8 次。最终报告中的合规对比是终态夏普，而非接受率，但发现循环陷入饥饿是动作空间过窄的领先指标。</li>
   <li><strong>接受的种类不同。</strong> 仅 DSL 系统的接受是微调（更小的仓位比例）；完整 LBG 的接受包含能力增加（一层新的波动率感知仓位、一个新的过滤信号）。后者改变了特征集合；前者做不到。</li>
-  <li><strong>两者都会犯错。</strong> 完整 LBG 第 8 次因复杂度被拒——智能体在制度识别器上过度膨胀。这是预期内的；门控的复杂度惩罚正是为压制此类失败模式而设。该拒绝写入记忆，可在后续试验中抑制类似动作。</li>
-  <li><strong>仅 DSL 也能产出一些东西。</strong> 第 1、6、8 次接受确实带来 <em>某种</em> 相对起点的改进。H1 要问的不是"仅 DSL 能否带来改进？"——能。H1 要问的是"程序合成层是否带来 <em>更多</em> 改进？"密封测试给出答案。</li>
+  <li><strong>两者都会犯错。</strong> 完整 LBG 第 8 次因复杂度被拒；智能体在制度识别器上过度膨胀。这是预期内的；门控的复杂度惩罚正是为压制此类失败模式而设。该拒绝写入记忆，可在后续试验中抑制类似动作。</li>
+  <li><strong>仅 DSL 也能产出一些东西。</strong> 第 1、6、8 次接受确实带来 <em>某种</em> 相对起点的改进。H1 要问的不是"仅 DSL 能否带来改进？"，答案是能。H1 要问的是"程序合成层是否带来 <em>更多</em> 改进？"密封测试给出答案。</li>
 </ul>
 
 <div class="aside">
@@ -2416,32 +2423,75 @@ proposed_edit:
 
 <p>任一第零层检查失败，发现运行不得启动。</p>
 
-<h3>第一层：密封裁定</h3>
+<h3>第一层：基于已验证因子的密封裁定</h3>
 
-<p>H1 的主要检验是关于 LBG-Trader 与最强预注册基线之间密封夏普 <em>差值</em> 的分块自助置信区间：</p>
+<p>H1 的分析单位是单张因子卡片。一张卡片被 <em>验证</em> 当且仅当其个体在密封测试上的增量贡献，95% 置信区间下界 &gt; 0。H1 头条检验对各系统的已验证卡片做计数比较。</p>
+
+<h4>步骤 1 · 单卡片的增量密封夏普</h4>
+
+<p>对每张在发现运行中被接受的因子卡片 \(c\)，定义"包含 \(c\)"与"剔除 \(c\)"的两个策略解释器，并计算各自的日收益序列：</p>
 
 <div class="math">
 \[
-\Delta S \;=\; \text{Sharpe}(H_\text{final},\, D_\text{sealed}) \;-\; \text{Sharpe}(B^{*},\, D_\text{sealed})
+r^{\text{with } c}_t = \pi_{H \setminus \{c\} \cup \{c\}}(X_{\le t})\, R_{t+1} - \ldots, \qquad
+r^{\text{without } c}_t = \pi_{H \setminus \{c\}}(X_{\le t})\, R_{t+1} - \ldots
 \]
-<span class="where">\(B^{*}\) 是在 <code>analysis_plan.yaml</code> 中预注册的最强基线。本里程碑下为 DSL 上的贝叶斯优化。"最强"由验证集决定，且必须在密封测试 <em>打开之前</em> 选定；选定结果不得在看到密封结果后修改。</span>
+\[
+\Delta r^{c}_t \;=\; r^{\text{with } c}_t \;-\; r^{\text{without } c}_t, \qquad
+\Delta S_c \;=\; \sqrt{252}\;\frac{\overline{\Delta r^{c}_t}}{\operatorname{std}(\Delta r^{c}_t)}
+\]
+<span class="where">\(\Delta S_c\) 是卡片 \(c\) 加入到 \(H \setminus \{c\}\) 时所贡献的年化信息率。Leave-one-out，在 \(D_\text{sealed}\) 上仅在运行末尾评测一次。</span>
+</div>
+
+<h4>步骤 2 · 对单卡片贡献做分块自助置信区间</h4>
+
+<div class="math">
+\[
+\operatorname{CI}_{95}(\Delta S_c) \;=\; \text{moving block bootstrap}\bigl(\Delta r^{c}_{1:T_\text{sealed}};\ \text{block\_len}=10,\ n=1000\bigr)
+\]
+\[
+c \text{ 为 } \mathbf{\textit{已验证}} \;\;\iff\;\; \operatorname{lower bound}\bigl(\operatorname{CI}_{95}(\Delta S_c)\bigr) \;>\; 0
+\]
+</div>
+
+<h4>步骤 3 · H1 的计数检验（按系统）</h4>
+
+<div class="math">
+\[
+N^{\,\text{val}}_\text{LBG} \;=\; \#\bigl\{ c \in \text{cards}_\text{LBG} : c \text{ 被验证} \bigr\}
+\]
+\[
+N^{\,\text{val}}_{B^{*}} \;=\; \#\bigl\{ c \in \text{cards}_{B^{*}} : c \text{ 被验证} \bigr\}
+\]
+<span class="where">对每个预注册系统（LBG-Trader、DSL 上 BO、网格、随机、单次提案、仅 DSL LLM、无记忆消融、无策展器消融、无约束 Python 消融），对其每张被接受的候选执行步骤 1–2，再做验证卡片计数。H1 裁定为等同算力预算下的计数对比。</span>
 </div>
 
 <div class="math">
 \[
 \begin{aligned}
-\textbf{H1 强结论：} \quad & \operatorname{lower bound}\bigl(\,\text{CI}_{95}(\Delta S)\,\bigr) \;>\; 0 \\[6pt]
-\textbf{H1 弱结论：} \quad & \text{Sharpe}(H_\text{final}) \;>\; \text{Sharpe}(B^{*}) \\
-& \text{且 } \operatorname{MaxDD}(H_\text{final}) \text{ 不劣于 } \operatorname{MaxDD}(B^{*}) \\
-& \text{且换手率、成本处于预注册范围内}
+\textbf{H1 强结论：} \quad & N^{\,\text{val}}_\text{LBG} \;>\; \max_{B} N^{\,\text{val}}_B \quad\text{且}\quad N^{\,\text{val}}_\text{LBG} \ge \tau \\[4pt]
+\textbf{H1 弱结论：} \quad & N^{\,\text{val}}_\text{LBG} \ge 1 \quad\text{且}\quad N^{\,\text{val}}_\text{LBG} \ge N^{\,\text{val}}_{B^{*}}
 \end{aligned}
 \]
-<span class="where">置信区间通过移动块自助法（moving block bootstrap）计算，块长 \(\text{block\_len} = 10\)，重抽次数 \(n_\text{bootstrap} = 1000\)，应用于 LBG-Trader 与 \(B^{*}\) 在密封窗口上配对的日度收益序列。强结论决定头条裁定；弱结论作为补充材料一同报告。</span>
+<span class="where">\(B^{*}\) 是验证集产量最强的基线，在密封窗口打开 <em>之前</em> 选定，选定结果不得修改。\(\tau\) 是预注册的最小阈值（当前 \(\tau = 3\)），低于此值的正向对比不算有意义的证明。同时报告 \(N^{\,\text{val}}_\text{LBG} - N^{\,\text{val}}_{B^{*}}\) 的自助置信区间。</span>
 </div>
 
-<p>这一检验比"LBG 的置信区间下界超过 \(B^{*}\) 的点估计"更严格。差别在于：直接比较差值分布可避免一个常见陷阱：两个不重叠的置信区间被声称为显著，但实际差值并不显著。</p>
+<h4>步骤 4 · 策略层 Δ Sharpe（补充而非 H1）</h4>
 
-<p>选择块长为 10 的依据在于：日度收益存在短期序列自相关，独立同分布自助会低估方差，块长大约取相关程度的两到三倍较为稳健，10 个交易日（约两周）覆盖典型的短期相关窗口。</p>
+<p>在组合策略的日收益上做配对差值统计：</p>
+
+<div class="math">
+\[
+\Delta S^{\,\text{strat}} \;=\; \text{Sharpe}(H_\text{final},\, D_\text{sealed}) \;-\; \text{Sharpe}(B^{*},\, D_\text{sealed})
+\]
+</div>
+
+<p>仍然报告（同样以 \(\text{block\_len} = 10\)、\(n = 1000\) 的分块自助置信区间形式）。它回答的是"组合后的策略在这一段密封窗口上是否优于基线策略？"，有用，但不是 H1 裁定。一个产出大量已验证因子、但组合策略不佳的框架仍可通过 H1；反之，一个恰好击败 \(B^{*}\) 的幸运单策略，若其背后没有任何被个体验证的因子，则不能通过 H1。这一重新构造是有意为之：产出的持久性，而非单一产物的头条。</p>
+
+<div class="aside">
+<span class="aside-label">为何用计数而非均值</span>
+对 <code>ΔS_c</code> 跨卡片求均值看似诱人但具有误导性。一张贡献极端的卡片可主导均值，掩盖框架其实只靠一个幸运函数的事实。对超过置信阈值的卡片做计数可避免这一陷阱：每张卡片贡献 0 或 1，计数对异常值天然鲁棒。这也与运行实践相符；重新发现时，每张被验证的卡片留存，未被验证的弃用；计数正是因子图书馆所累积的量。
+</div>
 
 <h3>第二层：过程指标的形式化</h3>
 
@@ -2524,24 +2574,40 @@ proposed_edit:
 
 <span class="code-label">analysis_plan.yaml</span>
 <pre>primary_comparison:
-  test: block_bootstrap_difference
-  candidate: full_lbg_trader
-  reference: best_validation_pre_sealed_baseline
-  metric: sealed_sharpe
-  ci: 0.95
-  success_rule: lower_bound_gt_zero
-  block_len: 10
-  n_bootstrap: 1000
+  test:           validated_factor_count
+  candidate:      full_lbg_trader
+  references:     [bo_on_dsl, grid_on_dsl, random_search,
+                   one_shot_llm, dsl_only_llm,
+                   no_memory_ablation, no_curator_ablation,
+                   unconstrained_python_ablation]
 
-secondary_comparisons:
-  - full_lbg_trader vs llm_dsl_only
-  - full_lbg_trader vs no_memory_ablation
-  - full_lbg_trader vs no_curator_ablation
-  - full_lbg_trader vs unconstrained_python_ablation
+  per_card_validation:
+    method:       leave_one_out_incremental_sharpe
+    ci:           0.95
+    ci_method:    moving_block_bootstrap
+    block_len:    10
+    n_bootstrap:  1000
+    threshold:    lower_bound_gt_zero
+
+  success_rule:
+    h1_strong:    N_val_lbg > max_over_baselines(N_val_B) AND N_val_lbg >= tau
+    h1_weak:      N_val_lbg >= 1 AND N_val_lbg >= N_val_B_star
+    tau:          3
+
+supplementary_strategy_comparison:
+  test:           block_bootstrap_difference
+  metric:         sealed_strategy_sharpe
+  reference:      best_validation_pre_sealed_baseline
+  ci:             0.95
+  block_len:      10
+  n_bootstrap:    1000
+  # 同时报告但不作为 H1 裁定
 
 reported_metrics:
-  - sealed_sharpe
-  - sealed_max_drawdown
+  - validated_factor_count_per_system
+  - per_card_incremental_sharpe_with_ci
+  - sealed_strategy_sharpe
+  - sealed_strategy_max_drawdown
   - validation_to_sealed_degradation
   - acceptance_rate_trend
   - hypothesis_calibration
@@ -2550,13 +2616,14 @@ reported_metrics:
   - tokens_total
 
 multiple_testing_correction:
-  family: secondary_comparisons
-  method: holm_bonferroni
-  family_wise_error_rate: 0.05</pre>
+  family:               per_card_ci_tests
+  method:               benjamini_hochberg
+  false_discovery_rate: 0.10
+  # 此处用 FDR 而非 FWER：每张卡片是独立的发现候选，而非确认性对比。</pre>
 
-<p>主比较是单一检验，其 <em>p</em> 值（等价地，置信区间下界）即 H1 裁定。次级比较使用 Holm-Bonferroni 法控制族系误差率（FWER）于 0.05。任何未在密封测试打开之前出现在 <code>analysis_plan.yaml</code> 中的比较，将被报告为"事后探索性比较"，且明确不可用于支持 H1。</p>
+<p>主比较是按系统计数 <code>N_val</code>，再做对比；H1 强结论要求 LBG 的计数严格大于所有基线，且不低于阈值 \(\tau\)。补充性的策略层 ΔSharpe 仍以 Holm-Bonferroni 控制族系误差率报告。任何未在密封测试打开之前出现在 <code>analysis_plan.yaml</code> 中的比较，将被报告为"事后探索性比较"，且明确不可用于支持 H1。</p>
 
-<p>关于 Holm-Bonferroni 法的简要说明：它按照 <em>p</em> 值从小到大顺序，将第 \(i\) 个比较的临界值设为 \(\alpha / (m - i + 1)\)（\(m\) 为比较数）。相较于 Bonferroni 法的均匀划分，该方法在保持族系误差率控制的同时具有更高的检验功效，是医学和心理学论文中的标准做法。</p>
+<p>关于 FDR（错误发现率）与 FWER（族系误差率）的区别：当每个比较是 <em>独立的发现候选</em>（这里是每张卡片是否被验证），用 Benjamini-Hochberg 控制 FDR 在 0.10 是更合适的；FWER 适用于 <em>确认性对比</em>（系统 A 是否严格优于系统 B 一项），后者仍保留给策略层比较。</p>
 
 <div class="aside">
 <span class="aside-label">本节为何最关键</span>
@@ -2570,7 +2637,7 @@ multiple_testing_correction:
   <h2>LBG-Trader 如何兑现 HL 的承诺</h2>
 </div>
 
-<p>第二部分至此已完整规范了方法论。本节回身把整套方法论与 Weng 博文所结晶的 <em>启发式学习</em>（Heuristic Learning, HL）框架做一次审计——HL 是学习对象为软件而非权重的学习循环。该博文列出了 HL 应具备的五项性质。在前文已逐一交代各项机制的基础上，我们现在可以把每一项性质视作可被检验的承诺，并指向兑现它的具体章节。如果未来有审稿人发问"贵项目是真的实现了 HL，还是只是在挪用术语？"，§10.6 就是审计线索；下文的每一条引用都向后回看，指向读者已经读过的规范。</p>
+<p>第二部分至此已完整规范了方法论。本节回身把整套方法论与 Weng 博文所结晶的 <em>启发式学习</em>（Heuristic Learning, HL）框架做一次审计：HL 是学习对象为软件而非权重的学习循环。该博文列出了 HL 应具备的五项性质。在前文已逐一交代各项机制的基础上，我们现在可以把每一项性质视作可被检验的承诺，并指向兑现它的具体章节。如果未来有审稿人发问"贵项目是真的实现了 HL，还是只是在挪用术语？"，§10.6 就是审计线索；下文的每一条引用都向后回看，指向读者已经读过的规范。</p>
 
 <h3>Weng 风格的维度表，增列一栏</h3>
 
@@ -2639,7 +2706,7 @@ multiple_testing_correction:
   <div class="col-card alt">
     <h4>2 · 样本效率</h4>
     <p style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7; margin: 0 0 10px;"><strong>HL 论断。</strong> 一次有效代码更新即可跳到新策略，无需慢慢爬梯度。</p>
-    <p style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7; margin: 0 0 10px;"><strong>LBG-Trader 机制。</strong> 每次被接受的试验都是代码空间中的结构性跳跃。发现预算为每次运行 50 次试验，足够是因为每次编辑可改变特征集合，而不仅仅是参数——这是 BO / 网格基线做不到的。评测第四层（§10.5）显式报告"每百万 token 夏普"与夏普并列，使效率论断在等同算力下可与梯度类基线对比。</p>
+    <p style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7; margin: 0 0 10px;"><strong>LBG-Trader 机制。</strong> 每次被接受的试验都是代码空间中的结构性跳跃。发现预算为每次运行 50 次试验，足够是因为每次编辑可改变特征集合，而不仅仅是参数；这是 BO / 网格基线做不到的。评测第四层（§10.5）显式报告"每百万 token 夏普"与夏普并列，使效率论断在等同算力下可与梯度类基线对比。</p>
     <p style="font-family: var(--sans); font-size: 13px; color: var(--ink-muted); margin: 0;"><em>验证位置：</em> §5（双时间尺度）、§10.5 第四层（成本诚实）。</p>
   </div>
   <div class="col-card">
@@ -2669,7 +2736,7 @@ multiple_testing_correction:
 
 <h3>本映射不承诺什么</h3>
 
-<p>两点提醒。第一，满足 HL 性质清单本身并不意味着策略一定泛化——后者由密封测试裁定，H1 / H2 / H3 给出最终结论。HL 性质是必要的基础设施，不是裁定本身。第二，交易引入了 Weng 在 Atari 套件上的实验未触及的失败模式（对抗性回测面、分布漂移、LLM 中潜在的日历先验）。不变量套件（§9）与脱敏反馈纪律（§7）正是为防止 HL 所承诺的性质被这些交易特有的压力悄悄瓦解而存在。如果没有这些防线，上述每条性质技术上仍然成立，但最终策略仍会是错的。</p>
+<p>两点提醒。第一，满足 HL 性质清单本身并不意味着策略一定泛化；后者由密封测试裁定，H1 / H2 / H3 给出最终结论。HL 性质是必要的基础设施，不是裁定本身。第二，交易引入了 Weng 在 Atari 套件上的实验未触及的失败模式（对抗性回测面、分布漂移、LLM 中潜在的日历先验）。不变量套件（§9）与脱敏反馈纪律（§7）正是为防止 HL 所承诺的性质被这些交易特有的压力悄悄瓦解而存在。如果没有这些防线，上述每条性质技术上仍然成立，但最终策略仍会是错的。</p>
 </section>
 
 <div class="part-marker">
@@ -2692,8 +2759,8 @@ multiple_testing_correction:
   </div>
   <div class="stage-content">
     <h4>密封评测的 LBG 运行</h4>
-    <p>发现引擎在选定标的与日期范围上运行一次 LBG 循环。输出：冻结后的 <code>strategy.yaml</code> + <code>indicators/*.py</code> 产物、一次密封测试裁定、一份最终报告。这是科学核心，针对本次标的、本段时期、本套协议回答 H1/H2/H3。</p>
-    <p class="stage-meta">时长：数小时至一天 · 成本：数十美元的 token · 交付物：策略产物</p>
+    <p>发现引擎在选定标的与日期范围上运行一次 LBG 循环。输出：<strong>两类产物并行</strong>：(1) 一组已验证因子卡片（每张是通过密封测试、依 §10.5 第一层得到验证的前缀稳定 Python 因子），(2) 一份组合这些因子的冻结 <code>strategy.yaml</code> + <code>indicators/*.py</code>。再加上一次密封测试裁定与一份最终报告。这是科学核心，针对本次标的、本段时期、本套协议回答 H1/H2/H3。卡片跨多次重新发现留存（§13）；策略每次重新组合。</p>
+    <p class="stage-meta">时长：数小时至一天 · 成本：数十美元的 token · 交付物：已验证因子库 + 组合策略</p>
   </div>
 </div>
 
@@ -2781,11 +2848,11 @@ multiple_testing_correction:
       <td>
         <p style="margin: 0 0 6px;">这是唯一具有真实日度节奏的阶段。一个典型工作日：</p>
         <ul style="margin: 0 0 4px 18px; font-size: 13px;">
-          <li><strong>09:00</strong> —— 盘前数据刷新；前一日的复权 K 线终结；<code>features.py</code> 重算特征表。</li>
-          <li><strong>09:05</strong> —— <code>policy_interpreter.py</code> 消费特征表，输出当日目标仓位。记录到 <code>paper/decisions.jsonl</code>。</li>
-          <li><strong>09:30</strong> —— 开盘。成交模拟器以开盘价记录模拟成交，应用锁定的 5.5 bp 成本，更新模拟组合。</li>
-          <li><strong>16:00</strong> —— 收盘。计算日终损益；追加 <code>paper/equity.jsonl</code>；仪表盘刷新。</li>
-          <li><strong>16:30</strong> —— 回测-模拟差距监控重算。若差距超出阈值 30 天以上，触发重新发现（Slack 告警 + 写入 <code>paper/triggers.jsonl</code>）。</li>
+          <li><strong>09:00</strong>：盘前数据刷新；前一日的复权 K 线终结；<code>features.py</code> 重算特征表。</li>
+          <li><strong>09:05</strong>：<code>policy_interpreter.py</code> 消费特征表，输出当日目标仓位。记录到 <code>paper/decisions.jsonl</code>。</li>
+          <li><strong>09:30</strong>：开盘。成交模拟器以开盘价记录模拟成交，应用锁定的 5.5 bp 成本，更新模拟组合。</li>
+          <li><strong>16:00</strong>：收盘。计算日终损益；追加 <code>paper/equity.jsonl</code>；仪表盘刷新。</li>
+          <li><strong>16:30</strong>：回测-模拟差距监控重算。若差距超出阈值 30 天以上，触发重新发现（Slack 告警 + 写入 <code>paper/triggers.jsonl</code>）。</li>
           <li>以上全部不涉及 LLM。每根 K 线的计算耗时远低于一秒。</li>
         </ul>
       </td>
@@ -2805,7 +2872,7 @@ multiple_testing_correction:
   </tbody>
 </table>
 
-<p>这里平淡得令人意外的一点是：第三、四阶段每日的代码路径实际做的事情极少——读取当日 K 线、计算少量指标、输出一个 \([0,1]\) 内的数、记录日志。智能完全在上游，被冻结在 <code>strategy.yaml</code> 与 <code>indicators/</code> 中。这正是"运行期间拒绝调用 LLM"所兑现的可见收益。</p>
+<p>这里平淡得令人意外的一点是：第三、四阶段每日的代码路径实际做的事情极少：读取当日 K 线、计算少量指标、输出一个 \([0,1]\) 内的数、记录日志。智能完全在上游，被冻结在 <code>strategy.yaml</code> 与 <code>indicators/</code> 中。这正是"运行期间拒绝调用 LLM"所兑现的可见收益。</p>
 </section>
 
 <section id="engines">
@@ -2967,6 +3034,8 @@ multiple_testing_correction:
 <p>两次重新发现之间，策略保持冻结。执行引擎只是在当前激活的 <code>strategy.yaml</code> 与 <code>indicators/</code> 上运行 <code>policy_interpreter.py</code>。无编辑、无 LLM。这正是日常运行得以廉价、可靠、可复现的原因。</p>
 
 <p>这也意味着对每一个标的池而言，始终恰好存在一个激活的策略产物，且谱系清晰。若 Q1 策略为 <code>2026-Q1_spy_a</code>，Q4 重新发现产出 <code>2026-Q4_spy_a</code>，则后者干净地替代前者，前者归档以便历史对比与审计。</p>
+
+<p>因子库则相反，它 <em>累积</em>。Q1 的已验证因子卡片不会被 Q4 重新发现作废，它们仍是因子卡片库的条目，如果在 Q4 的密封测试上仍然能验证，可被重新组合进 Q4 策略。Q4 发现运行以并集（Q1 卡片 + 新候选）为种子池启动：一些 Q1 卡片在新密封窗口上不再通过验证（被标 <code>deprecated</code> 并附带日期注释）；一些继续通过验证、被复用；一些新候选被加入。多次重新发现后，策略产物在更替，因子库的规模在上涨、坏率在下降。这种复利正是 §2 中"持久性"论断的运行化兑现。</p>
 </section>
 
 <section id="universe">
@@ -3094,34 +3163,28 @@ multiple_testing_correction:
   <h2>最终报告的形态</h2>
 </div>
 
-<p>第一阶段的交付物是一份静态 HTML 最终报告。在展示任何数字之前，先给出 H1/H2/H3 裁定的头条结论。下面给出一个 H1 正面结局的报告草图。</p>
+<p>第一阶段的交付物是一份静态 HTML 最终报告。在展示任何数字之前，先给出 H1/H2/H3 裁定的头条结论。下面给出一个 H1 正面结局的报告草图。图序与 §4 的 H1 框架一致：已验证因子数量是裁定，组合策略是辅助上下文。</p>
 
-<div class="schematic-label">图 6–8 为报告版式的示意性插图，并非真实结果。报告生成器在渲染时会为每张图加上 <code>synthetic</code>（合成）或 <code>actual</code>（真实）标签。</div>
+<div class="schematic-label">图 6–9 为报告版式的示意性插图，并非真实结果。报告生成器在渲染时会为每张图加上 <code>synthetic</code>（合成）或 <code>actual</code>（真实）标签。</div>
 
 <div class="figure">
 <div class="chart-wrap">
-  <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; font-family: var(--sans); font-size: 11px; color: var(--ink-muted);">
-    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #2d6a5c;"></span>LBG-Trader</span>
-    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #b88a2c; border-top: 1px dashed #b88a2c; background: transparent;"></span>网格搜索</span>
-    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #8b3a2f;"></span>仅 DSL 的 LLM</span>
-    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #6b6b70;"></span>买入持有</span>
-    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #a4a4a8;"></span>SMA 双均线</span>
-  </div>
+  <div style="font-family: var(--sans); font-size: 12px; color: var(--ink-muted); margin-bottom: 8px;">等同算力预算下，各系统的已验证因子卡片数量</div>
   <div style="position: relative; height: 240px;">
-    <canvas id="equityChart" role="img" aria-label="各系统在密封测试上的净值曲线"></canvas>
+    <canvas id="factorCountChart" role="img" aria-label="各系统的已验证因子计数"></canvas>
   </div>
 </div>
-<div class="figure-caption"><strong>图 6。</strong> 合成的密封测试净值曲线。在 H1 正面结局下，LBG-Trader 通过更低的回撤在风险调整指标上拉开差距，即便买入持有在总收益上不逊色甚至超过。</div>
+<div class="figure-caption"><strong>图 6 · H1 头条。</strong> 每根柱形是该系统所产出的、其个体在密封测试上的增量夏普 95% 分块自助置信区间下界 &gt; 0 的因子卡片数量（依 §10.5 第一层）。H1 强结论要求 LBG-Trader 的柱形严格高于最高基线柱形，且不低于 \(\tau = 3\)。在 H1 正面结局下，青色 LBG 柱形明显高出金色基线一簇，正是这一结果的一目了然版。</div>
 </div>
 
 <div class="figure">
 <div class="chart-wrap">
-  <div style="font-family: var(--sans); font-size: 12px; color: var(--ink-muted); margin-bottom: 8px;">密封夏普（含移动块自助 95% 置信区间）</div>
-  <div style="position: relative; height: 220px;">
-    <canvas id="sharpeChart" role="img" aria-label="各系统的密封夏普及置信区间"></canvas>
+  <div style="font-family: var(--sans); font-size: 12px; color: var(--ink-muted); margin-bottom: 8px;">每张卡片的密封增量夏普 \(\Delta S_c\) 及 95% 自助置信区间</div>
+  <div style="position: relative; height: 260px;">
+    <canvas id="cardSharpeChart" role="img" aria-label="每张卡片的密封增量夏普及置信区间"></canvas>
   </div>
 </div>
-<div class="figure-caption"><strong>图 7。</strong> 各系统的密封夏普及自助置信区间。H1 裁定取决于 §10.5 规定的 <em>配对差值</em> 检验（LBG-Trader 与预注册最强基线之间差值的自助检验）而非对各系统置信区间作视觉比较。各系统单独的置信区间是补充性背景，不是裁定本身。</div>
+<div class="figure-caption"><strong>图 7 · 计数背后的 Python 函数。</strong> 一次发现运行中，智能体写入 <code>indicators/*.py</code> 的每个 Python 因子函数，按接受顺序排列。圆点是 leave-one-out 增量密封夏普的点估计；竖线是 95% 分块自助置信区间。置信区间下界高于零（虚线参考线之上）的函数被计入图 6 的统计；每个函数旁边的卡片是元数据索引，但被验证幸存下来的是函数本身。读者可直接从本图核对 H1 计数。</div>
 </div>
 
 <div class="figure">
@@ -3136,7 +3199,23 @@ multiple_testing_correction:
     <canvas id="overfitChart" role="img" aria-label="已接受试验上的过拟合差距"></canvas>
   </div>
 </div>
-<div class="figure-caption"><strong>图 8。</strong> 过拟合差距诊断。训练夏普随智能体改进而上升，推断出的验证强度紧随其后，红色虚线表示的差距保持狭小。差距持续扩大将表明智能体在门控之下仍在过拟合。</div>
+<div class="figure-caption"><strong>图 8 · 过拟合差距诊断。</strong> 训练夏普随智能体改进而上升，推断出的验证强度紧随其后，红色虚线表示的差距保持狭小。差距持续扩大将表明智能体在门控之下仍在过拟合。</div>
+</div>
+
+<div class="figure">
+<div class="chart-wrap">
+  <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; font-family: var(--sans); font-size: 11px; color: var(--ink-muted);">
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #2d6a5c;"></span>LBG-Trader 策略</span>
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #b88a2c; border-top: 1px dashed #b88a2c; background: transparent;"></span>网格搜索</span>
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #8b3a2f;"></span>仅 DSL 的 LLM</span>
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #6b6b70;"></span>买入持有</span>
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #a4a4a8;"></span>SMA 双均线</span>
+  </div>
+  <div style="position: relative; height: 240px;">
+    <canvas id="equityChart" role="img" aria-label="各系统在密封测试上的净值曲线"></canvas>
+  </div>
+</div>
+<div class="figure-caption"><strong>图 9 · 策略净值，补充性。</strong> 密封窗口上组合策略的净值曲线，并列各基线。这是可进入第二阶段的产物，也是多数读者最关心的视觉，但它 <em>不是</em> H1 裁定；裁定在图 6 与图 7。策略在此处更强或更弱，都不会改变已验证因子计数。</div>
 </div>
 </section>
 
@@ -3253,6 +3332,11 @@ multiple_testing_correction:
   <li>指标函数须满足前缀稳定性（§4.5）；动态不变量通过扰动测试强制执行</li>
   <li>每一次新增或修改指标且被接受的试验，须导出因子卡片（§6.6）</li>
   <li>日历标签（年份、命名事件）仅出现在面向人的最终报告与编排器内部日志中，绝不出现在智能体提示模板或任何 <code>ContextBuilder</code> 可读的文件中</li>
+  <li><strong>HL 的学习对象</strong>是启发式系统：<code>indicators/*.py</code>（Python 因子函数）、<code>strategy.yaml</code>、若干显式记忆层、git 谱系四者的并集。在此系统内 <em>LBG 真正产出的核心产物</em>，是智能体编写的 Python 因子函数集合。Dossier 与因子卡片是这些函数的翻译/元数据视图，并非交付物本身</li>
+  <li><strong>H1 的统计单位</strong>是 <em>幸存的 Python 因子函数</em>，通过其因子卡片做计数操作：一个函数其个体 leave-one-out 增量密封夏普的 95% 分块自助置信区间下界 &gt; 0（block_len 10、n_bootstrap 1000）。H1 裁定为等同算力预算下各系统的计数对比；H1 强结论要求 LBG-Trader 的计数严格大于最强基线，且不低于 \(\tau = 3\)。单卡片验证的多重检验校正用 Benjamini-Hochberg 控制 FDR 于 0.10</li>
+  <li>因子卡片 schema（§6.6）锁定为 <code>knowledge/factors/dossiers/</code> 中输入 dossier schema 的 <em>超集</em>：声明式字段（<code>factor_name</code>、<code>core_analysis</code>、<code>parameterization</code>、<code>combination_and_fusion</code>）加可执行证据（<code>python_implementation_path</code>、<code>prefix_stability_passed</code>、<code>sealed_evidence</code>、<code>status</code>）。这使 Python ↔ dossier 双向翻译有明确定义</li>
+  <li>已验证因子库为追加式，跨多次重新发现共享。第 N 次运行的幸存函数（及其卡片）进入第 N+1 次运行的种子池；在新密封窗口上重新验证后，要么保留、要么标 <code>deprecated</code>、要么合并。函数绝不无记录丢弃</li>
+  <li>外部因子档案存放于 <code>knowledge/factors/</code>（只读、跨多次运行共享），仅通过 <code>lbg.knowledge.search()</code> 暴露给编辑器。任何档案引用都不豁免任何不变量或密封测试</li>
 </ol>
 </div>
 
@@ -3312,47 +3396,94 @@ new Chart(document.getElementById('equityChart'), {
   }
 });
 
-new Chart(document.getElementById('sharpeChart'), {
+// 图 6 · 各系统已验证因子计数（H1 头条）
+const factorCountLabels = ['LBG-Trader', '仅 DSL LLM', 'DSL 上 BO', '网格', '随机', '单次提案', '无记忆消融', '无策展消融', '无约束 Python'];
+const factorCountValues = [12, 4, 3, 2, 1, 1, 5, 7, 0];
+const factorCountColors = factorCountLabels.map(l => l === 'LBG-Trader' ? palette.teal : palette.inkFaint);
+
+new Chart(document.getElementById('factorCountChart'), {
   type: 'bar',
   data: {
-    labels: ['LBG-Trader', '网格搜索', 'DSL 上 BO', '仅 DSL LLM', 'SMA 双均线', '随机搜索', '买入持有', '单次提案'],
+    labels: factorCountLabels,
+    datasets: [{
+      label: '已验证卡片',
+      data: factorCountValues,
+      backgroundColor: factorCountColors,
+      borderRadius: 2,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} 张已验证卡片` } }
+    },
+    scales: {
+      x: { ticks: { font: { family: 'Inter', size: 10 }, maxRotation: 30, color: palette.inkMuted }, grid: { display: false } },
+      y: { beginAtZero: true, ticks: { font: { family: 'Inter', size: 10 }, stepSize: 2, color: palette.inkMuted }, grid: { color: 'rgba(107,107,112,0.12)' }, title: { display: true, text: 'N_val', color: palette.inkMuted, font: { family: 'Inter', size: 10 } } }
+    }
+  }
+});
+
+// 图 7 · 每张因子卡片的增量密封夏普与置信区间
+const cardIds = ['c01','c02','c03','c04','c05','c06','c07','c08','c09','c10','c11','c12','c13','c14','c15','c16'];
+const cardPoint = [0.42, 0.31, 0.18, 0.05, 0.28, 0.55, 0.12, 0.36, -0.08, 0.22, 0.48, 0.09, 0.30, 0.16, 0.41, -0.12];
+const cardCiLow = [0.18, 0.10, 0.02, -0.20, 0.09, 0.32, -0.05, 0.14, -0.30, 0.04, 0.24, -0.07, 0.08, -0.02, 0.19, -0.35];
+const cardCiHi  = [0.66, 0.52, 0.34, 0.30, 0.47, 0.78, 0.29, 0.58, 0.14, 0.40, 0.72, 0.25, 0.52, 0.34, 0.63, 0.11];
+const cardValidated = cardCiLow.map(v => v > 0);
+
+new Chart(document.getElementById('cardSharpeChart'), {
+  type: 'scatter',
+  data: {
     datasets: [
       {
-        label: '夏普',
-        data: [0.71, 0.58, 0.55, 0.53, 0.52, 0.49, 0.45, 0.41],
-        backgroundColor: [palette.teal, palette.gold, palette.gold, palette.accent, palette.inkFaint, '#7a7a7e', palette.inkMuted, '#9a9a9e'],
-        borderRadius: 2,
+        label: '已验证（CI 下界 > 0）',
+        data: cardPoint.map((y, i) => ({ x: i, y, low: cardCiLow[i], hi: cardCiHi[i], validated: cardValidated[i] })).filter((_, i) => cardValidated[i]),
+        backgroundColor: palette.teal,
+        pointRadius: 5,
       },
       {
-        type: 'line',
-        label: 'CI 下界',
-        data: [0.48, 0.36, 0.33, 0.30, 0.31, 0.26, 0.22, 0.19],
-        showLine: false,
-        pointStyle: 'line',
-        pointRadius: 6,
-        pointBorderColor: palette.ink,
-        pointBorderWidth: 1.5,
-      },
-      {
-        type: 'line',
-        label: 'CI 上界',
-        data: [0.94, 0.78, 0.76, 0.74, 0.74, 0.72, 0.66, 0.62],
-        showLine: false,
-        pointStyle: 'line',
-        pointRadius: 6,
-        pointBorderColor: palette.ink,
-        pointBorderWidth: 1.5,
+        label: '未验证',
+        data: cardPoint.map((y, i) => ({ x: i, y, low: cardCiLow[i], hi: cardCiHi[i], validated: cardValidated[i] })).filter((_, i) => !cardValidated[i]),
+        backgroundColor: palette.inkFaint,
+        pointRadius: 5,
       },
     ]
   },
   options: {
     responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => `ΔS=${ctx.raw.y.toFixed(2)} CI [${ctx.raw.low.toFixed(2)}, ${ctx.raw.hi.toFixed(2)}]` } }
+    },
     scales: {
-      x: { ticks: { font: { family: 'Inter', size: 10 }, maxRotation: 30, color: palette.inkMuted }, grid: { display: false } },
-      y: { beginAtZero: true, ticks: { font: { family: 'Inter', size: 10 }, callback: v => v.toFixed(2), color: palette.inkMuted }, grid: { color: 'rgba(107,107,112,0.12)' } }
+      x: { type: 'linear', min: -0.5, max: cardIds.length - 0.5, ticks: { font: { family: 'Inter', size: 10 }, stepSize: 1, callback: v => cardIds[v] || '', color: palette.inkMuted }, grid: { display: false }, title: { display: true, text: 'Python 因子函数（已验证，按接受顺序）', color: palette.inkMuted, font: { family: 'Inter', size: 10 } } },
+      y: { min: -0.5, max: 1.0, ticks: { font: { family: 'Inter', size: 10 }, callback: v => v.toFixed(2), color: palette.inkMuted }, grid: { color: ctx => ctx.tick.value === 0 ? palette.accent : 'rgba(107,107,112,0.12)' }, title: { display: true, text: 'ΔS_c（密封增量夏普）', color: palette.inkMuted, font: { family: 'Inter', size: 10 } } }
     }
-  }
+  },
+  plugins: [{
+    id: 'errorBars',
+    afterDatasetsDraw(chart) {
+      const { ctx, scales: { x, y } } = chart;
+      ctx.save();
+      ctx.lineWidth = 1.2;
+      cardPoint.forEach((pt, i) => {
+        const xPx = x.getPixelForValue(i);
+        const yLowPx = y.getPixelForValue(cardCiLow[i]);
+        const yHiPx = y.getPixelForValue(cardCiHi[i]);
+        ctx.strokeStyle = cardValidated[i] ? palette.teal : palette.inkFaint;
+        ctx.beginPath();
+        ctx.moveTo(xPx, yLowPx);
+        ctx.lineTo(xPx, yHiPx);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(xPx - 3, yLowPx); ctx.lineTo(xPx + 3, yLowPx);
+        ctx.moveTo(xPx - 3, yHiPx);  ctx.lineTo(xPx + 3, yHiPx);
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+  }]
 });
 
 const accTrials = [1,2,3,4,5,6,7,8,9,10,11,12];

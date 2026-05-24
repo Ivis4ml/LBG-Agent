@@ -1,0 +1,1 @@
+{"trial_id":0,"explanation":"Baseline strategy established; Sharpe ~0.69 on train, Sharpe ~0.93 on val.","hypothesis_outcome":"confirmed","accepted_rules_updates":["cross_above + cross_below entry/exit on two SMAs is a viable baseline"],"failed_directions_updates":[],"open_questions_updates":[],"do_not_repeat_updates":[]}
