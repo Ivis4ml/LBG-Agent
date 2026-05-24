@@ -84,6 +84,7 @@ class Discovery:
         timeout_sec: float = 30.0,
         prefix_stability_n_samples: int = 12,
         prefix_stability_n_perturbations: int = 2,
+        live: LiveStatusWriter | None = None,
     ) -> None:
         self.repo_root = Path(repo_root).resolve()
         self.runner = runner or RoleRunner()
@@ -97,7 +98,9 @@ class Discovery:
         )
         self.curator = Curator(self.runner, self.memory, git=self.git)
         self.alpha_writer = AlphaCardWriter(self.repo_root)
-        self.live = LiveStatusWriter(self.repo_root)
+        # The campaign may want all iterations to write to the same jsonl;
+        # when caller supplies a writer, don't truncate via __init__.
+        self.live = live if live is not None else LiveStatusWriter(self.repo_root)
         self.gate_config = gate_config or GateConfig()
         self.timeout_sec = timeout_sec
         self.prefix_n = prefix_stability_n_samples
@@ -355,6 +358,31 @@ class Discovery:
             parent_commit = self.git.head_sha()
         except GitCommandError:
             parent_commit = "0" * 40
+
+        # Auto-extract cited factors for add_indicator trials when the
+        # Editor forgot to populate cited_factors. Empirically only ~27% of
+        # Editor proposals carried structured citations (campaign v3); this
+        # gives ContextBuilder a deterministic floor so dedup still works.
+        cited = list(editor_result.proposal.cited_factors)
+        cite_source = "editor_cite"
+        if not cited and apply_result.edit_summary.type == EditType.ADD_INDICATOR:
+            from lbg.knowledge.factors import extract_factor_names_from_string
+
+            ed_change = editor_result.proposal.proposed_edit.change
+            haystack = " ".join(
+                filter(
+                    None,
+                    [
+                        getattr(ed_change, "name", None),
+                        getattr(ed_change, "fn", None),
+                    ],
+                )
+            )
+            extracted = extract_factor_names_from_string(haystack)
+            if extracted:
+                cited = extracted
+                cite_source = "auto_extract"
+
         record = TrialRecord(
             trial_id=trial_id,
             parent_commit=parent_commit,
@@ -392,9 +420,23 @@ class Discovery:
                 + refl_result.compute.wall_clock_sec,
             ),
             fallback_if_rejected=editor_result.proposal.fallback_if_rejected,
-            cited_factors=list(editor_result.proposal.cited_factors),
+            cited_factors=cited,
         )
         self.memory.append_trial(record)
+        # Cross-iteration dedup log. Always write a line (even with empty
+        # factors) so the file's line count tracks total Editor proposals
+        # for audit purposes; ContextBuilder filters empty entries.
+        if cited:
+            from lbg.memory.records import TriedFactorRecord
+
+            self.memory.append_tried_factors(
+                TriedFactorRecord(
+                    trial_id=trial_id,
+                    factors=cited,
+                    decision=record.decision.value,
+                    source=cite_source,
+                )
+            )
         self.memory.append_reflection(refl_result.record)
         self.memory.append_agent_compute(editor_result.compute)
         self.memory.append_agent_compute(refl_result.compute)
@@ -455,7 +497,7 @@ class Discovery:
                     hypothesis_text=editor_result.proposal.hypothesis,
                     train_metrics=record.train_metrics,
                     validation_signal=record.validation_signal,
-                    cited_factors=list(editor_result.proposal.cited_factors),
+                    cited_factors=cited,  # uses auto-extracted citations when Editor forgot
                 )
                 trans_result = self.runner.translator(ti)
                 self.memory.append_agent_compute(trans_result.compute)
@@ -501,7 +543,7 @@ class Discovery:
             candidate_outcome=candidate_outcome,
             gate_reason=gate_decision.reason,
             summary=apply_result.edit_summary.summary,
-            cited_factors=tuple(editor_result.proposal.cited_factors),
+            cited_factors=tuple(cited),
         )
 
     def _evaluate(self, strategy: Strategy, df_train, df_val) -> TrialOutcome:

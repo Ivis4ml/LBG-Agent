@@ -15,6 +15,7 @@ from lbg.memory.records import (
     InvariantFailureRecord,
     ReflectionRecord,
     ReflectorOutputPayload,
+    TriedFactorRecord,
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "MemoryManager",
     "ReflectionRecord",
     "ReflectorOutputPayload",
+    "TriedFactorRecord",
 ]

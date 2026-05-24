@@ -251,15 +251,18 @@ class ContextBuilder:
     ) -> set[str]:
         """Factor names already explored. A dossier name counts as tried if:
 
-          * any past trial's `cited_factors` lists it exactly, or
+          * any past trial's `cited_factors` lists it exactly (within iter), or
+          * any entry in `memory/tried_factors.jsonl` lists it
+            (cross-iteration -- survives CampaignRunner._reset_for_iteration), or
           * any current strategy indicator's `name` or `fn` contains the
             dossier name as a case-insensitive substring (e.g. `adx_14`
             counts as ADX tried; `sma_fast` does NOT count -- min length 3).
 
-        Past trial citations are the authoritative signal; the indicator-
-        name substring rule is a safety net for sessions where the Editor
-        forgot to cite explicitly. Returns dossier `factor_name` values
-        case-preserved so the FactorHint output matches the index.
+        The three signals are unioned; the jsonl is the dedup safety net
+        across iterations because the in-process `recent` list is event-
+        memory-bound and gets wiped on iter reset. Returns dossier
+        `factor_name` values case-preserved so the FactorHint output
+        matches the index.
         """
         from lbg.knowledge.factors import load_index
 
@@ -270,11 +273,16 @@ class ContextBuilder:
         dossier_names = {k: None for k in dossier_names if k and len(k) >= 3}
 
         tried: set[str] = set()
-        # Authoritative source: explicit citations on past trials.
+        # Authoritative source #1: explicit citations on past trials in this iter.
         for t in recent:
             for cite in t.cited_factors:
                 if cite in dossier_names:
                     tried.add(cite)
+        # Authoritative source #2: cross-iteration jsonl (persists across resets).
+        for rec in self.memory.read_tried_factors():
+            for f in rec.factors:
+                if f in dossier_names:
+                    tried.add(f)
         # Safety net: indicator names / fns that contain a dossier name.
         indicator_strings = [s.name.lower() for s in strategy.indicators] + [
             s.fn.lower() for s in strategy.indicators

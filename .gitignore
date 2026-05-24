@@ -24,6 +24,7 @@ __pycache__/
 # Cached market data
 data/
 
-# Large knowledge / factor library data (code in lbg/knowledge/ + scripts/ is tracked)
-knowledge/
-libs/
+# Large knowledge / factor library data (code in lbg/knowledge/ + scripts/ is tracked).
+# Anchor at root so the pattern doesn't accidentally swallow lbg/knowledge/.
+/knowledge/
+/libs/

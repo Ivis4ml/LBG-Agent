@@ -51,6 +51,38 @@ def search(query: str, top_k: int = 5) -> list[dict[str, Any]]:
     return out
 
 
+def extract_factor_names_from_string(text: str, *, min_len: int = 3) -> list[str]:
+    """Return dossier factor names whose lower-cased form appears in `text`.
+
+    Used by Discovery to auto-cite when the Editor writes an indicator
+    `fn` like 'adx' or 'lsma_dev' but forgets to populate `cited_factors`.
+    Case-insensitive substring match; the `min_len` filter prevents short
+    codes like "AD" from matching every "sma_*" indicator name.
+
+    Returns dossier names in their canonical case (e.g. "ADX"), sorted by
+    descending name length so the longer / more specific match comes first.
+    """
+    if not text:
+        return []
+    low = text.lower()
+    out: list[str] = []
+    for entry in load_index():
+        name = (entry.get("factor_name") or "").strip()
+        if len(name) < min_len:
+            continue
+        if name.lower() in low:
+            out.append(name)
+    out.sort(key=len, reverse=True)
+    # Dedupe preserving order.
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for n in out:
+        if n not in seen:
+            seen.add(n)
+            deduped.append(n)
+    return deduped
+
+
 def get_dossier(factor_name: str) -> dict[str, Any] | None:
     """Return the parsed dossier for a factor, or a raw-text fallback dict.
 

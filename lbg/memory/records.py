@@ -88,3 +88,23 @@ class AgentComputeRecord(BaseModel):
     # Categorical reasons that triggered each retry. Length == retry_attempts-1.
     # Values are stable strings: "redaction", "missing_yaml", "parse_error".
     retry_reasons: list[str] = Field(default_factory=list)
+
+
+class TriedFactorRecord(BaseModel):
+    """One line of `memory/tried_factors.jsonl`.
+
+    This stream is the CROSS-iteration dedup log: ContextBuilder reads it
+    when building factor hints so a campaign's later iterations don't
+    re-suggest factors earlier iterations already tried, even though
+    trials.jsonl is wiped between iterations.
+
+    The file is preserved by CampaignRunner._reset_for_iteration (see the
+    intentional omission from _EVENT_MEMORY_FILENAMES). Append-only.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    trial_id: int = Field(ge=0)
+    factors: list[str]
+    decision: str  # "accept" | "reject" | "abort"
+    source: str  # "editor_cite" | "auto_extract"

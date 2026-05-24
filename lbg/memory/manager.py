@@ -11,6 +11,7 @@ from lbg.memory.records import (
     AgentComputeRecord,
     InvariantFailureRecord,
     ReflectionRecord,
+    TriedFactorRecord,
 )
 from lbg.schemas import TrialRecord
 
@@ -21,6 +22,11 @@ TRIALS_FILE = "trials.jsonl"
 REFLECTIONS_FILE = "reflections.jsonl"
 INVARIANT_FAILURES_FILE = "invariant_failures.jsonl"
 AGENT_COMPUTE_FILE = "agent_compute.jsonl"
+# Cross-iteration tried-factor log. Intentionally NOT wiped by
+# CampaignRunner._reset_for_iteration so iter 2's Editor sees what iter 1
+# already explored. Source-tagged so audits can tell explicit Editor
+# citations apart from Discovery's auto-extracted ones.
+TRIED_FACTORS_FILE = "tried_factors.jsonl"
 
 # The four semantic-memory documents (PROPOSAL.html §4 / §8). The Reflector
 # writes incremental bullets to these; the Curator compresses them every 10
@@ -66,6 +72,10 @@ class MemoryManager:
     @property
     def agent_compute_path(self) -> Path:
         return self.memory_dir / AGENT_COMPUTE_FILE
+
+    @property
+    def tried_factors_path(self) -> Path:
+        return self.memory_dir / TRIED_FACTORS_FILE
 
     # ---- generic append + read ----
 
@@ -125,6 +135,14 @@ class MemoryManager:
 
     def read_agent_compute(self) -> list[AgentComputeRecord]:
         return self._read_all(self.agent_compute_path, AgentComputeRecord)
+
+    # ---- tried factors (cross-iteration dedup log) ----
+
+    def append_tried_factors(self, record: TriedFactorRecord) -> None:
+        self._append_one(self.tried_factors_path, record)
+
+    def read_tried_factors(self) -> list[TriedFactorRecord]:
+        return self._read_all(self.tried_factors_path, TriedFactorRecord)
 
     # ---- semantic memory (markdown) ----
 
