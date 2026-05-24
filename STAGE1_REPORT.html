@@ -324,10 +324,179 @@ window.MathJax = {
   </div>
 </header>
 
-<!-- ============================== § 0 概要 ============================== -->
-<section id="headline">
+<!-- ============================== § 0 TL;DR ============================== -->
+<section id="tldr">
 <div class="section-marker">
   <span class="section-num">§ 0</span>
+  <h2>TL;DR · 这是什么、谁在做什么</h2>
+</div>
+
+<p class="lede">LBG-Trader 是一个把 LLM 当作<em>策略改写者</em>的发现框架：让 LLM 在严格的沙箱与 sealed-evaluation 协议里逐步提出 SPY 日频交易策略的小改动，由一个确定性的 Python 控制平面（Orchestrator）负责判别、记录、提交。所有 LLM 调用集中在三个明确的角色上，整个系统的可信度来自<em>Orchestrator 自身从不调用 LLM</em>。</p>
+
+<h3>三个 LLM 角色 · 各自的输入与产出</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:14%">Agent</th>
+      <th style="width:18%">何时被调用</th>
+      <th style="width:30%">输入</th>
+      <th style="width:38%">产出</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Editor</strong></td>
+      <td>每个 trial 开头</td>
+      <td>当前 <code>strategy.yaml</code>、最近 N 个 trial 摘要（只含类别化 val 信号）、四份语义记忆 md、active skill 列表</td>
+      <td>一份结构化 YAML 提案：八种 edit type 之一、一段假设、对 train 与 val 信号的两个预期、失败回退方案。<em>实例：</em>"把 sizing 从 fixed_fraction 切到 volatility_target，预期 mild_improvement / accept"</td>
+    </tr>
+    <tr>
+      <td><strong>Reflector</strong></td>
+      <td>gate 判别完成后</td>
+      <td>Editor 的提案、机械算出的 <code>hypothesis_outcome</code>、actual <code>validation_signal</code>、train 指标（无 val 数值）</td>
+      <td>对 outcome 的机械解释 + 对四份语义记忆 md 的增量 bullet 更新。<em>不能</em>改写 outcome 本身。<em>实例：</em>"vol-target 让回撤改善但交易激增，gate 不接受。"</td>
+    </tr>
+    <tr>
+      <td><strong>Curator</strong></td>
+      <td>每 10 个 accepted trial</td>
+      <td>四份语义记忆 md 的全文 + accepted trial 计数</td>
+      <td>压缩后的四份 md：去重、剔除被推翻的条目、合并相似 bullet。<em>shadow 模式下仅压缩记忆，不修改 strategy.yaml。</em>同时维护 <code>skills/</code> 库。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>一个 trial 的完整生命周期</h3>
+
+<div class="figure">
+<div class="chart-wrap" style="padding: 24px 18px;">
+<svg viewBox="0 0 700 245" width="100%" role="img">
+  <title>单 trial 流水线：从 Editor 提案到 Git commit</title>
+
+  <!-- 时间轴 -->
+  <line x1="40" y1="135" x2="660" y2="135" stroke="#1a1a1c" stroke-width="0.8"/>
+
+  <!-- 9 个节点 -->
+  <g font-family="Fraunces, serif" font-size="11.5" fill="#1a1a1c">
+    <!-- 1. Editor -->
+    <circle cx="80" cy="135" r="9" fill="#8b3a2f"/>
+    <text x="80" y="120" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8b3a2f">LLM</text>
+    <text x="80" y="160" text-anchor="middle">Editor</text>
+    <text x="80" y="176" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">提案</text>
+
+    <!-- 2. ProposalParser -->
+    <circle cx="150" cy="135" r="7" fill="#1a1a1c"/>
+    <text x="150" y="160" text-anchor="middle">Parser</text>
+    <text x="150" y="176" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">两层校验</text>
+
+    <!-- 3. CandidateBuilder -->
+    <circle cx="225" cy="135" r="7" fill="#1a1a1c"/>
+    <text x="225" y="160" text-anchor="middle">Builder</text>
+    <text x="225" y="176" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">写 yaml / .py</text>
+
+    <!-- 4. InvariantRunner -->
+    <circle cx="305" cy="135" r="7" fill="#1a1a1c"/>
+    <text x="305" y="160" text-anchor="middle">Invariants</text>
+    <text x="305" y="176" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">AST + sandbox</text>
+
+    <!-- 5. Backtest -->
+    <circle cx="385" cy="135" r="7" fill="#1a1a1c"/>
+    <text x="385" y="160" text-anchor="middle">Backtest</text>
+    <text x="385" y="176" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">train + val</text>
+
+    <!-- 6. Gate -->
+    <circle cx="455" cy="135" r="7" fill="#2d6a5c"/>
+    <text x="455" y="160" text-anchor="middle">Gate</text>
+    <text x="455" y="176" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">5 信号</text>
+
+    <!-- 7. HypothesisScorer -->
+    <circle cx="520" cy="135" r="7" fill="#1a1a1c"/>
+    <text x="520" y="160" text-anchor="middle">Scorer</text>
+    <text x="520" y="176" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">机械比对</text>
+
+    <!-- 8. Reflector -->
+    <circle cx="590" cy="135" r="9" fill="#8b3a2f"/>
+    <text x="590" y="120" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8b3a2f">LLM</text>
+    <text x="590" y="160" text-anchor="middle">Reflector</text>
+    <text x="590" y="176" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">解释</text>
+
+    <!-- 9. Memory + Git -->
+    <circle cx="650" cy="135" r="7" fill="#1a1a1c"/>
+    <text x="650" y="160" text-anchor="middle">提交</text>
+    <text x="650" y="176" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">memory + git</text>
+  </g>
+
+  <!-- 上侧说明：每步产物 -->
+  <g font-family="JetBrains Mono, monospace" font-size="9" fill="#6b6b70" letter-spacing="0.04em">
+    <text x="80" y="100" text-anchor="middle">YAML</text>
+    <text x="150" y="100" text-anchor="middle">EditProposal</text>
+    <text x="225" y="100" text-anchor="middle">strategy.yaml</text>
+    <text x="305" y="100" text-anchor="middle">5 层检查</text>
+    <text x="385" y="100" text-anchor="middle">指标</text>
+    <text x="455" y="100" text-anchor="middle">accept / reject</text>
+    <text x="520" y="100" text-anchor="middle">outcome</text>
+    <text x="590" y="100" text-anchor="middle">md 增量</text>
+    <text x="650" y="100" text-anchor="middle">commit</text>
+  </g>
+
+  <!-- 顶部标签 -->
+  <text x="40" y="40" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="0.08em" fill="#8b3a2f">两次 LLM 调用 / trial · 中间七步全部确定性</text>
+
+  <!-- LLM 高亮虚线 -->
+  <line x1="80" y1="58" x2="80" y2="120" stroke="#8b3a2f" stroke-width="0.6" stroke-dasharray="3 2" opacity="0.5"/>
+  <line x1="590" y1="58" x2="590" y2="120" stroke="#8b3a2f" stroke-width="0.6" stroke-dasharray="3 2" opacity="0.5"/>
+
+  <!-- 底部分支：accept vs reject -->
+  <g font-family="Inter, sans-serif" font-size="10.5" fill="#6b6b70">
+    <text x="40" y="215" font-family="JetBrains Mono, monospace" font-size="9" letter-spacing="0.06em" fill="#2d6a5c">accept ⇒</text>
+    <text x="115" y="215">incumbent ← candidate；进入下一个 trial</text>
+    <text x="40" y="232" font-family="JetBrains Mono, monospace" font-size="9" letter-spacing="0.06em" fill="#8b3a2f">reject ⇒</text>
+    <text x="115" y="232">恢复工作树到 incumbent；进入下一个 trial</text>
+  </g>
+</svg>
+</div>
+<div class="figure-caption"><strong>图 0。</strong> 一个 trial 从 Editor 提案到 git commit 的全部步骤。红圈代表 LLM 调用（共两次：Editor 与 Reflector），中间七步全部由确定性 Python 完成。<em>每 10 个 accepted trial 之后</em>，额外触发一次 Curator 调用对四份语义记忆 md 做压缩，独立成一个 git branch。</div>
+</div>
+
+<h3>整次运行的持久产物</h3>
+
+<table>
+  <thead>
+    <tr><th>产物</th><th>内容</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>memory/trials.jsonl</code></td><td>每个 trial 一行：完整的提案、机械判定结果、train 指标、token 与时延记账。</td></tr>
+    <tr><td><code>memory/reflections.jsonl</code></td><td>Reflector 对每个 trial 的机械解释。</td></tr>
+    <tr><td><code>memory/agent_compute.jsonl</code></td><td>每次 LLM 调用一行：role、model、in/out tokens、wall-clock。</td></tr>
+    <tr><td><code>memory/invariant_failures.jsonl</code></td><td>未通过任一层不变式的候选，按 invariant 名 + 文件 + 行号记录。</td></tr>
+    <tr><td><code>memory/{accepted_rules,failed_directions,open_questions,do_not_repeat}.md</code></td><td>语义记忆：Reflector 持续追加 bullet；Curator 每 10 个 accepted 后压缩。</td></tr>
+    <tr><td><code>runs/NNNN/editor.yaml</code> + <code>reflector.yaml</code></td><td>每个 trial 的两次 LLM 原始响应。</td></tr>
+    <tr><td><code>skills/&lt;skill_id&gt;.yaml</code></td><td>Curator 抽取的可复用 edit 配方（trigger、recipe、evidence、failure_modes）。</td></tr>
+    <tr><td><code>strategy.yaml</code> + <code>indicators/</code></td><td>最终被接受的策略与所有 agent 编写的 indicator 源码。</td></tr>
+    <tr><td>一个 git commit / trial</td><td>subject 格式 <code>trial NNNN: &lt;summary&gt;</code>；每个 Curator cycle 单独一个 <code>curator/cycle-NNN</code> 分支。</td></tr>
+    <tr><td><code>artifacts/sealed/sealed_test_final.json</code></td><td>循环结束时一次性写入：sealed 指标 + H1 verdict + 区间。文件 <code>chmod 0o444</code> 防覆写。</td></tr>
+    <tr><td><code>artifacts/reports/discovery_report.html</code></td><td>从所有 jsonl + md + sealed 渲染的静态 HTML 报告。</td></tr>
+  </tbody>
+</table>
+
+<h3>核心方法学</h3>
+
+<p>三个相互独立但互锁的原则共同保证结果可信：</p>
+
+<ul>
+  <li><strong>结构上隔离 sealed window</strong>。<code>split_C</code> 的数据、指标、日期 agent 永远看不到，由 <code>SealedVault</code> 一次性写入。</li>
+  <li><strong>判定与解释分离</strong>。<code>HypothesisScorer</code> 机械判定 trial 是否符合 Editor 的预期；Reflector 只能解释 outcome、不能改写。schema 在结构上让覆写 outcome 不可能。</li>
+  <li><strong>多目标 gate 而非单 Sharpe</strong>。per-trial gate 同时考量交易数、回撤回归、换手、复杂度、效用 LCB、Pareto 改进、过拟合差距。任何一项越界就拒。</li>
+</ul>
+
+<p>下面 § 1 给出一句话实验结论；§ 2 开始展开架构、算法与实证。</p>
+
+</section>
+
+<!-- ============================== § 1 一句话概要 ============================== -->
+<section id="headline">
+<div class="section-marker">
+  <span class="section-num">§ 1</span>
   <h2>一句话概要</h2>
 </div>
 
@@ -365,7 +534,7 @@ window.MathJax = {
 <!-- ============================== § 1 架构 ============================== -->
 <section id="architecture">
 <div class="section-marker">
-  <span class="section-num">§ 1</span>
+  <span class="section-num">§ 2</span>
   <h2>架构全貌</h2>
 </div>
 
@@ -513,7 +682,7 @@ H1 verdict、per-trial gate、不变式套件，这三项都与提案来自哪�
 <!-- ============================== § 2 Discovery loop ============================== -->
 <section id="loop">
 <div class="section-marker">
-  <span class="section-num">§ 2</span>
+  <span class="section-num">§ 3</span>
   <h2>Discovery 循环的运转</h2>
 </div>
 
@@ -623,7 +792,7 @@ ReportBuilder.build()                                  </span><span class="c"># 
 <!-- ============================== § 3 不变式分层防御 ============================== -->
 <section id="invariants">
 <div class="section-marker">
-  <span class="section-num">§ 3</span>
+  <span class="section-num">§ 4</span>
   <h2>应对 agent 代码的分层防御</h2>
 </div>
 
@@ -719,7 +888,7 @@ f\!\left(D_{1:T}\right)\!\bigl[t\bigr] \;=\; f\!\left(D_{1:t}\right)\!\bigl[t\bi
 <!-- ============================== § 4 验证 gate ============================== -->
 <section id="gate">
 <div class="section-marker">
-  <span class="section-num">§ 4</span>
+  <span class="section-num">§ 5</span>
   <h2>验证 gate</h2>
 </div>
 
@@ -793,7 +962,7 @@ f\!\left(D_{1:T}\right)\!\bigl[t\bigr] \;=\; f\!\left(D_{1:t}\right)\!\bigl[t\bi
 <!-- ============================== § 5 sealed window 与 H1 ============================== -->
 <section id="sealed">
 <div class="section-marker">
-  <span class="section-num">§ 5</span>
+  <span class="section-num">§ 6</span>
   <h2>封存窗口与 H1 verdict</h2>
 </div>
 
@@ -895,7 +1064,7 @@ f\!\left(D_{1:T}\right)\!\bigl[t\bigr] \;=\; f\!\left(D_{1:t}\right)\!\bigl[t\bi
 <!-- ============================== § 6 反 sycophancy ============================== -->
 <section id="sycophancy">
 <div class="section-marker">
-  <span class="section-num">§ 6</span>
+  <span class="section-num">§ 7</span>
   <h2>反 sycophancy 的防御</h2>
 </div>
 
@@ -961,7 +1130,7 @@ f\!\left(D_{1:T}\right)\!\bigl[t\bigr] \;=\; f\!\left(D_{1:t}\right)\!\bigl[t\bi
 <!-- ============================== § 7 实验与发现 ============================== -->
 <section id="experiments">
 <div class="section-marker">
-  <span class="section-num">§ 7</span>
+  <span class="section-num">§ 8</span>
   <h2>实验与发现</h2>
 </div>
 
@@ -1116,7 +1285,7 @@ MIMO 这次运行让我们发现原版循环把 trial id 取自 <code>max(trials
 <!-- ============================== § 8 启示 ============================== -->
 <section id="implications">
 <div class="section-marker">
-  <span class="section-num">§ 8</span>
+  <span class="section-num">§ 9</span>
   <h2>这意味着什么，下一步做什么</h2>
 </div>
 
