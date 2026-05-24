@@ -26,14 +26,37 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 
 
-def _stage_run_dir(out: Path) -> Path:
+def _resolve_baseline(name: str) -> tuple[Path, Path]:
+    """Resolve a baseline name to its (strategy_yaml, indicators_dir) sources.
+
+    The default `sma_cross` reads the repo-root files (strategy.yaml +
+    indicators/sma.py + __init__.py). `buyhold` and any future named
+    baseline live under `baselines/<name>/`.
+    """
+    if name == "sma_cross":
+        return REPO / "strategy.yaml", REPO / "indicators"
+    candidate = REPO / "baselines" / name
+    if not candidate.is_dir():
+        raise SystemExit(f"unknown baseline {name!r}; have: sma_cross, {list_baselines()}")
+    return candidate / "strategy.yaml", candidate / "indicators"
+
+
+def list_baselines() -> list[str]:
+    root = REPO / "baselines"
+    if not root.is_dir():
+        return ["sma_cross"]
+    return ["sma_cross"] + sorted(p.name for p in root.iterdir() if p.is_dir())
+
+
+def _stage_run_dir(out: Path, *, baseline: str = "sma_cross") -> Path:
     """Copy baseline + the live lbg/ package into a fresh out/ dir so we
     don't mutate the repo's strategy.yaml / indicators/ when running
     campaigns. Mirrors scripts/long_discovery.py's staging pattern.
     """
+    strategy_src, indicators_src = _resolve_baseline(baseline)
     out.mkdir(parents=True, exist_ok=True)
+    shutil.copy(strategy_src, out / "strategy.yaml")
     for name in (
-        "strategy.yaml",
         "policy_interpreter.py",
         "backtest.py",
         "pyproject.toml",
@@ -46,7 +69,7 @@ def _stage_run_dir(out: Path) -> Path:
     indicators_dst = out / "indicators"
     if indicators_dst.exists():
         shutil.rmtree(indicators_dst)
-    shutil.copytree(REPO / "indicators", indicators_dst)
+    shutil.copytree(indicators_src, indicators_dst)
 
     lbg_dst = out / "lbg"
     if lbg_dst.exists():
@@ -108,10 +131,17 @@ def main(argv: list[str] | None = None) -> int:
         "permissive = looser min_trades / utility_lcb / drawdown thresholds "
         "to exercise alpha_cards in experimentation",
     )
+    parser.add_argument(
+        "--baseline",
+        type=str,
+        default="sma_cross",
+        help="starting strategy: sma_cross (repo default) or buyhold "
+        "(baselines/buyhold/); see scripts/campaign.py for list",
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
 
-    run_dir = _stage_run_dir(args.out.resolve())
+    run_dir = _stage_run_dir(args.out.resolve(), baseline=args.baseline)
 
     log_path = run_dir / "campaign.log"
     logging.basicConfig(

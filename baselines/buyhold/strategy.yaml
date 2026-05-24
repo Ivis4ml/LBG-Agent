@@ -1,0 +1,26 @@
+name: buyhold_baseline
+
+indicators:
+  - name: step_in
+    fn: step_in
+    params: {}
+  - name: zero_baseline
+    fn: zero_baseline
+    params: {}
+
+entry:
+  rule: cross_above
+  fast: step_in
+  slow: zero_baseline
+
+exit:
+  rule: cross_below
+  fast: step_in
+  slow: zero_baseline
+
+filters: []
+
+sizing:
+  mode: fixed_fraction
+  fraction: 1.0
+  max_position: 1.0
