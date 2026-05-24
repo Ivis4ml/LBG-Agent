@@ -76,6 +76,10 @@ class PastTrialSummary:
     train_turnover: float
     train_num_trades: int
     decision: str  # "accept" | "reject"
+    # B · forced fallback: what the Editor said it would try next if this
+    # trial was rejected. Empty string when the trial accepted (no fallback
+    # is owed) or when the field is missing on a historical trial.
+    fallback_if_rejected: str = ""
 
 
 @dataclass(frozen=True)
@@ -258,6 +262,7 @@ def _summarize(record: TrialRecord) -> PastTrialSummary:
         train_turnover=record.train_metrics.turnover,
         train_num_trades=record.train_metrics.num_trades,
         decision=record.decision.value,
+        fallback_if_rejected=(record.fallback_if_rejected or "").strip(),
     )
 
 

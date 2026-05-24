@@ -429,6 +429,20 @@ def _render_editor_user_prompt(context: EditorContext, *, trial_id: int) -> str:
             + _format_factor_hints(context.factor_hints)
         )
     parts.append("## Recent trial history\n\n" + _format_recent_trials(context.recent_trials))
+    # B · forced fallback. If the *most recent* trial was rejected AND had a
+    # non-empty fallback note, surface it as a dedicated reminder. The
+    # Editor doesn't have to follow it, but ignoring it should require a
+    # reason -- which is exactly the multi-step planning we want to force.
+    pending = _pending_fallback(context.recent_trials)
+    if pending is not None:
+        parts.append(
+            "## Your previously promised fallback\n\n"
+            f'On trial {pending.trial_id} you wrote: "{pending.fallback_if_rejected}". '
+            "That trial was rejected. Either execute that fallback now, or "
+            "state in your hypothesis why you are choosing a different "
+            "direction (one sentence is enough). Repeated bare drift from "
+            "your own promises is the single most-cited Editor failure mode."
+        )
     if context.semantic_memory:
         parts.append("## Semantic memory\n\n" + _format_semantic_memory(context.semantic_memory))
     if context.skills:
@@ -487,6 +501,21 @@ def _render_reflector_user_prompt(
         "prompt. Explain mechanically; do not re-judge the hypothesis."
     )
     return "\n".join(parts)
+
+
+def _pending_fallback(trials: list[PastTrialSummary]) -> PastTrialSummary | None:
+    """Return the most recent rejected trial that wrote a fallback note.
+
+    Empty fallback or an accepted trial both yield None (no pending promise
+    to call out). The Editor's "your previously promised fallback" prompt
+    section is conditioned on this returning non-None.
+    """
+    for t in reversed(trials):
+        if t.decision == "reject" and t.fallback_if_rejected:
+            return t
+        if t.decision == "accept":
+            return None
+    return None
 
 
 def _format_factor_hints(hints: list[FactorHint]) -> str:

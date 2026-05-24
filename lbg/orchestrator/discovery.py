@@ -346,6 +346,7 @@ class Discovery:
                 wall_clock_sec=editor_result.compute.wall_clock_sec
                 + refl_result.compute.wall_clock_sec,
             ),
+            fallback_if_rejected=editor_result.proposal.fallback_if_rejected,
         )
         self.memory.append_trial(record)
         self.memory.append_reflection(refl_result.record)

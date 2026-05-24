@@ -158,6 +158,7 @@ def _sample_trial_record_dict() -> dict:
             "model_reflector": "claude-opus-4-7",
             "wall_clock_sec": 42.1,
         },
+        "fallback_if_rejected": None,
     }
 
 

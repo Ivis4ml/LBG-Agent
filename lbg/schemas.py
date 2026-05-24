@@ -162,3 +162,8 @@ class TrialRecord(BaseModel):
     complexity_before: float = Field(ge=0)
     complexity_after: float = Field(ge=0)
     agent_compute: AgentCompute
+    # Step B (forced fallback): preserved verbatim from the Editor's proposal so
+    # the next trial's ContextBuilder can surface "you said you would do X if
+    # this got rejected, now try X". Optional for backward compatibility with
+    # historical trials.jsonl rows.
+    fallback_if_rejected: str | None = None
