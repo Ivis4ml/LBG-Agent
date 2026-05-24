@@ -368,13 +368,16 @@ class Discovery:
         if not cited and apply_result.edit_summary.type == EditType.ADD_INDICATOR:
             from lbg.knowledge.factors import extract_factor_names_from_string
 
-            ed_change = editor_result.proposal.proposed_edit.change
+            # editor_result.payload is the typed AddIndicatorPayload; the
+            # raw .proposed_edit.change is a dict and would return None
+            # under getattr. Use the typed handle.
+            payload = editor_result.payload
             haystack = " ".join(
                 filter(
                     None,
                     [
-                        getattr(ed_change, "name", None),
-                        getattr(ed_change, "fn", None),
+                        getattr(payload, "name", None),
+                        getattr(payload, "fn", None),
                     ],
                 )
             )
@@ -430,10 +433,12 @@ class Discovery:
         if cited or apply_result.edit_summary.type == EditType.ADD_INDICATOR:
             from lbg.memory.records import TriedFactorRecord
 
-            ed_change = editor_result.proposal.proposed_edit.change
+            # `proposed_edit.change` on EditProposal is a raw dict; the
+            # typed payload lives on editor_result.payload. Use that to
+            # read the new indicator's fn name.
             tried_fn = None
             if apply_result.edit_summary.type == EditType.ADD_INDICATOR:
-                tried_fn = getattr(ed_change, "fn", None)
+                tried_fn = getattr(editor_result.payload, "fn", None)
             self.memory.append_tried_factors(
                 TriedFactorRecord(
                     trial_id=trial_id,
@@ -457,18 +462,23 @@ class Discovery:
         # H1 (PROPOSAL §4) counts cards whose sealed_summary clears the CI bar;
         # the per-trial card pins the artifact at the moment of acceptance.
         alpha_card_path: Path | None = None
-        change = None
         indicator_name = None
+        indicator_fn: str | None = None
         if record.decision == Decision.ACCEPT and record.edit.type == EditType.ADD_INDICATOR:
-            change = editor_result.proposal.proposed_edit.change
-            indicator_name = getattr(change, "name", None)
+            # editor_result.payload is the typed AddIndicatorPayload; the
+            # raw .proposed_edit.change is a dict and getattr against it
+            # would silently return the fallback, dropping alpha cards on
+            # the floor. Use the typed handle.
+            payload = editor_result.payload
+            indicator_name = getattr(payload, "name", None)
+            indicator_fn = getattr(payload, "fn", None)
             if indicator_name:
                 try:
                     # Prefer explicit Editor citation over substring guess;
                     # falls back to name-match when the Editor didn't cite.
                     dossier_link = match_dossier_from_citation(
                         editor_result.proposal.cited_factors
-                    ) or match_dossier_by_name(getattr(change, "fn", indicator_name))
+                    ) or match_dossier_by_name(indicator_fn or indicator_name)
                     alpha_card_path = self.alpha_writer.write_for_added_indicator(
                         trial_id=trial_id,
                         source_commit=parent_commit,
@@ -486,19 +496,20 @@ class Discovery:
         # Same trigger as alpha_cards; a Translator failure does not block
         # the loop -- it just means no dossier got written this trial.
         dossier_path: Path | None = None
-        if alpha_card_path is not None and indicator_name:
+        if alpha_card_path is not None and indicator_name and indicator_fn:
             try:
                 from lbg.translator import DossierWriter, TranslatorInput
 
-                indicator_source = (
-                    self.indicators_dir / f"{getattr(change, 'fn', indicator_name)}.py"
-                ).read_text(encoding="utf-8")
+                payload = editor_result.payload
+                indicator_source = (self.indicators_dir / f"{indicator_fn}.py").read_text(
+                    encoding="utf-8"
+                )
                 ti = TranslatorInput(
                     trial_id=trial_id,
                     source_commit=parent_commit,
                     indicator_name=indicator_name,
-                    indicator_fn=getattr(change, "fn", indicator_name),
-                    indicator_params=dict(getattr(change, "params", {}) or {}),
+                    indicator_fn=indicator_fn,
+                    indicator_params=dict(getattr(payload, "params", {}) or {}),
                     indicator_source=indicator_source,
                     hypothesis_text=editor_result.proposal.hypothesis,
                     train_metrics=record.train_metrics,
