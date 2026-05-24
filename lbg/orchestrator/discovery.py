@@ -13,7 +13,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from backtest import run_backtest
-from lbg.alpha_cards import AlphaCardWriter, match_dossier_by_name
+from lbg.alpha_cards import (
+    AlphaCardWriter,
+    match_dossier_by_name,
+    match_dossier_from_citation,
+)
 from lbg.builder import CandidateBuilder, CandidateBuildError
 from lbg.data.loader import load_split
 from lbg.dsl import load_strategy
@@ -347,6 +351,7 @@ class Discovery:
                 + refl_result.compute.wall_clock_sec,
             ),
             fallback_if_rejected=editor_result.proposal.fallback_if_rejected,
+            cited_factors=list(editor_result.proposal.cited_factors),
         )
         self.memory.append_trial(record)
         self.memory.append_reflection(refl_result.record)
@@ -368,6 +373,11 @@ class Discovery:
             indicator_name = getattr(change, "name", None)
             if indicator_name:
                 try:
+                    # Prefer explicit Editor citation over substring guess;
+                    # falls back to name-match when the Editor didn't cite.
+                    dossier_link = match_dossier_from_citation(
+                        editor_result.proposal.cited_factors
+                    ) or match_dossier_by_name(getattr(change, "fn", indicator_name))
                     alpha_card_path = self.alpha_writer.write_for_added_indicator(
                         trial_id=trial_id,
                         source_commit=parent_commit,
@@ -376,7 +386,7 @@ class Discovery:
                         train_metrics=record.train_metrics,
                         validation_signal=record.validation_signal,
                         hypothesis_outcome=record.hypothesis_outcome,
-                        dossier_link=match_dossier_by_name(getattr(change, "fn", indicator_name)),
+                        dossier_link=dossier_link,
                     )
                 except (ValueError, OSError) as e:
                     logger.warning("trial %d alpha card emit failed: %s", trial_id, e)

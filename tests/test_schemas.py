@@ -79,6 +79,7 @@ def _sample_edit_proposal_dict() -> dict:
         "expected_train_signal": "mild_improvement",
         "expected_validation_signal": "accept",
         "fallback_if_rejected": "Try weaker target_vol (0.08).",
+        "cited_factors": [],
     }
 
 
@@ -159,6 +160,7 @@ def _sample_trial_record_dict() -> dict:
             "wall_clock_sec": 42.1,
         },
         "fallback_if_rejected": None,
+        "cited_factors": [],
     }
 
 

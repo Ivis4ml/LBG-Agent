@@ -80,6 +80,9 @@ class PastTrialSummary:
     # trial was rejected. Empty string when the trial accepted (no fallback
     # is owed) or when the field is missing on a historical trial.
     fallback_if_rejected: str = ""
+    # Dossier factor names the Editor cited for this trial; used by the
+    # hint pipeline to skip factors that were already tried.
+    cited_factors: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -203,6 +206,11 @@ class ContextBuilder:
     ) -> list[FactorHint]:
         """Retrieve a deduplicated, length-capped list of factor hints.
 
+        Skips factors already tried in `recent` (via `cited_factors` or
+        indicator-name substring on the strategy's current indicators) --
+        the campaign should explore the dossier breadth-first, not show
+        the same top-5 every trial.
+
         Defensive against a missing knowledge base: factor_search returns
         an empty list when knowledge/factors/index.jsonl is absent, so the
         method simply returns []. This keeps ContextBuilder usable in
@@ -211,12 +219,15 @@ class ContextBuilder:
         terms = self._derive_search_terms(strategy, recent)
         if not terms:
             return []
+        tried = self._tried_factor_names(strategy, recent)
         seen: set[str] = set()
         out: list[FactorHint] = []
         for term in terms:
             for hit in factor_search(term, top_k=self.factor_hints_per_term):
                 name = (hit.get("factor_name") or "").strip()
                 if not name or name in seen:
+                    continue
+                if name in tried:
                     continue
                 seen.add(name)
                 one_line = _truncate(
@@ -232,6 +243,49 @@ class ContextBuilder:
                 if len(out) >= self.factor_hints_total_cap:
                     return out
         return out
+
+    def _tried_factor_names(
+        self,
+        strategy: Strategy,
+        recent: list[PastTrialSummary],
+    ) -> set[str]:
+        """Factor names already explored. A dossier name counts as tried if:
+
+          * any past trial's `cited_factors` lists it exactly, or
+          * any current strategy indicator's `name` or `fn` contains the
+            dossier name as a case-insensitive substring (e.g. `adx_14`
+            counts as ADX tried; `sma_fast` does NOT count -- min length 3).
+
+        Past trial citations are the authoritative signal; the indicator-
+        name substring rule is a safety net for sessions where the Editor
+        forgot to cite explicitly. Returns dossier `factor_name` values
+        case-preserved so the FactorHint output matches the index.
+        """
+        from lbg.knowledge.factors import load_index
+
+        index = load_index()
+        if not index:
+            return set()
+        dossier_names = {(e.get("factor_name") or "").strip(): None for e in index}
+        dossier_names = {k: None for k in dossier_names if k and len(k) >= 3}
+
+        tried: set[str] = set()
+        # Authoritative source: explicit citations on past trials.
+        for t in recent:
+            for cite in t.cited_factors:
+                if cite in dossier_names:
+                    tried.add(cite)
+        # Safety net: indicator names / fns that contain a dossier name.
+        indicator_strings = [s.name.lower() for s in strategy.indicators] + [
+            s.fn.lower() for s in strategy.indicators
+        ]
+        for real_name in dossier_names:
+            low_name = real_name.lower()
+            for h in indicator_strings:
+                if low_name in h:
+                    tried.add(real_name)
+                    break
+        return tried
 
 
 def _scrub_years(text: str) -> str:
@@ -263,6 +317,7 @@ def _summarize(record: TrialRecord) -> PastTrialSummary:
         train_num_trades=record.train_metrics.num_trades,
         decision=record.decision.value,
         fallback_if_rejected=(record.fallback_if_rejected or "").strip(),
+        cited_factors=tuple(record.cited_factors or ()),
     )
 
 

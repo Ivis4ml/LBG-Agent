@@ -124,7 +124,15 @@ expected_train_signal: <one of: strong_improvement, mild_improvement, neutral, m
 expected_validation_signal: <one of: accept, reject>
 fallback_if_rejected: |
   <one sentence on what you would try next if this trial is rejected>
+cited_factors:
+  - <optional list of dossier factor names you drew on; empty list if none>
 ```
+
+`cited_factors` lets the Orchestrator (a) record which dossiers actually
+got tried so it can show you NEW dossiers next time, and (b) link the
+alpha card back to the seed library if this trial accepts. Use the
+factor's exact name from the candidate-factor list above. Omit the field
+or use an empty list when the edit didn't draw on the seed library.
 
 Do not include any prose outside the code block. The Orchestrator parses
 your output programmatically; extraneous text causes the trial to fail.

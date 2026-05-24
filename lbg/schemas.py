@@ -87,6 +87,12 @@ class EditProposal(BaseModel):
     expected_train_signal: ExpectedTrainSignal
     expected_validation_signal: ExpectedValidationSignal
     fallback_if_rejected: str | None = None
+    # Structured citation of dossier factor names the Editor drew on for
+    # this trial. Optional and defaults to []. Used by ContextBuilder to
+    # avoid re-suggesting tried factors, and by the alpha_card writer to
+    # populate dossier_link.matched_via=editor_cite. Empty list when the
+    # edit didn't draw on the seed library.
+    cited_factors: list[str] = Field(default_factory=list)
 
 
 class EditSummary(BaseModel):
@@ -167,3 +173,7 @@ class TrialRecord(BaseModel):
     # this got rejected, now try X". Optional for backward compatibility with
     # historical trials.jsonl rows.
     fallback_if_rejected: str | None = None
+    # Dossier factor names the Editor consciously cited for this trial.
+    # ContextBuilder uses this to de-prioritize already-tried factors in
+    # the hint shortlist for subsequent trials. Empty list is the default.
+    cited_factors: list[str] = Field(default_factory=list)

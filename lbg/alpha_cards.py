@@ -198,8 +198,10 @@ def match_dossier_by_name(
 
     Uses `lbg.knowledge.factors.search()` -- substring match on factor_name
     is the highest-precision signal we have without an explicit cite from
-    the Editor (which will come in a later milestone). Returns None when no
-    dossier matches; callers must handle the None case.
+    the Editor. Returns None when no dossier matches; callers must handle
+    the None case. Prefer `match_dossier_from_citation()` whenever the
+    Editor provided `cited_factors` -- the cite is explicit, the substring
+    match is a guess.
     """
     from lbg.knowledge.factors import search
 
@@ -218,6 +220,35 @@ def match_dossier_by_name(
     )
 
 
+def match_dossier_from_citation(
+    cited_factors: list[str],
+    *,
+    knowledge_root: str | Path = "knowledge/factors",
+) -> AlphaCardDossierLink | None:
+    """Explicit Editor citation → dossier link. Picks the first cited
+    factor whose name resolves to a dossier path; falls back to None
+    when none of the citations match the index (e.g. Editor cited a name
+    not actually in the seed library)."""
+    from lbg.knowledge.factors import load_index
+
+    if not cited_factors:
+        return None
+    index = {e["factor_name"]: e for e in load_index() if e.get("factor_name")}
+    for cite in cited_factors:
+        entry = index.get(cite)
+        if entry is None:
+            continue
+        path = entry.get("path") or ""
+        if not path:
+            continue
+        return AlphaCardDossierLink(
+            factor_name=cite,
+            dossier_path=str(Path(knowledge_root) / path),
+            matched_via="editor_cite",
+        )
+    return None
+
+
 __all__ = [
     "AlphaCard",
     "AlphaCardDossierLink",
@@ -226,4 +257,5 @@ __all__ = [
     "AlphaCardStatus",
     "AlphaCardWriter",
     "match_dossier_by_name",
+    "match_dossier_from_citation",
 ]
