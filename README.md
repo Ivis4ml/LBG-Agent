@@ -35,13 +35,14 @@ The framework runs a multi-trial Discovery loop. Each trial:
 6. After the configured budget, the sealed test window opens *exactly once*
    and the H1 verdict is computed via a moving block bootstrap.
 
-## The three LLM agents
+## The four LLM agents
 
 | Agent | When | Input | Output |
 |-------|------|-------|--------|
-| **Editor** | Start of every trial | current `strategy.yaml`, recent trial summaries (categorical val signal only), four semantic memory `.md` files, active skills | one YAML proposal: edit type + hypothesis + expected train/val signals + fallback |
+| **Editor** | Start of every trial | current `strategy.yaml`, recent trial summaries (categorical val signal only), four semantic memory `.md` files, active skills, dossier hint shortlist from `knowledge/factors/`, banned-indicator-name list | one YAML proposal: edit type + hypothesis + expected train/val signals + fallback + `cited_factors` |
 | **Reflector** | After the gate decides | proposal, mechanical `hypothesis_outcome`, actual `validation_signal`, train metrics | mechanical explanation + incremental bullet updates to the four `.md` files |
 | **Curator** | Every 10 accepted trials (shadow mode) | the four `.md` files in full | compressed, deduplicated rewrites of the four `.md` files |
+| **Translator** | After each accepted `add_indicator` | the agent-authored `.py` source + alpha card metadata + observed train metrics + cited factors | JSON dossier matching the seed library schema, written to `alpha_cards/dossiers/<name>_trial_NNNN.txt` |
 
 ## Repository layout
 
@@ -52,15 +53,16 @@ strategy.yaml             # initial DSL config (sma_cross_baseline)
 
 indicators/               # agent-authored pure-function indicators
 lbg/
-  builder/                # CandidateBuilder + 8 edit type appliers
+  alpha_cards.py          # AlphaCardWriter + dossier-link matcher (PROPOSAL §6.6)
+  builder/                # CandidateBuilder + 8 edit type appliers (incl. add_indicator attach)
   data/                   # yfinance + Tiingo cross-check, split_A/B/C aliasing
   dsl/                    # Pydantic schemas for strategy.yaml
-  gate/                   # ValidationGate, HypothesisScorer, complexity
+  gate/                   # ValidationGate, HypothesisScorer, complexity (strict / permissive presets)
   git_manager.py          # one commit per trial, one branch per Curator cycle
   invariants/             # AST checks + prefix_stability
-  knowledge/              # external factor knowledge base (read-only)
-  memory/                 # MemoryManager (jsonl + md)
-  orchestrator/           # ContextBuilder, RoleRunner, Curator, Discovery, prompts/
+  knowledge/              # factor-library retrieval (search / get_dossier / load_index)
+  memory/                 # MemoryManager (jsonl + md + tried_factors.jsonl cross-iter log)
+  orchestrator/           # ContextBuilder, RoleRunner (4 roles), Curator, Discovery, Campaign, live_status, prompts/, templates/
   parser/                 # ProposalParser, per-edit-type payloads
   sandbox/                # restricted-namespace exec + SIGALRM timeout
   schemas.py              # EditProposal, TrialRecord, 6 StrEnums
@@ -68,17 +70,21 @@ lbg/
   skills/                 # SkillManager (skill_id.yaml store)
   stage2/                 # forward validation engine
   stage3/                 # PaperTradingEngine (bar-by-bar streaming)
+  translator.py           # 4th LLM role · .py → JSON dossier (round-trip bridge)
   verdict/                # H1 moving block bootstrap + analysis_plan
 
+knowledge/factors/        # 564 read-only seed dossiers + index.jsonl
 scripts/
-  long_discovery.py       # CLI entry for a multi-trial Discovery run
+  campaign.py             # multi-iteration Discovery with persisted skills + alpha cards
+  long_discovery.py       # single Discovery run (legacy CLI)
   migrate_factors.py      # one-shot import of the factor knowledge base
-  reshuffle_proposal.py
 
-tests/                    # 330+ tests, pytest-driven
-docs/                     # human-facing reports
-artifacts/                # runtime: sealed/, reports/  (gitignored)
-memory/                   # runtime: per-run jsonl + md  (auditable)
+tests/                    # 440 tests, pytest-driven
+docs/                     # human-facing reports (STAGE1_REPORT.html · 11 sections)
+artifacts/                # runtime: sealed/, reports/, live/  (live/ dashboard.html for browser)
+alpha_cards/              # runtime: per-accepted-trial card + dossier JSON (auditable)
+memory/                   # runtime: per-run jsonl + md + tried_factors.jsonl  (auditable)
+campaigns/                # runtime: per-iter sealed vault + campaign_summary.json
 runs/                     # runtime: per-trial editor.yaml + reflector.yaml
 ```
 
@@ -100,12 +106,19 @@ EOF
 # 3. fetch SPY data (one-time; persists to data/spy_daily.parquet)
 uv run python -m lbg.data.loader fetch
 
-# 4. run a short Discovery (writes to /tmp/lbg_run/, doesn't touch this repo)
+# 4a. single Discovery (writes to /tmp/lbg_run/, doesn't touch this repo)
 uv run python scripts/long_discovery.py --budget 5 --out /tmp/lbg_run
 
-# 5. inspect the artifacts
+# 4b. or a multi-iteration campaign with cross-iter persisted memory
+uv run python scripts/campaign.py --iterations 3 --budget 5 \
+    --out /tmp/lbg_camp --gate permissive
+
+# 5a. inspect Discovery artifacts
 open /tmp/lbg_run/artifacts/reports/discovery_report.html
 cat /tmp/lbg_run/artifacts/sealed/sealed_test_final.json
+
+# 5b. open the live browser dashboard during a campaign (2s auto-refresh)
+open /tmp/lbg_camp/artifacts/live/dashboard.html
 ```
 
 ## Switching LLM providers
@@ -130,7 +143,7 @@ sealed verdicts on the same baseline strategy, by design.
 ## Testing
 
 ```bash
-uv run pytest -q                # 330+ tests; skips live LLM tests if keys absent
+uv run pytest -q                # 440 tests; skips live LLM tests if keys absent
 uv run ruff check               # lint
 uv run ruff format --check      # format
 ```
@@ -162,10 +175,19 @@ Stage 4 (live capital) is intentionally out of scope.
 | Stage 2 — forward validation (no LLM) | done |
 | Stage 3 — paper trading (no LLM) | done, simulation only |
 | Stage 4 — live capital broker adapter | out of scope |
+| Translator agent (4th LLM role) | wired but untriggered (no accepted `add_indicator` yet) |
+| Campaign multi-iteration loop | done, 4 live runs (v2-v5b) under Anthropic Opus 4.7 |
+| Live browser dashboard | done, `artifacts/live/dashboard.html` |
 | Active Curator mode | not enabled (shadow only) |
 
-Experimental result on the SMA(20/50) baseline (both providers, budget=20):
-`H1 strong = False`, `H1 weak = False`. The strategy underperforms
+Experimental result on the SMA(20/50) baseline across six campaigns
+(90 trials total, Anthropic Opus 4.7, strict + permissive gate variants):
+`H1 strong = False`, `H1 weak = False`. 10 accepts overall, 0 of which
+were `add_indicator` — so 0 alpha cards have landed and the Translator
+agent's wiring (PROPOSAL §6.7 round-trip bridge) remains untriggered.
+v5b iter 1 produced the first non-trivial sealed Sharpe (0.570, 5×
+baseline) via a `change_exit_rule` accept; see `docs/STAGE1_REPORT.html`
+§ 10 + § 11 for the full trajectory. The strategy underperforms
 buy-and-hold on the sealed window by 0.75 Sharpe units; the framework
 reported this cleanly. See `docs/STAGE1_REPORT.html` § 7 – § 8.
 
