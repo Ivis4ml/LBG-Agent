@@ -20,6 +20,17 @@ PERIODS_PER_YEAR: int = 252
 # norm.ppf(0.80) -- the one-sided 80% z-quantile used at α = 0.20.
 Z_QUANTILE_80: float = 0.8416212335729143
 
+# Pre-computed norm.ppf(1 - α) for the α values the orchestrator uses.
+# Keeps `utility_lcb_sharpe` scipy-free for the common cases; callers can
+# still pass an explicit `z_quantile` for arbitrary α.
+_Z_QUANTILES: dict[float, float] = {
+    0.40: 0.2533471031357997,  # GateConfig.permissive
+    0.30: 0.5244005127080407,
+    0.20: Z_QUANTILE_80,  # GateConfig default (PROPOSAL §9)
+    0.10: 1.2815515655446004,
+    0.05: 1.6448536269514722,
+}
+
 
 def utility_lcb_sharpe(
     returns: pd.Series,
@@ -31,9 +42,8 @@ def utility_lcb_sharpe(
 ) -> float:
     """Return the one-sided lower confidence bound on annualized Sharpe.
 
-    When `alpha == 0.20` and no `z_quantile` is passed, the hard-coded
-    `Z_QUANTILE_80` is used. For other α's, pass the corresponding
-    `norm.ppf(1 - alpha)` explicitly.
+    The lookup table covers α ∈ {0.05, 0.10, 0.20, 0.30, 0.40}. For other
+    α's pass the corresponding `norm.ppf(1 - alpha)` explicitly.
     """
     n = int(len(returns))
     if n < min_obs:
@@ -47,8 +57,14 @@ def utility_lcb_sharpe(
     se = float(np.sqrt((1.0 + 0.5 * sharpe**2) / n) * np.sqrt(periods_per_year))
 
     if z_quantile is None:
-        if not np.isclose(alpha, 0.20):
-            raise ValueError(f"alpha={alpha} requires an explicit `z_quantile=norm.ppf(1-alpha)`")
-        z_quantile = Z_QUANTILE_80
+        for known_alpha, q in _Z_QUANTILES.items():
+            if np.isclose(alpha, known_alpha):
+                z_quantile = q
+                break
+        if z_quantile is None:
+            raise ValueError(
+                f"alpha={alpha} not in pre-computed table {sorted(_Z_QUANTILES)}; "
+                "pass an explicit `z_quantile=norm.ppf(1-alpha)`"
+            )
 
     return sharpe - z_quantile * se
