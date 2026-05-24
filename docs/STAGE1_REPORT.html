@@ -319,9 +319,9 @@ window.MathJax = {
   <div class="title-right">
     <div>SPY · 2010 – 2024</div>
     <div>Stage 1 · Discovery</div>
-    <div><span class="v">v0.3.0</span> · commit 6b1c1c8</div>
+    <div><span class="v">v0.4.0</span> · commit 9a9b647</div>
     <div>2026 · 05 · 24</div>
-    <div style="font-size: 10px; color: var(--ink-muted); margin-top: 4px;">§ 10 升级补遗 + § 11 第二波 · 2026-05-24</div>
+    <div style="font-size: 10px; color: var(--ink-muted); margin-top: 4px;">§ 12 H1 weak True · 2026-05-24</div>
   </div>
 </header>
 
@@ -1744,10 +1744,131 @@ indicator_fn = getattr(change, "fn", None)              # → None, always</pre>
 
 </section>
 
+<!-- ============================== § 12 buy-and-hold baseline + H1 weak True ============================== -->
+<section id="buyhold-milestone">
+<div class="section-marker">
+  <span class="section-num">§ 12</span>
+  <h2>换 baseline · H1 weak 第一次为 True</h2>
+</div>
+
+<p class="lede">用户的一句质问推动了这次决定性的实验："我怎么觉得现在的效果还没有我们一开始的 v0 好啊"。账面是诚实的：前六轮 campaign 累计 90 trial、10 accepts、0 alpha card、H1 verdict 一字未动。v0 报告 §9 当时已经写过——"下一步动作<em>在动作空间上，不在架构上</em>"。这条建议被忽略了五个月。这次我们听了它。</p>
+
+<h3>新 baseline · 用现有 DSL 表达 buy-and-hold</h3>
+
+<p>原 SMA(20/50) baseline 在 val 窗口上 Sharpe 0.93——结构性偶然，<em>任何</em> entry filter 都把这个 baseline 拉下来。在那个起点上，<code>add_indicator</code> 在 Pareto 上无路可走，Editor 反复退回 sizing trick。把起点换成 buy-and-hold（always-long），filter 的作用从"过滤 entry 事件"变成"在 risk-off 期间退出"——一个理论上能减回撤而不伤 Sharpe 的方向。</p>
+
+<p>在不改 schema 的前提下用现有 CrossRule DSL 编码 buy-and-hold：</p>
+
+<pre><code>baselines/buyhold/indicators/step_in.py     · [0, 1, 1, 1, ...]
+baselines/buyhold/indicators/zero_baseline.py · 常量 0
+baselines/buyhold/strategy.yaml
+    entry: cross_above(step_in, zero_baseline)  → bar 1 触发一次
+    exit:  cross_below(step_in, zero_baseline)  → 永不触发
+    sizing: fixed_fraction 1.0</code></pre>
+
+<p>step_in 一次性跳变创造唯一一次 entry 事件；exit 永远不触发，所以仓位从 bar 2 持续到 sealed 窗口末尾。两个 indicator 都是 pure pandas 函数，prefix-stable trivially（输出只依赖 row index、不依赖任何数据值）。<code>scripts/campaign.py</code> 加 <code>--baseline {sma_cross, buyhold}</code> flag。</p>
+
+<h3>v6 实证结果</h3>
+
+<p>同样 3×5 = 15 trial × Anthropic Opus 4.7 × permissive gate，但起点是 buyhold（baseline sealed Sharpe 0.886）。</p>
+
+<table>
+  <thead>
+    <tr><th>iter</th><th class="num">accept</th><th class="num">sealed Sharpe</th><th class="num">sealed MaxDD</th><th>incumbent 演化</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>0</td><td class="num">1</td><td class="num">0.9546</td><td class="num">-0.203</td><td>vol_target sizing 接受</td></tr>
+    <tr><td>1</td><td class="num">1</td><td class="num"><strong>0.9910</strong></td><td class="num"><strong>-0.165</strong></td><td>vol_target sizing 再次接受 (略调参)</td></tr>
+    <tr><td>2</td><td class="num">1</td><td class="num">0.9910</td><td class="num">-0.165</td><td>vol_target sizing 再次接受 (同上)</td></tr>
+  </tbody>
+</table>
+
+<h3>H1 verdict · 第一次出现非负差</h3>
+
+<table>
+  <thead>
+    <tr><th>campaign</th><th>strategy Sharpe</th><th>baseline (b&amp;h) Sharpe</th><th class="num">ΔSharpe</th><th class="num">95% CI</th><th class="num">H1 weak</th><th class="num">H1 strong</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>v0 – v5b (90 trial)</td><td class="num">0.108</td><td class="num">0.861</td><td class="num">-0.753</td><td class="num">[-1.44, +0.003]</td><td class="num">False</td><td class="num">False</td></tr>
+    <tr><td>v6 iter 1+2</td><td class="num"><strong>0.991</strong></td><td class="num">0.861</td><td class="num"><strong>+0.130</strong></td><td class="num">[-0.150, +0.441]</td><td class="num"><strong>True</strong></td><td class="num">False</td></tr>
+  </tbody>
+</table>
+
+<div class="figure">
+<div class="chart-wrap" style="padding: 24px 18px;">
+<svg viewBox="0 0 700 220" width="100%" role="img">
+  <title>H1 verdict: v0-v5b vs v6 sealed paired Sharpe diff</title>
+  <line x1="60" y1="135" x2="660" y2="135" stroke="#1a1a1c" stroke-width="0.8"/>
+  <g font-family="JetBrains Mono, monospace" font-size="10" fill="#6b6b70">
+    <text x="60"  y="158" text-anchor="middle">-1.5</text>
+    <text x="180" y="158" text-anchor="middle">-1.0</text>
+    <text x="300" y="158" text-anchor="middle">-0.5</text>
+    <text x="420" y="158" text-anchor="middle">0.0</text>
+    <text x="540" y="158" text-anchor="middle">+0.5</text>
+    <text x="660" y="158" text-anchor="middle">+1.0</text>
+  </g>
+  <line x1="420" y1="40" x2="420" y2="150" stroke="#2d6a5c" stroke-width="1" stroke-dasharray="3 3"/>
+  <text x="420" y="32" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="11" fill="#2d6a5c">H1 强判据：CI 下界 &gt; 0</text>
+
+  <!-- v0-v5b CI: [-1.44, +0.003] -->
+  <rect x="74" y="92" width="346" height="14" fill="#8b3a2f" opacity="0.16"/>
+  <line x1="74" y1="85" x2="74" y2="113" stroke="#8b3a2f" stroke-width="2"/>
+  <line x1="420.4" y1="85" x2="420.4" y2="113" stroke="#8b3a2f" stroke-width="2"/>
+  <circle cx="239" cy="99" r="4" fill="#1a1a1c"/>
+  <text x="60" y="80" font-family="Inter, sans-serif" font-size="11" fill="#8b3a2f">v0-v5b · point -0.75, CI [-1.44, +0.003]</text>
+
+  <!-- v6 CI: [-0.150, +0.441] -->
+  <rect x="384" y="118" width="173" height="14" fill="#2d6a5c" opacity="0.22"/>
+  <line x1="384" y1="111" x2="384" y2="139" stroke="#2d6a5c" stroke-width="2"/>
+  <line x1="557" y1="111" x2="557" y2="139" stroke="#2d6a5c" stroke-width="2"/>
+  <circle cx="451.2" cy="125" r="5" fill="#2d6a5c"/>
+  <text x="384" y="106" font-family="Inter, sans-serif" font-size="11" fill="#2d6a5c">v6 iter 1+2 · point <strong>+0.13</strong>, CI [-0.15, +0.44]</text>
+
+  <text x="350" y="195" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="12" fill="#1a1a1c">x = sealed paired ΔSharpe (strategy − buy_and_hold)</text>
+</svg>
+</div>
+<div class="figure-caption"><strong>图 12。</strong> H1 verdict 从五个月的红色 CI（v0–v5b 全都点估计 -0.75、CI 上界仅 +0.003）转到第一个蓝色 CI（v6 点估计 +0.13、跨过 0）。<strong>H1 weak 第一次为 True</strong>——sealed window 上策略的点估计 Sharpe 高过 buy-and-hold benchmark；<strong>H1 strong 仍是 False</strong>——CI 下界 -0.15 没越过 0，n_bootstrap=1000 + block_len=10 给出的区间约 ±0.30 宽，需要更大样本或更显著的效应才能让下界翻正。</div>
+</div>
+
+<h3>真实发现是什么</h3>
+
+<p>v6 iter 1 / 2 的 accept 都是 <strong>volatility_target sizing</strong> on buyhold。框架机械地确认了一个文献早就知道的事实：long-only equity index 上 vol-target sizing 的 risk-adjusted return 通常高于 fixed_fraction。这不是新发现的因子，是一个已知的 sizing 技术——但是框架<em>自己跑出来</em>的、在 sealed 窗口上数值上确认了的。这是 0 alpha card 的局面下，<em>策略层</em>的第一个真实增益。</p>
+
+<p>仍然没有 accepted <code>add_indicator</code>，所以 alpha_cards 与 Translator 链路仍未触发。这条新发现的原因：buyhold 起点上只有 1 个 entry event，任何 <code>indicator_above</code> / <code>indicator_below</code> 类型的 entry filter 都把这个 entry 砍掉 → too_few_trades。v6 里 4 次 add_indicator 全部因此被拒。要在 buyhold 起点上让 add_indicator accept，需要的不是新的 indicator 函数，是 <strong>新的 filter 类型</strong>——把 indicator 作为 exit 触发器，而不是 entry filter。</p>
+
+<h3>下一步</h3>
+
+<table>
+  <thead><tr><th>方向</th><th>原因</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>给 DSL 加 exit_filter 类型</td>
+      <td>buy-and-hold 起点 + exit_filter（"if RSI &gt; 70 then exit"）才是真正的 add_indicator 路径。这是产生第一张 alpha card 的最直接路线。</td>
+    </tr>
+    <tr>
+      <td>更窄的 H1 strong CI</td>
+      <td>n_bootstrap=1000 + block_len=10 的 ±0.30 区间偏宽，可以提到 n_bootstrap=5000 或换 stationary bootstrap (Politis-Romano)。即便 ΔSharpe 点估计稳定在 +0.13，CI 下界翻正需要要么扩样本要么改方法。</td>
+    </tr>
+    <tr>
+      <td>跨基线对照表</td>
+      <td>把 sma_cross 与 buyhold 两个起点的 verdict 并排放，明确 baseline 选择对 H1 的影响。这是 PROPOSAL §7 该有的内容、不该靠 STAGE1_REPORT 后补。</td>
+    </tr>
+    <tr>
+      <td>fresh sealed windows</td>
+      <td>v6 三个 iter 的 sealed verdict 是同一个窗口。一个真实的 campaign-level verdict 需要 walk-forward 不相交段。</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>七次 campaign、105 trial 之后，H1 weak 第一次为 True。这不是因为框架加了哪个 agent 或哪种 dedup——是因为终于换了起点。<strong>v0 §9 的诊断从一开始就是对的：next step is in the action space, not the architecture.</strong></p>
+
+</section>
+
 <!-- ============================== 页脚 ============================== -->
 <footer class="footer">
-<div>LBG-Trader · 第一阶段回顾 · 2026-05-24 第二次重修订</div>
-<div>repo · <span class="accent">commit 6b1c1c8</span> · 440 tests · <em>uv run pytest -q</em> · <em>uv run ruff check</em></div>
+<div>LBG-Trader · 第一阶段回顾 · 2026-05-24 第三次重修订（H1 weak True）</div>
+<div>repo · <span class="accent">commit 9a9b647</span> · 448 tests · <em>uv run pytest -q</em> · <em>uv run ruff check</em></div>
 <div>对照阅读 · <span class="accent">PROPOSAL.html</span> · 所有 § 1-7 引用的源头规范</div>
 </footer>
 
