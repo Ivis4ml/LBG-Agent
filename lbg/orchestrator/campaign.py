@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from lbg.gate import GateConfig
 from lbg.orchestrator.discovery import Discovery, DiscoveryResult
 from lbg.orchestrator.role_runner import RoleRunner
 from lbg.sealed_vault import SealedVault
@@ -112,9 +113,14 @@ class CampaignRunner:
         repo_root: str | Path,
         *,
         runner: RoleRunner | None = None,
+        gate_config: GateConfig | None = None,
     ) -> None:
         self.repo_root = Path(repo_root).resolve()
         self.runner = runner
+        # Inject the gate per-iteration. None falls back to Discovery's strict
+        # default (PROPOSAL §7). For experiment-stage campaigns that want a
+        # non-zero accept rate, pass GateConfig.permissive() explicitly.
+        self.gate_config = gate_config
 
         # Snapshot the baseline at __init__ time. We re-apply this snapshot
         # before each iteration so failed experiments don't corrupt later
@@ -156,7 +162,11 @@ class CampaignRunner:
             )
             self._reset_for_iteration()
             alpha_before = self._count_alpha_cards()
-            disc = Discovery(repo_root=self.repo_root, runner=self.runner)
+            disc = Discovery(
+                repo_root=self.repo_root,
+                runner=self.runner,
+                gate_config=self.gate_config,
+            )
             vault_path = (
                 self.repo_root / "campaigns" / f"iteration_{i:03d}" / "sealed_test_final.json"
             )

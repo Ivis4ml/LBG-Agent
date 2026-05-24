@@ -21,7 +21,14 @@ class TrialOutcome:
 @dataclass(frozen=True)
 class GateConfig:
     """Per-trial gate thresholds. Locked per PROPOSAL.html §20 once a Discovery
-    run starts; do not edit during a run."""
+    run starts; do not edit during a run.
+
+    Use the default GateConfig() for any H1 reporting / paper claim. The
+    classmethod `permissive()` returns a looser preset for experiment-stage
+    campaigns that need a non-zero accept rate to exercise downstream
+    machinery (alpha_cards/, sealed verdicts on a non-baseline incumbent).
+    Results from the permissive preset MUST NOT be cited as H1 evidence.
+    """
 
     min_trades: int = 20
     drawdown_regression_factor: float = 1.15
@@ -30,6 +37,23 @@ class GateConfig:
     max_train_val_sharpe_gap: float = 0.5
     utility_lcb_alpha: float = 0.20
     eps: float = 0.005
+
+    @classmethod
+    def permissive(cls) -> "GateConfig":
+        """Relaxed thresholds for experimentation only. Concretely:
+
+          * min_trades 20 → 10   (was the binding constraint on wider SMAs)
+          * utility_lcb_alpha 0.20 → 0.40  (looser one-sided CI on Sharpe gain)
+          * drawdown_regression_factor 1.15 → 1.30  (tolerate larger DD)
+
+        Used by `scripts/campaign.py --gate permissive` to surface real
+        alpha_cards from the Discovery loop. Not for any statistical claim.
+        """
+        return cls(
+            min_trades=10,
+            utility_lcb_alpha=0.40,
+            drawdown_regression_factor=1.30,
+        )
 
 
 # Reason strings produced by `decide`. The first three accept reasons map to

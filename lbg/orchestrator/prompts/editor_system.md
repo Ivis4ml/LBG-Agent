@@ -86,7 +86,9 @@ and the trial is aborted before the gate even sees it.
    attach: {rule: indicator_above, indicator: rsi_14, threshold: 30.0}}`.
 
 - **`parameter_change`** `change:` block has: `path` (str, one of
-  `sizing.<field>` or `indicators[<name>].params.<key>`), `value` (number/bool/str).
+  `sizing.<field>`, `indicators[<name>].params.<key>`, or
+  `filters[<idx>].threshold`), `value` (number/bool/str). Use the filter
+  threshold form to tune an existing filter without rewriting it.
 
 - **`add_filter`** `change:` block has: `filter` (a Filter object). A Filter
   is `{rule: indicator_above|indicator_below, indicator: <name>, threshold: <float>}`.

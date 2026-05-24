@@ -94,12 +94,15 @@ def test_parameter_change_on_indicator_param(working_tree):
 
 
 def test_parameter_change_rejects_unknown_path(working_tree):
+    """A path that doesn't match any of the three supported forms must
+    raise. `filters[N].threshold` itself is supported now (step (i)),
+    so we pick an unsupported form here -- `entry.rule`."""
     parent = load_strategy(working_tree / "strategy.yaml")
     builder = CandidateBuilder(working_tree)
 
     proposal = _proposal(
         EditType.PARAMETER_CHANGE,
-        {"path": "filters[0].threshold", "value": 1.0},
+        {"path": "entry.rule", "value": "cross_below"},
     )
     payload = ParameterChangePayload.model_validate(proposal.proposed_edit.change)
     with pytest.raises(CandidateBuildError, match="unsupported parameter_change path"):

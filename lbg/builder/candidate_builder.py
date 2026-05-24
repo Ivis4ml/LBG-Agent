@@ -45,6 +45,7 @@ class CandidateApplyResult:
 _INDICATOR_PATH_RE = re.compile(
     r"^indicators\[(?P<name>[A-Za-z_][A-Za-z0-9_]*)\]\.params\.(?P<key>[A-Za-z_][A-Za-z0-9_]*)$"
 )
+_FILTER_PATH_RE = re.compile(r"^filters\[(?P<idx>\d+)\]\.threshold$")
 
 
 class CandidateBuilder:
@@ -431,6 +432,8 @@ def _set_path(data: dict, path: str, value):
     Supported forms:
       - `sizing.<field>`
       - `indicators[<name>].params.<key>`
+      - `filters[<idx>].threshold`   (added (i) -- the live campaign showed
+        Editor naturally wants to tune filter thresholds in a follow-up trial)
     """
     if path.startswith("sizing."):
         field = path[len("sizing.") :]
@@ -444,11 +447,28 @@ def _set_path(data: dict, path: str, value):
         data["sizing"][field] = value
         return before, value
 
+    fm = _FILTER_PATH_RE.match(path)
+    if fm:
+        idx = int(fm.group("idx"))
+        filters = data.get("filters") or []
+        if idx < 0 or idx >= len(filters):
+            raise CandidateBuildError(
+                f"filter index {idx} out of range; strategy has {len(filters)} filter(s)"
+            )
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            raise CandidateBuildError(
+                f"filter threshold must be a number; got {type(value).__name__}"
+            )
+        before = filters[idx].get("threshold")
+        filters[idx]["threshold"] = float(value)
+        return before, float(value)
+
     m = _INDICATOR_PATH_RE.match(path)
     if not m:
         raise CandidateBuildError(
             f"unsupported parameter_change path: {path!r}; "
-            "expected `sizing.<field>` or `indicators[<name>].params.<key>`"
+            "expected `sizing.<field>`, `indicators[<name>].params.<key>`, "
+            "or `filters[<idx>].threshold`"
         )
     name, key = m.group("name"), m.group("key")
     for spec in data["indicators"]:
