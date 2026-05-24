@@ -319,8 +319,9 @@ window.MathJax = {
   <div class="title-right">
     <div>SPY · 2010 – 2024</div>
     <div>Stage 1 · Discovery</div>
-    <div><span class="v">v0.1.0</span> · commit c3ecba5</div>
-    <div>2026 · 05 · 23</div>
+    <div><span class="v">v0.2.0</span> · commit fc7b59e</div>
+    <div>2026 · 05 · 24</div>
+    <div style="font-size: 10px; color: var(--ink-muted); margin-top: 4px;">§ 10 升级补遗 · 2026-05-24</div>
   </div>
 </header>
 
@@ -1339,10 +1340,218 @@ MIMO 这次运行让我们发现原版循环把 trial id 取自 <code>max(trials
 </div>
 </section>
 
+<!-- ============================== § 10 升级与重跑 ============================== -->
+<section id="upgrades">
+<div class="section-marker">
+  <span class="section-num">§ 10</span>
+  <h2>升级后的回炉重跑</h2>
+</div>
+
+<p class="lede">§ 9 给出的下一步建议被全部实现，并且在原来"单次 Discovery + 一次 sealed"之外多加了一层 <em>campaign</em>——多次 Discovery 共享 semantic memory 与 alpha cards。本节记录两轮升级（六项框架改造 + 两项跟进修复）和两次新的实证 campaign（严格 gate 与 permissive gate 各三轮 iteration）。结论：框架的机械问题（noop add_indicator、parser abort、缺失因子先验、单次 Discovery 失败即终止）全部消除；但在 SMA(20/50) 起点上 H1 仍然为 False。这次是个更彻底的 False。</p>
+
+<h3>六项框架改造 · 各自解决什么问题</h3>
+
+<table>
+  <thead>
+    <tr><th style="width:14%">改造</th><th style="width:34%">机制</th><th style="width:52%">解决的 § 9 病灶</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>step 1 · 因子库注入</strong></td>
+      <td><code>knowledge/factors/</code> 564 份 dossier 通过 <code>ContextBuilder</code> 进入 Editor 的 prompt——从当前 strategy 的 indicator 名 + 最近 trial 的拒绝信号派生检索词（波动率／回撤／趋势强度／均值回归 等中文关键词），dossier 文本里 [1990, 2050] 年份替换为 <code>&lt;YEAR&gt;</code> 以通过 redaction 守卫。</td>
+      <td>§ 9 建议的"内置 indicator 模板"。Editor 现在能在 hypothesis 里显式援引 ADX、AmihudIlliq、Chandelier、LSMA、RSI、ATR-trail、vol_ratio 等已发表因子，而不是凭空造一个 indicator。</td>
+    </tr>
+    <tr>
+      <td><strong>A · LLM 单调用 micro-retry</strong></td>
+      <td><code>RoleRunner.editor</code> 在响应触发 redaction / 缺 YAML 代码块 / schema parse error 时，最多再发起 2 次自纠正调用（共 3 次）。redaction 失败时丢弃脏 assistant 回合避免把违禁 token 引回上下文；其他失败时多轮重发，<code>AgentComputeRecord</code> 新增 <code>retry_attempts</code> 与 <code>retry_reasons</code> 字段记账。</td>
+      <td>§ 7 报告里 MIMO 出现 12 次 parser abort。该改造让"输出格式失败"不再消耗 trial 预算。本次 Anthropic 上的两次 campaign 共 30 trial 实际 retry 次数为 0——但 safety net 已就位。</td>
+    </tr>
+    <tr>
+      <td><strong>step 2 · alpha cards 导出</strong></td>
+      <td>accepted 且 <code>edit_type=add_indicator</code> 时 Orchestrator 写 <code>alpha_cards/trial_NNNN.yaml</code> + 追加 <code>alpha_cards/index.jsonl</code>，schema 是 dossier 的超集，含 train 指标、validation_signal、空白的 <code>sealed_summary</code> 槽位（待 H1 verdict 填充）以及可选的 <code>dossier_link</code> 指回种子库。Pydantic <code>extra="forbid"</code>。</td>
+      <td>PROPOSAL §6.6 新增的 round-trip bridge——把 "dossier ↔ Python ↔ alpha card" 三态绑定成一个可数对象。H1 计数（PROPOSAL §4）从"整体 paired ΔSharpe"改为"sealed CI 下界 &gt; 0 的 card 数"。</td>
+    </tr>
+    <tr>
+      <td><strong>step 3 · 拒绝 noop add_indicator</strong></td>
+      <td><code>Strategy.unwired_indicators()</code> 返回未被 entry / exit / 任何 filter 引用的 indicator 名。<code>AddIndicatorPayload</code> 新增可选 <code>attach: Filter | None</code>——一次性把新 indicator 接入 filter。<code>CandidateBuilder</code> 检测到 unwired 状态直接抛 <code>CandidateBuildError("unwired ...")</code>，在 backtest 之前就拒掉。</td>
+      <td>§ 7 报告里 Anthropic 5/8 的 trial 是 noop <code>add_indicator</code>。新 schema 让这种 trial 在结构上不可能发生：Editor 必须同时给出指标 + 接线，否则 builder 报错。本次两次 campaign 共 30 trial，noop 比例 <strong>0/30</strong>。</td>
+    </tr>
+    <tr>
+      <td><strong>B · 强制 fallback 接续</strong></td>
+      <td>每个 trial 的 <code>fallback_if_rejected</code> 字段写入 <code>TrialRecord</code>（可选，向后兼容旧 jsonl 行）。<code>ContextBuilder</code> 在下一次 Editor prompt 里另起一节 "Your previously promised fallback"——指名上一次 rejected 的 trial id 并引用原 fallback 文本；accept 一发清空 pending。</td>
+      <td>让 Editor 的"下一次会试 X"承诺有结构化跟进。实证：本次第一轮 campaign iter 1 trial 0 写了 "若被拒则试 vol-target sizing"，trial 1 立刻执行该 fallback——Editor 不能再静默漂移。</td>
+    </tr>
+    <tr>
+      <td><strong>C · Discovery campaign</strong></td>
+      <td>新模块 <code>lbg.orchestrator.campaign.CampaignRunner</code> 跑 K 次 Discovery iteration。每次起点：strategy.yaml + indicators/ 回退到 baseline；trials.jsonl 等事件记忆全部清空。跨次保留：四份语义记忆 md、skills/、alpha_cards/。每次 iteration 有独立的 sealed vault（<code>campaigns/iteration_NNN/sealed_test_final.json</code>）。</td>
+      <td>对 § 9 没明说但显然需要的 "Atari 式失败即重玩" 范式。一次 Discovery 拒掉所有 trial 不再终止整个实验——semantic memory 把那一轮的失败模式带给下一轮，下一轮的 Editor 起点更聪明。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>跟进的两项修复</h3>
+
+<table>
+  <thead>
+    <tr><th>修复</th><th>由什么暴露</th><th>修了什么</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>(i) <code>parameter_change</code> 支持 <code>filters[N].threshold</code></strong></td>
+      <td>严格 gate 下的 campaign 第 3 轮 trial 3 触发了 invariant failure: <code>unsupported parameter_change path: 'filters[0].threshold'</code>——Editor 在做"先 add filter 然后调它的阈值"的两步规划，DSL 不允许。</td>
+      <td>给 <code>_set_path</code> 增加第三种合法路径形式（带索引边界检查 + 类型检查）；Editor system prompt 更新。Editor 已经在尝试多步规划，DSL 现在能接住。</td>
+    </tr>
+    <tr>
+      <td><strong>(ii) <code>GateConfig.permissive()</code> 预设</strong></td>
+      <td>严格 gate 下三轮 iteration 共 0 接受率——alpha_cards 与 sealed verdict 永远跑在 baseline 上，无法观察"如果 incumbent 真的移动"会发生什么。需要一个实验时的旁路。</td>
+      <td>新 classmethod：<code>min_trades 20→10</code>、<code>utility_lcb_alpha 0.20→0.40</code>、<code>drawdown_regression_factor 1.15→1.30</code>。其他字段不变。docstring 与 CLI flag 都明确：permissive 结果<em>不</em>构成 H1 证据。<code>scripts/campaign.py --gate permissive</code> 启用。</td>
+    </tr>
+    <tr>
+      <td><strong>baseline 加入初始 commit</strong></td>
+      <td>首次 permissive campaign 跑到 iter 0 第 5 trial 即崩溃: <code>indicator module not found: sma.py</code>。根因：staging 脚本只 <code>git add README.md strategy.yaml</code>，indicators/ 未追踪；Editor 提出 <code>revert_to_trial_N</code> 时，git 视角的恢复把 sma.py 当 orphan 删掉。</td>
+      <td><code>scripts/campaign.py</code> 与 <code>scripts/long_discovery.py</code> 的 staging 中加入 <code>indicators/</code> 到初始 commit。两个回归测试钉死该 invariant。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>两次新 campaign · 数据</h3>
+
+<p>两次都跑 Anthropic Opus 4.7，3 iteration × 5 trial = 15 trials 每轮。本次<em>不</em>计入 H1，仅展示框架机械行为。</p>
+
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-label">campaign v1 · strict gate</div>
+    <div class="kpi-value">0 / 15</div>
+    <div class="kpi-sub">accepted = 0，alpha_cards = 0，331 秒</div>
+  </div>
+  <div class="kpi teal">
+    <div class="kpi-label">campaign v2 · permissive gate</div>
+    <div class="kpi-value">4 / 15</div>
+    <div class="kpi-sub">accepted（全部 iter 3），alpha_cards = 0，294 秒</div>
+  </div>
+  <div class="kpi gold">
+    <div class="kpi-label">noop add_indicator 比例</div>
+    <div class="kpi-value">0 / 30</div>
+    <div class="kpi-sub">（旧基线 5/8）</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">retry 触发次数</div>
+    <div class="kpi-value">0 / 60</div>
+    <div class="kpi-sub">A 的 safety net 未被需要</div>
+  </div>
+</div>
+
+<h3>Editor 的提案谱 · 由 dossier 库驱动的多样性</h3>
+
+<p>两次 campaign 合计 30 trial 里，Editor 提出的不同因子方向（按出现顺序）：</p>
+
+<table>
+  <thead>
+    <tr><th>因子</th><th>类别</th><th>本次出现在</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>adx_14</code></td><td>趋势强度</td><td>v1 iter 1 trial 0；v2 iter 1 trial 1</td></tr>
+    <tr><td><code>sma_slow_slope</code> / <code>_norm</code> / <code>_pct_slope</code></td><td>趋势方向</td><td>v1 iter 1-3 多次出现</td></tr>
+    <tr><td><code>lsma_dev_20</code> / <code>lsma_dev_30</code></td><td>均值回归</td><td>v1 iter 3；v2 iter 1 trial 0</td></tr>
+    <tr><td><code>rsi_14</code></td><td>动量震荡</td><td>v2 iter 1 trial 2</td></tr>
+    <tr><td><code>atr_trail_14</code></td><td>波动性 / trailing stop</td><td>v2 iter 1 trial 4</td></tr>
+    <tr><td><code>chandelier_long</code></td><td>波动性 / trailing stop</td><td>v2 iter 2 trial 0</td></tr>
+    <tr><td><code>vol_ratio_20</code></td><td>波动率比</td><td>v2 iter 2 trial 4</td></tr>
+    <tr><td><code>atr_pct_rank</code></td><td>波动率百分位</td><td>v2 iter 3 trial 4</td></tr>
+  </tbody>
+</table>
+
+<p>八条不同的因子方向，覆盖了趋势强度、趋势方向、均值回归、动量震荡、波动性 stop、波动率比五大族。这是<em>第一次</em>看到 Editor 跨多次 trial 主动从 dossier 库取材；旧版报告里只有 ADX 和 RSI 出现过。</p>
+
+<h3>permissive gate 的"trivial reduction"漏洞</h3>
+
+<p>v2 campaign 第 3 轮一口气接受了 4 个 trial：</p>
+
+<table>
+  <thead>
+    <tr><th>trial</th><th>edit</th><th>本轮 sealed Sharpe</th><th>本轮 sealed MaxDD</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>iter 3 trial 0</td><td><code>sizing.fraction: 1.0 → 0.5</code></td><td rowspan="4">0.108（与 baseline 相同）</td><td rowspan="4">-0.031（baseline -0.280，10× 改善）</td></tr>
+    <tr><td>iter 3 trial 1</td><td><code>sizing.fraction: 0.5 → 0.35</code></td></tr>
+    <tr><td>iter 3 trial 2</td><td><code>sizing.fraction: 0.35 → 0.25</code></td></tr>
+    <tr><td>iter 3 trial 3</td><td><code>sizing.fraction: 0.25 → 0.10</code></td></tr>
+  </tbody>
+</table>
+
+<p>这是一个有意思的反向结论。permissive gate 的 Pareto 改进路径上，<em>减仓位</em>是单调下坡——同比例缩小 mean 与 std，Sharpe 不变（因为是 mean/std 的比），但回撤的绝对值同比例缩小。每一步都让 incumbent 看起来"更安全且不更差"。Editor 把这条捷径找了出来，连续 4 步压到 fraction=0.10——本质上等于在交易 0.1 倍仓位。<strong>这条捷径不构成因子发现</strong>：sealed Sharpe 与 baseline 完全相同（0.108），相对于 buy-and-hold 的 ΔSharpe 仍是 -0.75，CI 仍是 <code>[-1.44, +0.003]</code>，H1 仍是 False。</p>
+
+<p>这反过来也说明严格 gate 的设计是对的——它要求 <code>utility_lcb</code> 真正改进，而不是 Pareto 上的廉价改善。permissive 是给实验用的，正如它的 docstring 写明的：<em>"results MUST NOT be cited as H1 evidence"</em>。</p>
+
+<h3>本轮的 H1 verdict</h3>
+
+<div class="figure">
+<div class="chart-wrap" style="padding: 24px 18px;">
+<svg viewBox="0 0 700 220" width="100%" role="img">
+  <title>H1 verdict 区间：v1 与 v2 sealed 配对 Sharpe 差</title>
+  <line x1="60" y1="130" x2="660" y2="130" stroke="#1a1a1c" stroke-width="0.8"/>
+  <g font-family="JetBrains Mono, monospace" font-size="10" fill="#6b6b70">
+    <text x="60"  y="158" text-anchor="middle">-1.5</text>
+    <text x="180" y="158" text-anchor="middle">-1.0</text>
+    <text x="300" y="158" text-anchor="middle">-0.5</text>
+    <text x="420" y="158" text-anchor="middle">0.0</text>
+    <text x="540" y="158" text-anchor="middle">+0.5</text>
+    <text x="660" y="158" text-anchor="middle">+1.0</text>
+  </g>
+  <line x1="420" y1="60" x2="420" y2="145" stroke="#2d6a5c" stroke-width="1" stroke-dasharray="3 3"/>
+  <text x="420" y="50" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="11" fill="#2d6a5c">H1 强判据：CI 下界 &gt; 0</text>
+
+  <!-- CI 区域，v1 与 v2 数值完全相同，画一条 -->
+  <rect x="74.4" y="102" width="346.4" height="20" fill="#8b3a2f" opacity="0.18"/>
+  <line x1="74.4" y1="90" x2="74.4" y2="134" stroke="#8b3a2f" stroke-width="2"/>
+  <line x1="420.8" y1="90" x2="420.8" y2="134" stroke="#8b3a2f" stroke-width="2"/>
+  <text x="74.4" y="180" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8b3a2f">-1.44</text>
+  <text x="420.8" y="180" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8b3a2f">+0.003</text>
+  <text x="247" y="83" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#8b3a2f">两次 campaign · 三次 iteration · 六次 sealed verdict 全部一致</text>
+  <circle cx="239.36" cy="112" r="5" fill="#1a1a1c"/>
+  <text x="239.36" y="200" text-anchor="middle" font-family="Fraunces, serif" font-size="12" fill="#1a1a1c">点估计 -0.75</text>
+</svg>
+</div>
+<div class="figure-caption"><strong>图 7。</strong> 两次 campaign 共 6 个 iteration 写入的 sealed verdict 全部完全一致：strict gate 下没有任何 accept，incumbent 永远是 baseline；permissive gate 的 4 个 accept 全是 <em>同比例减仓</em>，对 Sharpe 不产生影响。所以 H1 的 CI 与原版 STAGE1_REPORT § 7 完全相同。</div>
+</div>
+
+<div class="aside note">
+<span class="aside-label">为什么 H1 仍是 False，且这是诚实的结论</span>
+单步 DSL edit 在这个 val 窗口上始终无法显著改善 Sharpe，无论从因子库取多少种子。八种因子方向都试过，<strong>每一种的 val Sharpe 都低于 baseline 的 0.933</strong>——val 窗口对 SMA(20/50) 长仓的友好程度是结构性的（low-vol bull 时段，少回撤多上涨），任何加入选择性的 entry filter 都会让你错过一部分上涨。框架机械问题已经全部解决（noop 消除、retry 就位、dossier 注入、attach 强制、fallback 接续、跨次记忆），但 baseline + val 窗口组合本身就是一个不允许 single-step incremental edit 胜出的局面。要看到真正的 H1=True，需要换 baseline 或换 val 窗口。
+</div>
+
+<h3>下一步</h3>
+
+<table>
+  <thead><tr><th>方向</th><th>原因</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>缩小 permissive gate 的 Pareto 漏洞</td>
+      <td>把 "candidate.validation.sharpe ≥ baseline - eps" 改成 "candidate.validation.<em>cagr</em> not lower" 或加一条 "fraction 不能小于 incumbent 的 80%"。让 Pareto 不再被同比例减仓 trivially 满足。</td>
+    </tr>
+    <tr>
+      <td>从 <code>buy_and_hold</code> 起点而不是 SMA cross 起点跑 Discovery</td>
+      <td>SMA cross 在 val 上偶然好的运气是结构性的，Editor 怎么改都是输。换 baseline 让 single-step edit 真正有空间表达。这是一个独立实验，不破坏 H1 协议。</td>
+    </tr>
+    <tr>
+      <td>滑动 sealed 窗口的 walk-forward campaign</td>
+      <td>当前 campaign 的每次 iteration 都用同一个 sealed 窗口——sealed verdict 因此完全一致。把 sealed 窗口在 split_C 内切成 K 不相交段（K 与 iteration 数一致）能让每次 verdict 真的提供独立信号，跨次累积的 bootstrap CI 才有意义。</td>
+    </tr>
+    <tr>
+      <td>真正让 alpha cards 写出来</td>
+      <td>两次 campaign 30 trial 中 add_indicator 都被 gate 拒。需要先把上面两条做完，让 add_indicator 至少有一次 accept，第 1 张 alpha card 出现，整个 dossier ↔ Python ↔ card 三态翻译才真正闭合。</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>第二阶段的目标不再是"造框架"——框架已经按 PROPOSAL 实现完毕。目标变成 <em>从框架里看到第一张活生生的、能记账、能在 sealed 窗口上跨越 CI 阈值的 alpha card</em>。</p>
+
+</section>
+
 <!-- ============================== 页脚 ============================== -->
 <footer class="footer">
-<div>LBG-Trader · 第一阶段回顾 · 2026-05-23</div>
-<div>repo · <span class="accent">commit c3ecba5</span> · 330 tests · 19 377 LOC · <em>uv run pytest -q</em> · <em>uv run ruff check</em></div>
+<div>LBG-Trader · 第一阶段回顾 · 2026-05-24 重修订</div>
+<div>repo · <span class="accent">commit fc7b59e</span> · 395 tests · <em>uv run pytest -q</em> · <em>uv run ruff check</em></div>
 <div>对照阅读 · <span class="accent">PROPOSAL.html</span> · 所有 § 1-7 引用的源头规范</div>
 </footer>
 
