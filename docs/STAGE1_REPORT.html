@@ -1441,6 +1441,31 @@ MIMO 这次运行让我们发现原版循环把 trial id 取自 <code>max(trials
   </div>
 </div>
 
+<h3>过程可视化 · 两次 campaign 的逐 trial 关键指标</h3>
+
+<p>下面三个图把 trials.jsonl + agent_compute.jsonl + campaign.log 的逐 trial 记录画出来。所有数据从 <code>/tmp/lbg_camp/</code>（strict）与 <code>/tmp/lbg_camp_v2/</code>（permissive）的 git 历史抽取——每次 trial 一个 commit，含完整 train metrics——非合成。</p>
+
+<div class="figure">
+<div class="chart-wrap" style="padding: 18px 12px;">
+  <canvas id="trialSharpeChart" height="280"></canvas>
+</div>
+<div class="figure-caption"><strong>图 8。</strong> 两次 campaign × 3 iteration × 5 trial = 30 个 trial 的 train Sharpe（高色块）与 train MaxDD（低色块，正向比例）。垂直虚线划分 iteration 边界；横虚线是 SMA(20/50) baseline 的 train Sharpe 0.693。绿色条 = accepted trial（permissive iter 3 的连续 4 个减仓），灰色 = invariant failure（无指标可读）。v1 iter 1 trial 3 与 iter 2 trial 3 都得到了高 train Sharpe（0.89），但只有 6 笔交易——被 <code>min_trades</code> 拒；v1 iter 1 trial 4 出现 Sharpe = 0、交易数 = 0，是 sma_fast/sma_slow 同周期化导致的"永不交叉"边界状态。</div>
+</div>
+
+<div class="figure">
+<div class="chart-wrap" style="padding: 18px 12px;">
+  <canvas id="fractionReductionChart" height="220"></canvas>
+</div>
+<div class="figure-caption"><strong>图 9。</strong> v2 permissive iter 3 连续 4 个 accept 的轨迹。<strong>train Sharpe 锁在 0.693</strong>——因为 mean 与 std 按 fraction 同比例缩放，比值不变。MaxDD 从 -0.128 → -0.091 → -0.066 → -0.027，每一步都触发 Pareto 接受条件（drawdown 改进，Sharpe 不更差）。trial 4（atr_pct_rank）打破单调性、Sharpe 跌到 0.647、被拒。这条曲线就是 permissive gate 的"trivial reduction" 漏洞的视觉证据。</div>
+</div>
+
+<div class="figure">
+<div class="chart-wrap" style="padding: 18px 12px;">
+  <canvas id="factorFamilyChart" height="220"></canvas>
+</div>
+<div class="figure-caption"><strong>图 10。</strong> 两次 campaign 累计提案的因子类别分布。dossier 库（旁边一栏）覆盖 564 个因子；本次实际被引用的 8 个分散在 5 个族（趋势强度 1、趋势方向 3、均值回归 1、动量震荡 1、波动性 stop 2、波动率比 1）。仍有 99% 以上的 dossier 库未被尝试——这是后续 campaign 的探索空间。柱顶的数字是该族在两次 campaign 中被 Editor 触达的次数。</div>
+</div>
+
 <h3>Editor 的提案谱 · 由 dossier 库驱动的多样性</h3>
 
 <p>两次 campaign 合计 30 trial 里，Editor 提出的不同因子方向（按出现顺序）：</p>
@@ -1658,6 +1683,312 @@ new Chart(CTX('trialChart'), {
       ctx.fillText('baseline val 0.933', right - 120, y.getPixelForValue(0.933) - 5);
       ctx.restore();
     }
+  }],
+});
+
+/* ============ 图 8：两次 campaign 的逐 trial train Sharpe + MaxDD ============ */
+
+/* 数据从 /tmp/lbg_camp/{,_v2}/.git 的逐 commit memory/trials.jsonl 提取，
+ * 每条 commit 对应一个 trial 的 train_metrics。空槽是 invariant failure
+ * （Editor 提案被 builder/AST/prefix 拒，没有 train metrics 可记）。 */
+const V1_TRIALS = [
+  /* iter 1 */
+  { i:1, t:0, edit:'adx_14',        sharpe:0.417, mdd:-0.241, n:32,  outcome:'reject' },
+  { i:1, t:1, edit:'vol_target',    sharpe:0.722, mdd:-0.196, n:268, outcome:'reject' },
+  { i:1, t:2, edit:'sma_slope',     sharpe:0.779, mdd:-0.114, n:32,  outcome:'reject' },
+  { i:1, t:3, edit:'sma 50→200',    sharpe:0.893, mdd:-0.137, n:6,   outcome:'reject' },
+  { i:1, t:4, edit:'sma_fast 50',   sharpe:0.000, mdd:0.000,  n:0,   outcome:'reject' },
+  /* iter 2 */
+  { i:2, t:0, edit:'sma 50→100',    sharpe:0.633, mdd:-0.202, n:22,  outcome:'reject' },
+  { i:2, t:1, edit:'slope_norm',    sharpe:0.433, mdd:-0.203, n:32,  outcome:'reject' },
+  { i:2, t:2, edit:'vol_target',    sharpe:0.722, mdd:-0.196, n:268, outcome:'reject' },
+  { i:2, t:3, edit:'sma 50→200',    sharpe:0.893, mdd:-0.137, n:6,   outcome:'reject' },
+  { i:2, t:4, edit:'sma_slope',     sharpe:0.440, mdd:-0.203, n:36,  outcome:'reject' },
+  /* iter 3 */
+  { i:3, t:0, edit:'lsma_dev_20',   sharpe:0.210, mdd:-0.203, n:28,  outcome:'reject' },
+  { i:3, t:1, edit:'vol_target',    sharpe:0.722, mdd:-0.196, n:268, outcome:'reject' },
+  { i:3, t:2, edit:'lsma_dev_20',   sharpe:0.061, mdd:-0.116, n:14,  outcome:'reject' },
+  { i:3, t:3, edit:'filter thresh', sharpe:null,  mdd:null,   n:null,outcome:'invariant' },
+  { i:3, t:4, edit:'lsma_dev_20',   sharpe:0.082, mdd:-0.203, n:24,  outcome:'reject' },
+];
+const V2_TRIALS = [
+  /* iter 1 */
+  { i:1, t:0, edit:'lsma_dev_30',   sharpe:0.850, mdd:-0.102, n:36,  outcome:'reject' },
+  { i:1, t:1, edit:'adx_14',        sharpe:0.417, mdd:-0.241, n:32,  outcome:'reject' },
+  { i:1, t:2, edit:'rsi_14',        sharpe:0.713, mdd:-0.219, n:44,  outcome:'reject' },
+  { i:1, t:3, edit:'vol_target',    sharpe:0.722, mdd:-0.196, n:268, outcome:'reject' },
+  { i:1, t:4, edit:'atr_trail_14',  sharpe:0.693, mdd:-0.241, n:46,  outcome:'reject' },
+  /* iter 2 */
+  { i:2, t:0, edit:'chandelier',    sharpe:0.693, mdd:-0.241, n:46,  outcome:'reject' },
+  { i:2, t:1, edit:'(invariant)',   sharpe:null,  mdd:null,   n:null,outcome:'invariant' },
+  { i:2, t:2, edit:'(invariant)',   sharpe:null,  mdd:null,   n:null,outcome:'invariant' },
+  { i:2, t:3, edit:'cross_below↔',  sharpe:0.854, mdd:-0.201, n:1,   outcome:'reject' },
+  { i:2, t:4, edit:'vol_ratio_20',  sharpe:0.574, mdd:-0.114, n:20,  outcome:'reject' },
+  /* iter 3 -- the famous 4-accept fraction reduction */
+  { i:3, t:0, edit:'frac 1.0→0.5',  sharpe:0.693, mdd:-0.128, n:46,  outcome:'accept' },
+  { i:3, t:1, edit:'frac 0.5→0.35', sharpe:0.693, mdd:-0.091, n:46,  outcome:'accept' },
+  { i:3, t:2, edit:'frac 0.35→.25', sharpe:0.693, mdd:-0.066, n:46,  outcome:'accept' },
+  { i:3, t:3, edit:'frac 0.25→.10', sharpe:0.693, mdd:-0.027, n:46,  outcome:'accept' },
+  { i:3, t:4, edit:'atr_pct_rank',  sharpe:0.647, mdd:-0.027, n:44,  outcome:'reject' },
+];
+
+const colorForOutcome = (o) => o === 'accept' ? TEAL : (o === 'invariant' ? '#bbb7b0' : ACCENT);
+const buildSharpeData = (trials) => trials.map(t => t.sharpe === null ? null : t.sharpe);
+const buildLabels = (trials) => trials.map(t => `${t.i}·${t.t} ${t.edit}`);
+
+/* 一个 chart 两个数据集：v1 + v2。让用户横向对比，看哪一段是哪个 campaign。 */
+new Chart(CTX('trialSharpeChart'), {
+  type: 'bar',
+  data: {
+    labels: V1_TRIALS.map((t, idx) => `v1·${t.i}·${t.t}`)
+            .concat(V2_TRIALS.map((t, idx) => `v2·${t.i}·${t.t}`)),
+    datasets: [
+      {
+        label: 'train Sharpe',
+        data: buildSharpeData(V1_TRIALS).concat(buildSharpeData(V2_TRIALS)),
+        backgroundColor: V1_TRIALS.concat(V2_TRIALS).map(t => colorForOutcome(t.outcome)),
+        borderRadius: 0,
+        barPercentage: 0.95,
+        categoryPercentage: 0.92,
+      },
+    ],
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: INK,
+        titleFont: { family: "'Fraunces', serif", weight: 400 },
+        bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
+        padding: 10,
+        callbacks: {
+          afterLabel: (ctx) => {
+            const all = V1_TRIALS.concat(V2_TRIALS);
+            const t = all[ctx.dataIndex];
+            if (t.outcome === 'invariant') return ['edit: ' + t.edit, 'outcome: invariant failure'];
+            return [`edit: ${t.edit}`, `MDD: ${t.mdd.toFixed(3)}`, `trades: ${t.n}`, `outcome: ${t.outcome}`];
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        ticks: {
+          color: INK_MUTED,
+          font: { family: "'JetBrains Mono', monospace", size: 9 },
+          maxRotation: 90,
+          minRotation: 60,
+        },
+        grid: { display: false },
+      },
+      y: {
+        beginAtZero: true,
+        max: 1.0,
+        ticks: { color: INK_MUTED, font: { family: "'JetBrains Mono', monospace", size: 10 }, stepSize: 0.2 },
+        grid: { color: '#e8e4d8' },
+        title: { display: true, text: 'train Sharpe', color: INK_MUTED, font: { family: "'Fraunces', serif", style: 'italic', size: 11 } },
+      },
+    },
+  },
+  plugins: [{
+    id: 'campaignBoundaries',
+    afterDraw(chart) {
+      const { ctx, chartArea: { top, bottom, left, right }, scales: { x, y } } = chart;
+      ctx.save();
+      /* baseline line */
+      ctx.setLineDash([4,4]);
+      ctx.strokeStyle = ACCENT;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(left, y.getPixelForValue(0.693));
+      ctx.lineTo(right, y.getPixelForValue(0.693));
+      ctx.stroke();
+      ctx.font = "10px 'JetBrains Mono', monospace";
+      ctx.fillStyle = ACCENT;
+      ctx.fillText('baseline 0.693', left + 10, y.getPixelForValue(0.693) - 5);
+      /* iteration boundaries — v1 at 5/10/15, v2 split at 15/20/25 */
+      ctx.setLineDash([2,3]);
+      ctx.strokeStyle = INK_MUTED;
+      [5, 10, 15, 20, 25].forEach(idx => {
+        const px = x.getPixelForValue(idx) - (x.getPixelForValue(1) - x.getPixelForValue(0)) / 2;
+        ctx.beginPath();
+        ctx.moveTo(px, top);
+        ctx.lineTo(px, bottom);
+        ctx.stroke();
+      });
+      /* campaign labels */
+      ctx.setLineDash([]);
+      ctx.font = "italic 11px 'Fraunces', serif";
+      ctx.fillStyle = INK_MUTED;
+      ctx.fillText('campaign v1 · strict gate · 0/15 accepted', x.getPixelForValue(0), top - 5);
+      ctx.fillStyle = TEAL;
+      ctx.fillText('campaign v2 · permissive · 4/15 accepted', x.getPixelForValue(15), top - 5);
+      ctx.restore();
+    },
+  }],
+});
+
+/* ============ 图 9：v2 iter 3 fraction 减仓轨迹 ============ */
+
+const ITER3_TRIALS = V2_TRIALS.slice(10, 15);
+const ITER3_FRACTION = [0.50, 0.35, 0.25, 0.10, 0.10]; /* trial 4 didn't change fraction */
+const ITER3_MDD_POS  = ITER3_TRIALS.map(t => Math.abs(t.mdd ?? 0));
+
+new Chart(CTX('fractionReductionChart'), {
+  type: 'bar',
+  data: {
+    labels: ITER3_TRIALS.map((t, i) => `${t.edit}\n(${t.outcome})`),
+    datasets: [
+      {
+        label: 'sizing.fraction',
+        data: ITER3_FRACTION,
+        type: 'line',
+        yAxisID: 'yFrac',
+        borderColor: TEAL,
+        backgroundColor: TEAL,
+        pointRadius: 5,
+        pointBackgroundColor: TEAL,
+        tension: 0,
+      },
+      {
+        label: 'train MaxDD (abs)',
+        data: ITER3_MDD_POS,
+        yAxisID: 'yMdd',
+        backgroundColor: ITER3_TRIALS.map(t => colorForOutcome(t.outcome)),
+        borderRadius: 0,
+        barPercentage: 0.7,
+        categoryPercentage: 0.7,
+      },
+      {
+        label: 'train Sharpe (constant 0.693)',
+        data: ITER3_TRIALS.map(t => t.sharpe),
+        type: 'line',
+        yAxisID: 'yFrac',
+        borderColor: ACCENT,
+        backgroundColor: 'transparent',
+        borderDash: [5, 4],
+        pointRadius: 3,
+        pointBackgroundColor: ACCENT,
+        tension: 0,
+      },
+    ],
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', align: 'end' },
+      tooltip: {
+        backgroundColor: INK,
+        titleFont: { family: "'Fraunces', serif", weight: 400 },
+        bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
+        padding: 10,
+      },
+    },
+    scales: {
+      x: {
+        ticks: { color: INK_MUTED, font: { family: "'JetBrains Mono', monospace", size: 10 } },
+        grid: { display: false },
+      },
+      yFrac: {
+        position: 'left',
+        beginAtZero: true,
+        max: 1.0,
+        ticks: { color: TEAL, font: { family: "'JetBrains Mono', monospace", size: 10 }, stepSize: 0.2 },
+        grid: { color: '#e8e4d8' },
+        title: { display: true, text: 'fraction / Sharpe', color: TEAL, font: { family: "'Fraunces', serif", style: 'italic', size: 11 } },
+      },
+      yMdd: {
+        position: 'right',
+        beginAtZero: true,
+        max: 0.3,
+        ticks: { color: ACCENT, font: { family: "'JetBrains Mono', monospace", size: 10 } },
+        grid: { display: false },
+        title: { display: true, text: '|MaxDD|', color: ACCENT, font: { family: "'Fraunces', serif", style: 'italic', size: 11 } },
+      },
+    },
+  },
+});
+
+/* ============ 图 10：因子族探索分布 ============ */
+
+const FAMILY_COUNTS = {
+  '趋势强度': 2,         /* ADX × 2 */
+  '趋势方向': 5,         /* sma_slope, slope_norm, slope (v1) × 4 + sma_slow_pct_slope × 1 */
+  '均值回归': 5,         /* lsma_dev × 4 in v1 iter 3 + lsma_dev_30 in v2 */
+  '动量震荡': 1,         /* rsi_14 */
+  '波动性 stop': 2,      /* atr_trail_14, chandelier_long */
+  '波动率比': 1,         /* vol_ratio_20 */
+  '波动率分位': 1,       /* atr_pct_rank */
+};
+const FAMILY_COLORS = {
+  '趋势强度': ACCENT,
+  '趋势方向': ACCENT_SOFT,
+  '均值回归': TEAL,
+  '动量震荡': TEAL_SOFT,
+  '波动性 stop': GOLD,
+  '波动率比': '#a07050',
+  '波动率分位': '#6b6b70',
+};
+
+new Chart(CTX('factorFamilyChart'), {
+  type: 'bar',
+  data: {
+    labels: Object.keys(FAMILY_COUNTS),
+    datasets: [{
+      label: '本次 campaign 触达次数',
+      data: Object.values(FAMILY_COUNTS),
+      backgroundColor: Object.keys(FAMILY_COUNTS).map(k => FAMILY_COLORS[k]),
+      borderRadius: 0,
+      barPercentage: 0.7,
+      categoryPercentage: 0.8,
+    }],
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: INK,
+        titleFont: { family: "'Fraunces', serif", weight: 400 },
+        bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
+        padding: 10,
+      },
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+        max: 6,
+        ticks: { color: INK_MUTED, font: { family: "'JetBrains Mono', monospace", size: 10 } },
+        grid: { color: '#e8e4d8' },
+        title: { display: true, text: 'trial 触达次数（两次 campaign 累计）', color: INK_MUTED, font: { family: "'Fraunces', serif", style: 'italic', size: 11 } },
+      },
+      y: {
+        ticks: { color: INK, font: { family: "'Inter', 'Noto Sans SC', sans-serif", size: 11 } },
+        grid: { display: false },
+      },
+    },
+  },
+  plugins: [{
+    id: 'datalabels',
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart;
+      chart.data.datasets.forEach((ds, dsIdx) => {
+        const meta = chart.getDatasetMeta(dsIdx);
+        meta.data.forEach((bar, i) => {
+          ctx.save();
+          ctx.font = "11px 'JetBrains Mono', monospace";
+          ctx.fillStyle = INK;
+          ctx.textBaseline = 'middle';
+          ctx.fillText(String(ds.data[i]), bar.x + 6, bar.y);
+          ctx.restore();
+        });
+      });
+    },
   }],
 });
 </script>
