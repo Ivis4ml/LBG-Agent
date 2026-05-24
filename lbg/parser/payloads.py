@@ -39,6 +39,16 @@ class AddIndicatorPayload(BaseModel):
             "rejects the trial as an unwired-indicator noop."
         ),
     )
+    attach_target: Literal["entry", "exit"] = Field(
+        default="entry",
+        description=(
+            "Where the attached filter is wired. 'entry' = the existing "
+            "behavior (filter AND-combines with the entry cross rule). "
+            "'exit' = the new exit_filter path (filter OR-combines into "
+            "the exit signal). On a buyhold baseline use 'exit' so the "
+            "new indicator gates the exit decision."
+        ),
+    )
 
 
 class ParameterChangePayload(BaseModel):
@@ -56,22 +66,32 @@ class ParameterChangePayload(BaseModel):
 
 
 class AddFilterPayload(BaseModel):
-    """`proposed_edit.change` for `add_filter`."""
+    """`proposed_edit.change` for `add_filter`.
+
+    `target` chooses which list the new filter joins: 'entry' (default,
+    preserves legacy behavior; filter AND-combines with the entry cross
+    rule) or 'exit' (filter OR-combines into the exit signal; any True
+    exit_filter forces a position exit).
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     filter: Filter
+    target: Literal["entry", "exit"] = "entry"
 
 
 class RemoveFilterPayload(BaseModel):
     """`proposed_edit.change` for `remove_filter`.
 
-    Specifies the filter by index into the current `filters` list (0-based).
+    Specifies the filter by index into the chosen list (0-based).
+    `target` selects which list ('entry' = strategy.filters,
+    'exit' = strategy.exit_filters).
     """
 
     model_config = ConfigDict(extra="forbid")
 
     index: int = Field(ge=0)
+    target: Literal["entry", "exit"] = "entry"
 
 
 class ChangeSizingModePayload(BaseModel):

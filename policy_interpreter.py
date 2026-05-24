@@ -134,8 +134,13 @@ def compute_positions(
     entry_signal = _eval_cross_rule(strategy.entry, indicators)
     exit_signal = _eval_cross_rule(strategy.exit, indicators)
 
+    # Entry filters AND-combine with the entry cross: every filter must
+    # admit. Exit filters OR-combine with the exit cross: any True
+    # exit_filter forces an exit on top of the cross_rule exit event.
     for flt in strategy.filters:
         entry_signal = entry_signal & _eval_filter(flt, indicators)
+    for flt in strategy.exit_filters:
+        exit_signal = exit_signal | _eval_filter(flt, indicators)
 
     in_position = _state_from_events(entry_signal, exit_signal)
     sized = _apply_sizing(in_position, strategy.sizing, df)

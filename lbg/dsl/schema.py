@@ -121,6 +121,12 @@ class Strategy(BaseModel):
     entry: CrossRule
     exit: CrossRule
     filters: list[Filter] = Field(default_factory=list)
+    # exit_filters: when in position, any True exit_filter forces an exit.
+    # Combined with the exit CrossRule via OR (any path out fires). Allows
+    # `add_indicator` on the buyhold baseline -- which has no entry events
+    # to filter -- to produce a meaningful candidate by gating the EXIT
+    # instead of the entry. (PROPOSAL §11 follow-on.)
+    exit_filters: list[Filter] = Field(default_factory=list)
     sizing: Sizing
 
     @field_validator("indicators")
@@ -132,8 +138,9 @@ class Strategy(BaseModel):
         return v
 
     def referenced_indicator_names(self) -> set[str]:
-        """Names referenced by entry, exit, or any filter. Indicators that
-        compute a series but feed nothing in the policy are unwired."""
+        """Names referenced by entry, exit, or any filter (entry or exit).
+        Indicators that compute a series but feed nothing in the policy
+        are unwired."""
         names: set[str] = {
             self.entry.fast,
             self.entry.slow,
@@ -141,6 +148,8 @@ class Strategy(BaseModel):
             self.exit.slow,
         }
         for f in self.filters:
+            names.add(f.indicator)
+        for f in self.exit_filters:
             names.add(f.indicator)
         return names
 

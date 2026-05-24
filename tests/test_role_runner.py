@@ -115,7 +115,7 @@ def test_editor_parses_canonical_response(tmp_path):
     assert result.proposal.trial_id == 7
     assert result.proposal.proposed_edit.type == EditType.PARAMETER_CHANGE
     assert result.compute.role == "editor"
-    assert result.compute.model == "claude-opus-4-7"
+    assert result.compute.model == "claude-sonnet-4-6"
     assert result.compute.input_tokens > 0
     assert result.compute.output_tokens > 0
 
@@ -216,7 +216,7 @@ def test_default_provider_is_anthropic():
     """No explicit provider + no LBG_PROVIDER env -> anthropic."""
     runner = RoleRunner(api_key="dummy")
     assert runner.provider == "anthropic"
-    assert runner.model == "claude-opus-4-7"
+    assert runner.model == "claude-sonnet-4-6"
 
 
 def test_provider_arg_switches_defaults():

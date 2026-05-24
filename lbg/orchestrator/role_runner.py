@@ -3,7 +3,7 @@
 The contract:
   1. Render the assembled context into a single user-prompt string.
   2. Run the prompt through `assert_redacted` -- crash hard if any leak.
-  3. Call the LLM (anthropic SDK, model `claude-opus-4-7`).
+  3. Call the LLM (anthropic SDK, model `claude-sonnet-4-6` by default).
   4. Run the raw response text through `assert_redacted` again -- guards
      against the LLM hallucinating a calendar year into its proposal.
   5. Extract the YAML code block, hand it to `parse_proposal`.
@@ -103,7 +103,9 @@ PROVIDERS: dict[str, ProviderConfig] = {
         name="anthropic",
         api_key_env="ANTHROPIC_API_KEY",
         base_url=None,
-        default_model="claude-opus-4-7",
+        # Default switched from opus-4-7 to sonnet-4-6 (2026-05-24) to keep
+        # campaign costs sustainable. Opus stays usable via `model=` arg.
+        default_model="claude-sonnet-4-6",
     ),
     "mimo": ProviderConfig(
         name="mimo",

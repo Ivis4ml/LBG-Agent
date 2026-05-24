@@ -45,7 +45,7 @@ class CandidateApplyResult:
 _INDICATOR_PATH_RE = re.compile(
     r"^indicators\[(?P<name>[A-Za-z_][A-Za-z0-9_]*)\]\.params\.(?P<key>[A-Za-z_][A-Za-z0-9_]*)$"
 )
-_FILTER_PATH_RE = re.compile(r"^filters\[(?P<idx>\d+)\]\.threshold$")
+_FILTER_PATH_RE = re.compile(r"^(?P<list>filters|exit_filters)\[(?P<idx>\d+)\]\.threshold$")
 
 
 class CandidateBuilder:
@@ -152,8 +152,10 @@ class CandidateBuilder:
                 f"filter references unknown indicator {payload.filter.indicator!r}; "
                 f"declared: {sorted(declared)}"
             )
-        new_filters = [*parent.filters, payload.filter]
-        new_strategy = parent.model_copy(update={"filters": new_filters})
+        list_field = "exit_filters" if payload.target == "exit" else "filters"
+        current = getattr(parent, list_field)
+        new_filters = [*current, payload.filter]
+        new_strategy = parent.model_copy(update={list_field: new_filters})
         self._write_strategy(new_strategy)
         return CandidateApplyResult(
             new_strategy=new_strategy,
@@ -162,8 +164,8 @@ class CandidateBuilder:
                 type=EditType.ADD_FILTER,
                 target="strategy.yaml",
                 summary=(
-                    f"+{payload.filter.rule}({payload.filter.indicator} "
-                    f"vs {payload.filter.threshold})"
+                    f"+{payload.target}_{payload.filter.rule}("
+                    f"{payload.filter.indicator} vs {payload.filter.threshold})"
                 ),
             ),
         )
@@ -173,14 +175,16 @@ class CandidateBuilder:
         parent: Strategy,
         payload: RemoveFilterPayload,
     ) -> CandidateApplyResult:
-        if payload.index >= len(parent.filters):
+        list_field = "exit_filters" if payload.target == "exit" else "filters"
+        current = getattr(parent, list_field)
+        if payload.index >= len(current):
             raise CandidateBuildError(
-                f"filter index {payload.index} out of range; have {len(parent.filters)} filter(s)"
+                f"{list_field} index {payload.index} out of range; have {len(current)} filter(s)"
             )
-        removed = parent.filters[payload.index]
-        new_filters = list(parent.filters)
+        removed = current[payload.index]
+        new_filters = list(current)
         del new_filters[payload.index]
-        new_strategy = parent.model_copy(update={"filters": new_filters})
+        new_strategy = parent.model_copy(update={list_field: new_filters})
         self._write_strategy(new_strategy)
         return CandidateApplyResult(
             new_strategy=new_strategy,
@@ -188,7 +192,7 @@ class CandidateBuilder:
             edit_summary=EditSummary(
                 type=EditType.REMOVE_FILTER,
                 target="strategy.yaml",
-                summary=f"-{removed.rule}({removed.indicator})",
+                summary=f"-{payload.target}_{removed.rule}({removed.indicator})",
             ),
         )
 
@@ -232,8 +236,13 @@ class CandidateBuilder:
                     f"{payload.attach.indicator!r} but the new indicator is "
                     f"{payload.name!r}"
                 )
-            update["filters"] = [*parent.filters, payload.attach]
-            attach_summary = f" attached as {payload.attach.rule}:{payload.attach.indicator}"
+            list_field = "exit_filters" if payload.attach_target == "exit" else "filters"
+            current = getattr(parent, list_field)
+            update[list_field] = [*current, payload.attach]
+            attach_summary = (
+                f" attached as {payload.attach_target}_{payload.attach.rule}:"
+                f"{payload.attach.indicator}"
+            )
         new_strategy = parent.model_copy(update=update)
 
         if new_strategy.unwired_indicators():
@@ -290,6 +299,9 @@ class CandidateBuilder:
         for i, flt in enumerate(parent.filters):
             if flt.indicator == name:
                 referenced_by.append(f"filters[{i}]")
+        for i, flt in enumerate(parent.exit_filters):
+            if flt.indicator == name:
+                referenced_by.append(f"exit_filters[{i}]")
         if referenced_by:
             raise CandidateBuildError(
                 f"cannot simplify indicator {name!r}: still referenced by "
@@ -449,11 +461,12 @@ def _set_path(data: dict, path: str, value):
 
     fm = _FILTER_PATH_RE.match(path)
     if fm:
+        list_name = fm.group("list")
         idx = int(fm.group("idx"))
-        filters = data.get("filters") or []
+        filters = data.get(list_name) or []
         if idx < 0 or idx >= len(filters):
             raise CandidateBuildError(
-                f"filter index {idx} out of range; strategy has {len(filters)} filter(s)"
+                f"{list_name} index {idx} out of range; strategy has {len(filters)} {list_name}"
             )
         if not isinstance(value, (int, float)) or isinstance(value, bool):
             raise CandidateBuildError(
@@ -468,7 +481,7 @@ def _set_path(data: dict, path: str, value):
         raise CandidateBuildError(
             f"unsupported parameter_change path: {path!r}; "
             "expected `sizing.<field>`, `indicators[<name>].params.<key>`, "
-            "or `filters[<idx>].threshold`"
+            "`filters[<idx>].threshold`, or `exit_filters[<idx>].threshold`"
         )
     name, key = m.group("name"), m.group("key")
     for spec in data["indicators"]:

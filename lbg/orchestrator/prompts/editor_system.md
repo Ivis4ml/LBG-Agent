@@ -89,23 +89,44 @@ Use *exactly* these field names. Any extra or renamed field fails parsing
 and the trial is aborted before the gate even sees it.
 
 - **`add_indicator`** `change:` block has: `name` (str), `fn` (str),
-  `source` (str, Python code), `params` (dict), and **`attach`** — a
-  Filter object that references the new indicator. `attach` is REQUIRED in
-  every realistic case: without it, the new indicator is dead code and the
-  builder rejects the trial with an `unwired` error. The attach filter
-  must have `indicator == <the new name>`. Example:
+  `source` (str, Python code), `params` (dict), **`attach`** (a Filter
+  object referencing the new indicator), and **`attach_target`**
+  (`"entry"` (default) or `"exit"`). `attach` is REQUIRED in every
+  realistic case: without it the new indicator is dead code and the
+  builder rejects the trial with an `unwired` error.
+  - `attach_target: entry` AND-combines the filter with the entry cross
+    rule (filter must pass to allow entry). Use on baselines with many
+    entry events.
+  - `attach_target: exit` OR-combines the filter into the exit signal
+    (any True exit_filter forces an exit). **On the buyhold baseline use
+    `exit`**: buyhold has only one entry event, so an entry filter just
+    cuts it to zero trades; an exit filter gates the EXIT decision and
+    can reduce drawdown without losing the entry.
+  Example (entry path):
   `change: {name: rsi_14, fn: rsi, source: "...", params: {period: 14},
-   attach: {rule: indicator_above, indicator: rsi_14, threshold: 30.0}}`.
+   attach: {rule: indicator_above, indicator: rsi_14, threshold: 30.0},
+   attach_target: entry}`.
+  Example (exit path, buyhold style):
+  `change: {name: drawdown_15, fn: drawdown, source: "...",
+   params: {lookback: 60}, attach: {rule: indicator_above,
+   indicator: drawdown_15, threshold: 0.10}, attach_target: exit}`.
 
 - **`parameter_change`** `change:` block has: `path` (str, one of
-  `sizing.<field>`, `indicators[<name>].params.<key>`, or
-  `filters[<idx>].threshold`), `value` (number/bool/str). Use the filter
-  threshold form to tune an existing filter without rewriting it.
+  `sizing.<field>`, `indicators[<name>].params.<key>`,
+  `filters[<idx>].threshold`, or `exit_filters[<idx>].threshold`),
+  `value` (number/bool/str). Use the filter / exit_filter threshold form
+  to tune an existing filter without rewriting it.
 
-- **`add_filter`** `change:` block has: `filter` (a Filter object). A Filter
-  is `{rule: indicator_above|indicator_below, indicator: <name>, threshold: <float>}`.
+- **`add_filter`** `change:` block has: `filter` (a Filter object) and
+  optional `target: "entry" | "exit"` (default `"entry"`). A Filter is
+  `{rule: indicator_above|indicator_below, indicator: <name>, threshold: <float>}`.
+  Use `target: exit` to wire as an exit filter (forces position exit
+  when condition fires). On the buyhold baseline, exit filters are
+  almost always the right choice.
 
-- **`remove_filter`** `change:` block has: `index` (int, 0-based).
+- **`remove_filter`** `change:` block has: `index` (int, 0-based) and
+  optional `target: "entry" | "exit"` (default `"entry"`) selecting
+  which list to index into.
 
 - **`change_sizing_mode`** `change:` block has: `sizing` (a Sizing object).
   Sizing is one of:

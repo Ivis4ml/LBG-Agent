@@ -19,7 +19,7 @@ Two engines share one frozen artifact:
 
 The **Orchestrator** is a deterministic Python control plane of 13 single-purpose submodules: `ContextBuilder`, `RoleRunner`, `ProposalParser`, `CandidateBuilder`, `SandboxExecutor`, `InvariantRunner`, `BacktestRunner`, `ValidationGate`, `HypothesisScorer`, `MemoryManager`, `SkillManager`, `GitManager`, `SealedVault`, `ReportBuilder`. **No LLM calls anywhere in the Orchestrator** — its determinism is the credibility of the experiment.
 
-Three LLM roles, all `claude-opus-4-7`:
+Four LLM roles (`claude-sonnet-4-6` by default since 2026-05-24; opus-4-7 still usable via the `model=` arg on `RoleRunner`):
 
 - **Editor** — proposes exactly one of eight discrete edit types per trial as structured YAML: `add_indicator`, `parameter_change`, `add_filter`, `remove_filter`, `change_sizing_mode`, `change_exit_rule`, `simplify`, `revert_to_trial_N`.
 - **Reflector** — explains outcomes mechanically; never judges the hypothesis (the Orchestrator's `HypothesisScorer` does that).
@@ -95,5 +95,5 @@ One commit per trial; one branch per Curator cycle. Full lineage must remain aud
 
 - Package manager: `uv` (`uv add`, `uv run`, `uv sync`).
 - Lint and format: `ruff` (single tool for both).
-- LLM: `anthropic` Python SDK. Default provider is Anthropic (`claude-opus-4-7`); MIMO (Xiaomi, anthropic-compatible) is also registered. Switch with `RoleRunner(provider="mimo")` or set `LBG_PROVIDER=mimo`. Provider table is in `lbg/orchestrator/role_runner.py` `PROVIDERS`. Each provider reads its own API key env var (`ANTHROPIC_API_KEY`, `MIMO_API_KEY`).
+- LLM: `anthropic` Python SDK. Default provider is Anthropic, default model `claude-sonnet-4-6` (switched from opus-4-7 on 2026-05-24 to keep campaign costs sustainable; pass `model="claude-opus-4-7"` to RoleRunner for opus). MIMO (Xiaomi, anthropic-compatible) is also registered. Switch provider with `RoleRunner(provider="mimo")` or set `LBG_PROVIDER=mimo`. Provider table is in `lbg/orchestrator/role_runner.py` `PROVIDERS`. Each provider reads its own API key env var (`ANTHROPIC_API_KEY`, `MIMO_API_KEY`).
 - Data: SPY daily OHLCV via `yfinance`, cross-checked against Tiingo (`TIINGO_TOKEN`), versioned as Parquet.
