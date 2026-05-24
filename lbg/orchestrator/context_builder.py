@@ -106,6 +106,12 @@ class EditorContext:
     semantic_memory: dict[str, str] = field(default_factory=dict)  # filename -> content
     skills: list[Skill] = field(default_factory=list)  # active skills from SkillManager
     factor_hints: list[FactorHint] = field(default_factory=list)
+    # Indicator fn names that earlier add_indicator trials proposed and that
+    # didn't accept. Editor MUST NOT re-propose any of these. Sourced from
+    # `memory/tried_factors.jsonl` so the list survives CampaignRunner iter
+    # resets and catches non-library names like `chandelier_long` that the
+    # dossier dedup can't filter on its own.
+    banned_indicator_fns: tuple[str, ...] = ()
 
 
 class ContextBuilder:
@@ -146,6 +152,7 @@ class ContextBuilder:
         semantic = self._read_semantic_memory()
         active_skills = self.skills.list_active()
         factor_hints = self._factor_hints(current_strategy, recent)
+        banned_fns = self._banned_indicator_fns(current_strategy)
 
         return EditorContext(
             strategy_yaml=strategy_yaml,
@@ -153,6 +160,7 @@ class ContextBuilder:
             semantic_memory=semantic,
             skills=active_skills,
             factor_hints=factor_hints,
+            banned_indicator_fns=banned_fns,
         )
 
     # ---- internals ----
@@ -243,6 +251,28 @@ class ContextBuilder:
                 if len(out) >= self.factor_hints_total_cap:
                     return out
         return out
+
+    def _banned_indicator_fns(self, strategy: Strategy) -> tuple[str, ...]:
+        """Indicator fn names that prior trials proposed and didn't accept.
+
+        Reads `memory/tried_factors.jsonl`, takes records that carry an
+        `indicator_fn` and whose decision != 'accept', and returns the
+        unique fn names in append order. Fns currently in the strategy
+        (i.e. they DID accept somewhere and are still wired) are skipped
+        -- those are legitimate live indicators, not ban candidates.
+        """
+        current_fns = {s.fn for s in strategy.indicators}
+        banned: list[str] = []
+        seen: set[str] = set()
+        for rec in self.memory.read_tried_factors():
+            fn = rec.indicator_fn
+            if not fn or fn in seen or fn in current_fns:
+                continue
+            if rec.decision == "accept":
+                continue
+            banned.append(fn)
+            seen.add(fn)
+        return tuple(banned)
 
     def _tried_factor_names(
         self,

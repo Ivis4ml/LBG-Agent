@@ -517,6 +517,11 @@ def _render_editor_user_prompt(context: EditorContext, *, trial_id: int) -> str:
             + _format_factor_hints(context.factor_hints)
         )
     parts.append("## Recent trial history\n\n" + _format_recent_trials(context.recent_trials))
+    if context.banned_indicator_fns:
+        parts.append(
+            "## Indicator names you must NOT repeat\n\n"
+            + _format_banned_indicator_fns(context.banned_indicator_fns)
+        )
     # B · forced fallback. If the *most recent* trial was rejected AND had a
     # non-empty fallback note, surface it as a dedicated reminder. The
     # Editor doesn't have to follow it, but ignoring it should require a
@@ -641,6 +646,23 @@ def _pending_fallback(trials: list[PastTrialSummary]) -> PastTrialSummary | None
         if t.decision == "accept":
             return None
     return None
+
+
+def _format_banned_indicator_fns(banned: tuple[str, ...]) -> str:
+    """Render the hard-ban list. Each fn name on its own bulleted line so the
+    Editor can't miss any of them. The trailing reminder is what gives the
+    list teeth: invented variants on a banned name (e.g. `chandelier_long`
+    after `chandelier_stop_22` was banned) still violate this rule."""
+    lines = [f"- `{fn}`" for fn in banned]
+    lines.append("")
+    lines.append(
+        "These indicator names were already proposed and rejected in earlier "
+        "trials of this campaign. **Do NOT propose any of them again, nor a "
+        "minor renaming of one of them (e.g. adding `_tight`, `_v2`, a new "
+        "lookback suffix).** If you want to revisit the underlying idea, "
+        "change its structural form, not just the name."
+    )
+    return "\n".join(lines) + "\n"
 
 
 def _format_factor_hints(hints: list[FactorHint]) -> str:

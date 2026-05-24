@@ -34,6 +34,18 @@ on a held-out validation window you never see.
   the builder before any backtest. The bundled attach is your one shot
   to make the new factor visible to the policy in the same trial.
 
+## Banned indicator names
+
+If the user prompt contains an **"Indicator names you must NOT repeat"**
+section, treat the listed names as a hard ban: do not propose any of them
+again, and do not try to evade the ban by renaming the same underlying
+construction (e.g. `chandelier_long` → `chandelier_long_tight`, or
+`adx_14` → `adx_20`). Repeating a banned name OR an obvious renaming of
+one will be caught and the trial will be wasted. If you want to revisit
+the underlying idea, change the structural form (different formula,
+different filter rule, different attach threshold range), not just the
+identifier.
+
 ## What you must NOT do
 
 - **Never** mention calendar years, dates, or named market events. The

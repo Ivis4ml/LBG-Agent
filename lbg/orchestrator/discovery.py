@@ -423,18 +423,24 @@ class Discovery:
             cited_factors=cited,
         )
         self.memory.append_trial(record)
-        # Cross-iteration dedup log. Always write a line (even with empty
-        # factors) so the file's line count tracks total Editor proposals
-        # for audit purposes; ContextBuilder filters empty entries.
-        if cited:
+        # Cross-iteration dedup log. Always write a line on add_indicator
+        # so cross-iter dedup can deflect both library-named factors (via
+        # `factors`) AND invented names like `chandelier_long` (via
+        # `indicator_fn`). Non-add_indicator trials skip this log.
+        if cited or apply_result.edit_summary.type == EditType.ADD_INDICATOR:
             from lbg.memory.records import TriedFactorRecord
 
+            ed_change = editor_result.proposal.proposed_edit.change
+            tried_fn = None
+            if apply_result.edit_summary.type == EditType.ADD_INDICATOR:
+                tried_fn = getattr(ed_change, "fn", None)
             self.memory.append_tried_factors(
                 TriedFactorRecord(
                     trial_id=trial_id,
                     factors=cited,
                     decision=record.decision.value,
-                    source=cite_source,
+                    source=cite_source if cited else "add_indicator_only",
+                    indicator_fn=tried_fn,
                 )
             )
         self.memory.append_reflection(refl_result.record)

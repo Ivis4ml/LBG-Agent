@@ -94,12 +94,22 @@ class TriedFactorRecord(BaseModel):
     """One line of `memory/tried_factors.jsonl`.
 
     This stream is the CROSS-iteration dedup log: ContextBuilder reads it
-    when building factor hints so a campaign's later iterations don't
-    re-suggest factors earlier iterations already tried, even though
-    trials.jsonl is wiped between iterations.
+    when building factor hints AND when populating the Editor's "banned
+    indicator names" prompt section, so a campaign's later iterations
+    don't re-suggest factors earlier iterations already tried, even
+    though trials.jsonl is wiped between iterations.
 
     The file is preserved by CampaignRunner._reset_for_iteration (see the
     intentional omission from _EVENT_MEMORY_FILENAMES). Append-only.
+
+    Schema notes:
+      * `factors` holds dossier-library names recognised on this trial.
+        Empty list when the Editor invented an out-of-library name
+        (e.g. `chandelier_long`) — still useful, because `indicator_fn`
+        captures that name verbatim for the hard-ban prompt section.
+      * `indicator_fn` is None when the trial was NOT an add_indicator
+        (e.g. parameter_change, change_sizing_mode) -- those trials are
+        never banned because they're orthogonal to indicator authoring.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -107,4 +117,5 @@ class TriedFactorRecord(BaseModel):
     trial_id: int = Field(ge=0)
     factors: list[str]
     decision: str  # "accept" | "reject" | "abort"
-    source: str  # "editor_cite" | "auto_extract"
+    source: str  # "editor_cite" | "auto_extract" | "add_indicator_only"
+    indicator_fn: str | None = None  # set on every add_indicator, regardless of cite match
