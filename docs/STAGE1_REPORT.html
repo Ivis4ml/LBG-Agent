@@ -319,9 +319,9 @@ window.MathJax = {
   <div class="title-right">
     <div>SPY · 2010 – 2024</div>
     <div>Stage 1 · Discovery</div>
-    <div><span class="v">v0.4.0</span> · commit 9a9b647</div>
+    <div><span class="v">v0.5.0</span> · commit 1373c66</div>
     <div>2026 · 05 · 24</div>
-    <div style="font-size: 10px; color: var(--ink-muted); margin-top: 4px;">§ 12 H1 weak True · 2026-05-24</div>
+    <div style="font-size: 10px; color: var(--ink-muted); margin-top: 4px;">§ 13 opus + sonnet 双模 · 2026-05-24</div>
   </div>
 </header>
 
@@ -1865,10 +1865,122 @@ baselines/buyhold/strategy.yaml
 
 </section>
 
+<!-- ============================== § 13 sonnet + exit_filters ============================== -->
+<section id="sonnet-exit-filters">
+<div class="section-marker">
+  <span class="section-num">§ 13</span>
+  <h2>exit_filter DSL 扩展 + sonnet 切换</h2>
+</div>
+
+<p class="lede">§ 12 的诊断尾巴写明两件待办：(1) DSL 加 exit_filter 类型，让 add_indicator 在 buyhold 上有真实可达的 Pareto 路径；(2) 在做更多实验之前，把默认模型从 <code>claude-opus-4-7</code> 换成 <code>claude-sonnet-4-6</code> 把单次成本压到 1/5。两件都做完了，又跑了一次 v7 campaign 直接对比。</p>
+
+<h3>exit_filters 机制</h3>
+
+<p>不破坏现有 schema 的最小补丁，沿用现有 Filter 类型（IndicatorAboveFilter / IndicatorBelowFilter），分两层接入：</p>
+
+<table>
+  <thead><tr><th>层</th><th>改动</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Strategy schema</strong></td><td>新增 <code>exit_filters: list[Filter] = []</code>。<code>referenced_indicator_names()</code> 把两个 filter 列表都算进去；unwired 检查随之扩展。</td></tr>
+    <tr><td><strong>policy_interpreter</strong></td><td>entry signal 仍是 cross_rule AND-combine filters；exit signal 现在是 cross_rule <strong>OR-combine</strong> exit_filters——任一 True 强制 exit。</td></tr>
+    <tr><td><strong>编辑入口</strong></td><td><code>AddFilterPayload</code>、<code>RemoveFilterPayload</code> 加 <code>target: "entry"|"exit"</code>（默认 entry，向后兼容）。<code>AddIndicatorPayload</code> 加 <code>attach_target</code>——让"新加 indicator + 接成 exit_filter"一次性完成。</td></tr>
+    <tr><td><strong>parameter_change</strong></td><td>路径正则推广到 <code>(filters|exit_filters)[N].threshold</code>，可调任一列表里的阈值。</td></tr>
+    <tr><td><strong>Editor 系统提示</strong></td><td>明确写出"on the buyhold baseline use <code>attach_target: exit</code>"——entry filter 在 buyhold 上只会砍掉唯一一个 entry 事件。</td></tr>
+  </tbody>
+</table>
+
+<p>10 个新测试钉死语义：schema 默认、policy OR-combine、两条 add_filter 路径、attach_target=exit 把 indicator 接进 exit_filters、parameter_change 两条索引、以及"在 buyhold 上加 drawdown exit_filter 真的能降 train MaxDD"端到端 sanity check。</p>
+
+<h3>sonnet 切换</h3>
+
+<p>v0–v6 每次 campaign 单次开销 ~$1–2，跑 Opus。Sonnet 4.6 单 token 价格约 1/5、输出格式上同样支持本项目用的 fenced YAML / JSON。<code>PROVIDERS["anthropic"].default_model</code> 切到 <code>claude-sonnet-4-6</code>；opus 仍可通过 <code>RoleRunner(model="claude-opus-4-7")</code> 用——两个模型都保留。CLAUDE.md 同步更新。</p>
+
+<h3>v6 (opus) vs v7 (sonnet) 对照</h3>
+
+<p>两次跑同样配置：3 iter × 5 trial、permissive gate、buyhold baseline。区别只在模型、以及 v7 还能用 exit_filter（v6 那时 DSL 还没扩）。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th class="num">v6 (opus 4.7)</th>
+      <th class="num">v7 (sonnet 4.6 + exit_filter)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>accepts</td><td class="num">3/15</td><td class="num">3/15</td></tr>
+    <tr><td>accept 类型</td><td class="num">全是 vol_target sizing</td><td class="num">全是 vol_target sizing</td></tr>
+    <tr><td>alpha_cards</td><td class="num">0</td><td class="num">0</td></tr>
+    <tr><td>invariant failures</td><td class="num">2</td><td class="num"><strong>7</strong></td></tr>
+    <tr><td>耗时</td><td class="num">296 s</td><td class="num"><strong>207 s</strong></td></tr>
+    <tr><td>估算成本</td><td class="num">~$1.5</td><td class="num"><strong>~$0.3</strong></td></tr>
+    <tr><td>最佳 sealed Sharpe</td><td class="num"><strong>0.9910</strong></td><td class="num">0.9546</td></tr>
+    <tr><td>对 b&amp;h ΔSharpe</td><td class="num"><strong>+0.130</strong></td><td class="num">+0.094</td></tr>
+    <tr><td>H1 weak</td><td class="num"><strong>True</strong></td><td class="num"><strong>True</strong></td></tr>
+    <tr><td>H1 strong</td><td class="num">False</td><td class="num">False</td></tr>
+    <tr><td>用了 exit_filter?</td><td class="num">N/A (DSL 还没扩)</td><td class="num"><strong>是</strong> · 2 次 attach_target=exit</td></tr>
+  </tbody>
+</table>
+
+<h3>三个发现</h3>
+
+<ul>
+  <li><strong>exit_filter 通路真的被走过</strong>。v7 iter 0·4 提了 <code>sma_200 attached as exit_indicator_below:sma_200</code>（趋势线下穿退出）；iter 1·2 提了 <code>realvol_20 attached as exit_indicator_above:realvol_20</code>（高波动退出）。两个 add_indicator 都用了新 schema 字段 <code>attach_target: exit</code>，CandidateBuilder 把它们正确写入 strategy.yaml 的 <code>exit_filters</code> 块——首次确认整条链路在生产里走通。</li>
+  <li><strong>但 add_indicator 仍未在 Pareto 上赢</strong>。两个 exit_filter 候选都被 <code>reject_no_meaningful_improvement</code> 拒——val window 上这些过滤器引起的 Sharpe 下降盖过 MDD 改进。要让 alpha_card 出现需要的不是 DSL 能力（已具备），是更具体的 exit_filter 设计（threshold 调到对的位置，触发频次合理）。这指向下一步：把 dossier 库里关于"exit / risk-off"类的因子（drawdown duration、Calmar、tail risk）显式提示给 Editor。</li>
+  <li><strong>sonnet 与 opus 在科学结论上等价，在工程成本上压倒性</strong>。两个模型都把 H1 weak 推到了 True、accept 数相同、accept 类型相同、ΔSharpe 同符号。区别仅在 sonnet 的 invariant failure 率更高（schema 兼容性偏弱）和 Sharpe 数值上稍低 0.04（vol_target 参数选择略不同）。综合 1/5 成本 + 30% 速度，sonnet 当默认模型是正确决策；opus 留作"严格 H1 报告时需要时启用"的备用。</li>
+</ul>
+
+<h3>当前总账</h3>
+
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-label">campaign 累计</div>
+    <div class="kpi-value">8</div>
+    <div class="kpi-sub">v0 - v7，120 trial</div>
+  </div>
+  <div class="kpi teal">
+    <div class="kpi-label">H1 weak (point estimate)</div>
+    <div class="kpi-value">True</div>
+    <div class="kpi-sub">v6 / v7 buyhold campaigns</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">H1 strong (CI lower &gt; 0)</div>
+    <div class="kpi-value">False</div>
+    <div class="kpi-sub">CI 仍跨过 0</div>
+  </div>
+  <div class="kpi gold">
+    <div class="kpi-label">accepted add_indicator</div>
+    <div class="kpi-value">0</div>
+    <div class="kpi-sub">120 trial; alpha_card 仍未点亮</div>
+  </div>
+</div>
+
+<p>下一步候选（按对 H1 strong 的边际贡献排序）：</p>
+
+<table>
+  <thead><tr><th>方向</th><th>原因</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>显式给 Editor 推 risk-off 类 dossier 提示</td>
+      <td>v7 的两个 exit_filter 都试在了"趋势线下穿"和"波动率上升"——但 Editor 自己选的 threshold 都太宽松。dossier 库里 Calmar / MaxDrawdownDuration / IntradayMomentumPathEfficiency 这类专门描述 risk-off 的因子，应该在 buyhold 起点下被 ContextBuilder 优先推送。</td>
+    </tr>
+    <tr>
+      <td>把 H1 strong CI 收窄</td>
+      <td>n_bootstrap=1000 + block_len=10 给出的 ±0.30 区间太宽。改为 n_bootstrap=5000，或换 stationary bootstrap (Politis-Romano) 让 block_len 不固定。</td>
+    </tr>
+    <tr>
+      <td>walk-forward sealed window</td>
+      <td>当前三 iter 共用一个 sealed 窗口，verdict 相同。把 split_C 切成不重叠段独立打分，让 campaign 给出真正的多次独立观测。</td>
+    </tr>
+  </tbody>
+</table>
+
+</section>
+
 <!-- ============================== 页脚 ============================== -->
 <footer class="footer">
-<div>LBG-Trader · 第一阶段回顾 · 2026-05-24 第三次重修订（H1 weak True）</div>
-<div>repo · <span class="accent">commit 9a9b647</span> · 448 tests · <em>uv run pytest -q</em> · <em>uv run ruff check</em></div>
+<div>LBG-Trader · 第一阶段回顾 · 2026-05-24 第四次重修订（opus + sonnet 双模 + exit_filters）</div>
+<div>repo · <span class="accent">commit 1373c66</span> · 458 tests · <em>uv run pytest -q</em> · <em>uv run ruff check</em></div>
 <div>对照阅读 · <span class="accent">PROPOSAL.html</span> · 所有 § 1-7 引用的源头规范</div>
 </footer>
 
