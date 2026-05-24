@@ -152,6 +152,16 @@ class CampaignRunner:
             n_iterations=n_iterations,
             budget_per_iteration=budget_per_iteration,
         )
+        # Per-iteration Discovery creates its own LiveStatusWriter (which
+        # truncates the jsonl on init). To keep one continuous dashboard
+        # across the whole campaign, we own the writer at this scope and
+        # let each Discovery share it instead.
+        import time as _time
+
+        from lbg.orchestrator.live_status import LiveStatusWriter
+
+        live = LiveStatusWriter(self.repo_root)
+        t_start = _time.monotonic()
 
         for i in range(n_iterations):
             logger.info(
@@ -167,6 +177,11 @@ class CampaignRunner:
                 runner=self.runner,
                 gate_config=self.gate_config,
             )
+            disc.iter_id = i
+            # Share the campaign-scoped live writer so all iterations
+            # append into the same jsonl (Discovery's default writer
+            # would truncate it on each iteration's __init__).
+            disc.live = live
             vault_path = (
                 self.repo_root / "campaigns" / f"iteration_{i:03d}" / "sealed_test_final.json"
             )
@@ -202,6 +217,11 @@ class CampaignRunner:
         summary_path.write_text(
             json.dumps(out.to_dict(), indent=2, ensure_ascii=False),
             encoding="utf-8",
+        )
+        live.campaign_end(
+            total_accepted=out.total_accepted,
+            total_alpha_cards=out.total_alpha_cards,
+            elapsed_sec=_time.monotonic() - t_start,
         )
         return out
 

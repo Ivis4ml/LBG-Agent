@@ -38,6 +38,7 @@ from lbg.memory.records import (
 )
 from lbg.orchestrator.context_builder import ContextBuilder
 from lbg.orchestrator.curator import Curator
+from lbg.orchestrator.live_status import LiveStatusWriter
 from lbg.orchestrator.redaction import RedactionError
 from lbg.orchestrator.report_builder import ReportBuilder
 from lbg.orchestrator.role_runner import RoleRunner, RoleRunnerError
@@ -96,6 +97,7 @@ class Discovery:
         )
         self.curator = Curator(self.runner, self.memory, git=self.git)
         self.alpha_writer = AlphaCardWriter(self.repo_root)
+        self.live = LiveStatusWriter(self.repo_root)
         self.gate_config = gate_config or GateConfig()
         self.timeout_sec = timeout_sec
         self.prefix_n = prefix_stability_n_samples
@@ -104,6 +106,9 @@ class Discovery:
         self.strategy_path = self.repo_root / "strategy.yaml"
         self.indicators_dir = self.repo_root / "indicators"
         self.runs_dir = self.repo_root / "runs"
+        # Iteration id for live-dashboard events. Defaults to 0 for a
+        # standalone Discovery run; CampaignRunner overrides per iteration.
+        self.iter_id = 0
 
     # ---- public entry ----
 
@@ -131,6 +136,7 @@ class Discovery:
         )
 
         result = DiscoveryResult(incumbent_strategy=incumbent_strategy)
+        self.live.iter_start(self.iter_id, budget=budget)
 
         # Sequential trial_ids so each budget step gets a unique id even when
         # the Editor aborts before producing a parseable proposal. Otherwise
@@ -150,12 +156,24 @@ class Discovery:
                 )
             except (RoleRunnerError, RedactionError) as e:
                 logger.warning("trial %d aborted: %s", trial_id, e)
+                self.live.invariant_failure(
+                    iter_id=self.iter_id,
+                    trial_id=trial_id,
+                    invariant_name="editor_abort",
+                    message=str(e),
+                )
                 self._restore_working_tree(incumbent_strategy)
                 result.n_aborted += 1
                 continue
 
             if step is None:
                 # Invariant or build failure -- already logged.
+                self.live.invariant_failure(
+                    iter_id=self.iter_id,
+                    trial_id=trial_id,
+                    invariant_name="builder_or_prefix",
+                    message="see memory/invariant_failures.jsonl",
+                )
                 result.n_invariant_failures += 1
                 self._restore_working_tree(incumbent_strategy)
                 continue
@@ -170,6 +188,15 @@ class Discovery:
                 result.n_rejected += 1
                 self._restore_working_tree(incumbent_strategy)
                 logger.info("trial %d rejected (%s): %s", trial_id, step.gate_reason, step.summary)
+            self.live.trial(
+                iter_id=self.iter_id,
+                trial_id=trial_id,
+                edit_summary=step.summary,
+                decision="accept" if step.accepted else "reject",
+                gate_reason=None if step.accepted else step.gate_reason,
+                train_metrics=step.candidate_outcome.train,
+                cited_factors=step.cited_factors,
+            )
 
             # Curator (shadow) every N accepted trials.
             if self.curator.should_run(result.n_accepted):
@@ -188,6 +215,19 @@ class Discovery:
             sealed_metrics = self._seal(incumbent_strategy, sealed_split, vault)
             result.sealed_metrics = sealed_metrics
 
+        self.live.iter_end(
+            self.iter_id,
+            n_accepted=result.n_accepted,
+            n_rejected=result.n_rejected,
+            n_invariant=result.n_invariant_failures,
+            sealed_sharpe=(result.sealed_metrics or {}).get("sharpe")
+            if result.sealed_metrics
+            else None,
+            sealed_max_drawdown=(result.sealed_metrics or {}).get("max_drawdown")
+            if result.sealed_metrics
+            else None,
+        )
+
         if report_path is not None:
             ReportBuilder(self.memory, vault, output_path=report_path).build()
 
@@ -202,6 +242,7 @@ class Discovery:
         candidate_outcome: TrialOutcome
         gate_reason: str
         summary: str
+        cited_factors: tuple[str, ...] = ()
 
     def _run_one_trial(
         self,
@@ -368,6 +409,8 @@ class Discovery:
         # H1 (PROPOSAL §4) counts cards whose sealed_summary clears the CI bar;
         # the per-trial card pins the artifact at the moment of acceptance.
         alpha_card_path: Path | None = None
+        change = None
+        indicator_name = None
         if record.decision == Decision.ACCEPT and record.edit.type == EditType.ADD_INDICATOR:
             change = editor_result.proposal.proposed_edit.change
             indicator_name = getattr(change, "name", None)
@@ -391,6 +434,38 @@ class Discovery:
                 except (ValueError, OSError) as e:
                     logger.warning("trial %d alpha card emit failed: %s", trial_id, e)
 
+        # Translator: emit a JSON dossier for the just-accepted add_indicator.
+        # Same trigger as alpha_cards; a Translator failure does not block
+        # the loop -- it just means no dossier got written this trial.
+        dossier_path: Path | None = None
+        if alpha_card_path is not None and indicator_name:
+            try:
+                from lbg.translator import DossierWriter, TranslatorInput
+
+                indicator_source = (
+                    self.indicators_dir / f"{getattr(change, 'fn', indicator_name)}.py"
+                ).read_text(encoding="utf-8")
+                ti = TranslatorInput(
+                    trial_id=trial_id,
+                    source_commit=parent_commit,
+                    indicator_name=indicator_name,
+                    indicator_fn=getattr(change, "fn", indicator_name),
+                    indicator_params=dict(getattr(change, "params", {}) or {}),
+                    indicator_source=indicator_source,
+                    hypothesis_text=editor_result.proposal.hypothesis,
+                    train_metrics=record.train_metrics,
+                    validation_signal=record.validation_signal,
+                    cited_factors=list(editor_result.proposal.cited_factors),
+                )
+                trans_result = self.runner.translator(ti)
+                self.memory.append_agent_compute(trans_result.compute)
+                dossier_path = DossierWriter(self.repo_root).write(
+                    trans_result.dossier, trial_id=trial_id
+                )
+                logger.info("trial %d dossier emitted to %s", trial_id, dossier_path)
+            except (RoleRunnerError, RedactionError, OSError) as e:
+                logger.warning("trial %d translator failed: %s", trial_id, e)
+
         # Git commit.
         files = [
             *(str(p.relative_to(self.repo_root)) for p in apply_result.touched_paths),
@@ -403,6 +478,8 @@ class Discovery:
         if alpha_card_path is not None:
             files.append(str(alpha_card_path.relative_to(self.repo_root)))
             files.append(str(self.alpha_writer.index_path.relative_to(self.repo_root)))
+        if dossier_path is not None:
+            files.append(str(dossier_path.relative_to(self.repo_root)))
         for md_name in (
             "accepted_rules.md",
             "failed_directions.md",
@@ -424,6 +501,7 @@ class Discovery:
             candidate_outcome=candidate_outcome,
             gate_reason=gate_decision.reason,
             summary=apply_result.edit_summary.summary,
+            cited_factors=tuple(editor_result.proposal.cited_factors),
         )
 
     def _evaluate(self, strategy: Strategy, df_train, df_val) -> TrialOutcome:

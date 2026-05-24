@@ -12,14 +12,19 @@ The contract:
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, ValidationError
+
+if TYPE_CHECKING:
+    from lbg.translator import TranslatorDossier, TranslatorInput
 
 from lbg.memory.records import (
     AgentComputeRecord,
@@ -40,6 +45,7 @@ load_dotenv()
 
 EDITOR_SYSTEM_PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "editor_system.md"
 REFLECTOR_SYSTEM_PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "reflector_system.md"
+TRANSLATOR_SYSTEM_PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "translator_system.md"
 DEFAULT_MAX_TOKENS = 4096
 
 # Editor micro-retry: STAGE1_REPORT § 7 showed that ~12 of 20 MIMO trials
@@ -126,6 +132,15 @@ class EditorRunResult:
 @dataclass(frozen=True)
 class ReflectorRunResult:
     record: ReflectionRecord
+    raw_text: str
+    compute: AgentComputeRecord
+
+
+@dataclass(frozen=True)
+class TranslatorRunResult:
+    """Output of the Translator role: a dossier object plus accounting."""
+
+    dossier: "TranslatorDossier"
     raw_text: str
     compute: AgentComputeRecord
 
@@ -361,6 +376,66 @@ class RoleRunner:
         )
         return ReflectorRunResult(record=record, raw_text=raw_text, compute=compute)
 
+    def translator(
+        self,
+        translator_input: "TranslatorInput",
+    ) -> TranslatorRunResult:
+        """Invoke the Translator LLM. The Translator turns an accepted
+        Python factor function plus its alpha-card evidence into a
+        declarative dossier matching the seed-library schema.
+
+        Failure modes mirror reflector(): one shot, no retry. A bad
+        dossier doesn't block the Discovery loop -- it just means no
+        dossier got emitted for this trial (the alpha_card is still on
+        disk). Callers should catch RoleRunnerError and continue.
+        """
+        from lbg.translator import TranslatorDossier
+
+        system_prompt = TRANSLATOR_SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
+        user_prompt = _render_translator_user_prompt(translator_input)
+
+        assert_redacted(system_prompt)
+        assert_redacted(user_prompt)
+
+        client = self._client()
+        started = time.monotonic()
+        response = client.messages.create(
+            model=self.model,
+            max_tokens=self.max_tokens,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_prompt}],
+        )
+        elapsed = time.monotonic() - started
+
+        raw_text = _extract_text(response)
+        assert_redacted(raw_text)
+
+        json_block = _extract_json_block(raw_text, role="Translator")
+        try:
+            data = json.loads(json_block)
+        except json.JSONDecodeError as e:
+            raise RoleRunnerError(
+                f"Translator output not valid JSON: {e}\n--- raw ---\n{raw_text[:500]}"
+            ) from e
+        if not isinstance(data, dict):
+            raise RoleRunnerError(f"Translator output is not a mapping; got {type(data).__name__}")
+        try:
+            dossier = TranslatorDossier.model_validate(data)
+        except ValidationError as e:
+            raise RoleRunnerError(
+                f"Translator output missing required keys: {e}\n--- raw ---\n{raw_text[:500]}"
+            ) from e
+
+        compute = AgentComputeRecord(
+            trial_id=translator_input.trial_id,
+            role="translator",
+            model=self.model,
+            input_tokens=getattr(response.usage, "input_tokens", 0),
+            output_tokens=getattr(response.usage, "output_tokens", 0),
+            wall_clock_sec=elapsed,
+        )
+        return TranslatorRunResult(dossier=dossier, raw_text=raw_text, compute=compute)
+
 
 def _append_correction(
     messages: list[dict[str, str]],
@@ -390,6 +465,19 @@ def _append_correction(
         {"role": "assistant", "content": raw_text},
         {"role": "user", "content": correction},
     ]
+
+
+_JSON_BLOCK_RE = re.compile(r"```(?:json)?\s*\n(?P<body>.*?)```", re.DOTALL)
+
+
+def _extract_json_block(text: str, *, role: str = "Translator") -> str:
+    m = _JSON_BLOCK_RE.search(text)
+    if m:
+        return m.group("body").strip()
+    stripped = text.strip()
+    if stripped.startswith("{") and stripped.endswith("}"):
+        return stripped
+    raise RoleRunnerError(f"{role} response did not contain a JSON code block:\n{text[:500]}")
 
 
 def _extract_text(response) -> str:
@@ -453,6 +541,43 @@ def _render_editor_user_prompt(context: EditorContext, *, trial_id: int) -> str:
         "the schema in your system prompt -- no prose outside the block."
     )
     return "\n".join(parts)
+
+
+def _render_translator_user_prompt(ti: "TranslatorInput") -> str:
+    """Pack all evidence the Translator needs into a single user message.
+
+    Order: source code first so the model anchors on the executable
+    artifact; then metadata; then the Editor's hypothesis; then the
+    observed train metrics. cited_factors at the end -- they go into
+    the dossier's `lbg_provenance.cited_factors` and influence the
+    "combination patterns" section.
+    """
+    cited = "\n".join(f"- {c}" for c in ti.cited_factors) or "(none cited by Editor)"
+    return (
+        f"## Source code · indicators/{ti.indicator_fn}.py\n\n"
+        "```python\n"
+        f"{ti.indicator_source.rstrip()}\n"
+        "```\n\n"
+        f"## Alpha card metadata\n\n"
+        f"- factor / indicator name: `{ti.indicator_name}`\n"
+        f"- function name: `{ti.indicator_fn}`\n"
+        f"- params: `{json.dumps(ti.indicator_params, ensure_ascii=False)}`\n"
+        f"- source_commit: `{ti.source_commit}`\n"
+        f"- trial_id: {ti.trial_id}\n\n"
+        f"## Editor's original hypothesis\n\n{ti.hypothesis_text.strip()}\n\n"
+        f"## Observed training-window metrics (split_A)\n\n"
+        f"- sharpe: {ti.train_metrics.sharpe:.4f}\n"
+        f"- max_drawdown: {ti.train_metrics.max_drawdown:.4f}\n"
+        f"- turnover: {ti.train_metrics.turnover:.3f}\n"
+        f"- num_trades: {ti.train_metrics.num_trades}\n"
+        f"- validation_signal (categorical): `{ti.validation_signal.value}`\n\n"
+        f"## Editor-cited seed-library factors\n\n{cited}\n\n"
+        "## Your turn\n\n"
+        "Emit one fenced JSON code block whose object matches the schema "
+        "in your system prompt. Ground every numeric claim in the metrics "
+        "above; mark every other quantitative statement as inference. No "
+        "prose outside the code block."
+    )
 
 
 def _render_reflector_user_prompt(
