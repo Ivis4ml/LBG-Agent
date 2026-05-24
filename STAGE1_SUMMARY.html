@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LBG-Trader Stage 1 — Implementation Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']],
+         processEscapes: true, processEnvironments: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+             ignoreHtmlClass: 'no-mathjax' }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" id="MathJax-script" async></script>
+<style>
+  :root {
+    --ink: #1a1a1c;
+    --ink-soft: #2c2c30;
+    --ink-muted: #6b6b70;
+    --ink-faint: #a4a4a8;
+    --paper: #fbfaf6;
+    --paper-warm: #f5f1e8;
+    --rule: #d8d4c8;
+    --rule-soft: #e8e4d8;
+    --accent: #8b3a2f;
+    --accent-soft: #b76b5e;
+    --teal: #2d6a5c;
+    --gold: #b88a2c;
+    --serif: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+    --sans: 'Inter', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.65;
+    font-feature-settings: "kern", "liga", "onum";
+  }
+
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; opacity: 0.03; z-index: 100;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .container { max-width: 760px; margin: 0 auto; padding: 80px 32px 120px; }
+
+  .title-block {
+    border-top: 2px solid var(--ink);
+    border-bottom: 1px solid var(--rule);
+    padding: 32px 0 24px;
+    margin-bottom: 64px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: end;
+  }
+
+  .title-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 18px;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 58px;
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    font-feature-settings: "kern", "liga", "ss01";
+    margin-bottom: 14px;
+  }
+  h1 em { font-style: italic; color: var(--accent); font-weight: 300; }
+
+  .subtitle {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 21px;
+    line-height: 1.35;
+    color: var(--ink-soft);
+    font-weight: 300;
+    max-width: 540px;
+  }
+
+  .title-right {
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+  }
+  .title-right .v { color: var(--accent); font-weight: 500; }
+
+  section { margin-bottom: 72px; }
+
+  .section-marker {
+    display: flex; align-items: baseline; gap: 20px;
+    margin-bottom: 28px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
+  .section-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    font-weight: 500;
+  }
+
+  h2 {
+    font-family: var(--serif); font-weight: 400; font-size: 32px;
+    line-height: 1.15; letter-spacing: -0.015em; color: var(--ink);
+  }
+
+  h3 {
+    font-family: var(--serif); font-weight: 500; font-size: 21px;
+    line-height: 1.3; letter-spacing: -0.005em; margin: 36px 0 14px; color: var(--ink);
+  }
+
+  h4 {
+    font-family: var(--sans); font-weight: 500; font-size: 13px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-muted); margin: 28px 0 10px;
+  }
+
+  p { margin-bottom: 18px; text-wrap: pretty; }
+
+  .lede {
+    font-size: 21px; line-height: 1.55; color: var(--ink-soft);
+    font-weight: 400; margin-bottom: 32px;
+    padding: 0 0 0 20px; border-left: 2px solid var(--accent);
+  }
+  .lede em { font-style: italic; color: var(--accent); }
+
+  code {
+    font-family: var(--mono); font-size: 14px;
+    background: var(--paper-warm); padding: 1px 6px;
+    border-radius: 2px; color: var(--ink-soft);
+  }
+
+  em { font-style: italic; }
+  strong { font-weight: 500; color: var(--ink); }
+
+  .pullquote {
+    font-family: var(--serif); font-style: italic; font-weight: 300;
+    font-size: 26px; line-height: 1.35; color: var(--ink);
+    margin: 44px 0 44px -20px;
+    padding: 0 0 0 20px;
+    border-left: 3px solid var(--accent);
+    max-width: 600px;
+  }
+
+  .aside {
+    background: var(--paper-warm); border-left: 3px solid var(--gold);
+    padding: 20px 24px; margin: 28px 0;
+    font-size: 15px; line-height: 1.6; color: var(--ink-soft);
+  }
+  .aside-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--gold);
+    margin-bottom: 8px; display: block;
+  }
+  .aside.warn { border-left-color: var(--accent); }
+  .aside.warn .aside-label { color: var(--accent); }
+  .aside.note { border-left-color: var(--teal); }
+  .aside.note .aside-label { color: var(--teal); }
+
+  pre {
+    background: var(--ink); color: #e8e4d8;
+    padding: 20px 24px; border-radius: 4px; overflow-x: auto;
+    font-family: var(--mono); font-size: 13px; line-height: 1.65; margin: 24px 0;
+  }
+  pre code { background: none; padding: 0; color: inherit; font-size: 13px; }
+  pre .k { color: #d6a26a; }   /* keyword */
+  pre .c { color: #8a8a8a; font-style: italic; }  /* comment */
+  pre .s { color: #b8c97c; }   /* string */
+  pre .n { color: #e8e4d8; }
+  pre .m { color: #cdaa66; }   /* number */
+
+  .code-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink-faint);
+    margin-bottom: -16px; margin-top: 24px; display: block;
+  }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 24px 0;
+    font-family: var(--sans); font-size: 14px;
+  }
+  thead th {
+    text-align: left; font-weight: 500; color: var(--ink-muted);
+    border-bottom: 1.5px solid var(--ink);
+    padding: 10px 12px 10px 0;
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  tbody td {
+    padding: 10px 12px 10px 0; border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top; line-height: 1.5;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td code { font-size: 12.5px; }
+  td.num { font-family: var(--mono); text-align: right; font-size: 12.5px; }
+  td.yes { color: var(--teal); font-weight: 500; }
+  td.no  { color: var(--accent); font-weight: 500; }
+
+  ol, ul { margin: 16px 0 24px 28px; }
+  li { margin-bottom: 10px; line-height: 1.65; padding-left: 4px; }
+  ul li::marker { color: var(--accent); }
+  ol li::marker { font-family: var(--mono); font-size: 13px; color: var(--ink-muted); font-weight: 500; }
+
+  .figure { margin: 36px 0; }
+  .figure-caption {
+    font-family: var(--sans); font-size: 12.5px; line-height: 1.5;
+    color: var(--ink-muted); margin-top: 10px;
+    padding: 4px 0 4px 12px; border-left: 2px solid var(--rule);
+  }
+  .figure-caption strong { color: var(--ink); font-weight: 500; }
+
+  .chart-wrap {
+    background: var(--paper-warm); border: 1px solid var(--rule);
+    border-radius: 4px; padding: 20px; position: relative;
+  }
+  .chart-wrap canvas { max-width: 100%; }
+
+  .two-col {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin: 28px 0;
+  }
+  .col-card {
+    background: var(--paper-warm); border: 1px solid var(--rule);
+    border-radius: 4px; padding: 24px 26px;
+  }
+  .col-card h4 { margin-top: 0; color: var(--accent); }
+  .col-card.alt { background: var(--paper); border-color: var(--ink-soft); }
+  .col-card.alt h4 { color: var(--teal); }
+
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 12px; margin: 28px 0;
+  }
+  .kpi {
+    background: var(--paper-warm); border-top: 3px solid var(--accent);
+    padding: 16px 18px; border-radius: 0 0 4px 4px;
+  }
+  .kpi.teal { border-top-color: var(--teal); }
+  .kpi.gold { border-top-color: var(--gold); }
+  .kpi-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink-muted); margin-bottom: 6px;
+  }
+  .kpi-value {
+    font-family: var(--serif); font-size: 28px; font-weight: 400;
+    line-height: 1; letter-spacing: -0.015em; color: var(--ink);
+  }
+  .kpi-value.small { font-size: 22px; }
+  .kpi-sub {
+    font-family: var(--sans); font-size: 11px; color: var(--ink-muted); margin-top: 6px;
+  }
+
+  .ladder { margin: 32px 0; }
+  .rung {
+    display: grid; grid-template-columns: 80px 1fr; gap: 20px;
+    padding: 14px 0; border-bottom: 1px solid var(--rule-soft);
+    align-items: start;
+  }
+  .rung:last-child { border-bottom: none; }
+  .rung-tag {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--accent); letter-spacing: 0.08em;
+    padding-top: 4px; font-weight: 500;
+  }
+  .rung-body { font-size: 15px; line-height: 1.55; color: var(--ink-soft); }
+  .rung-body strong { color: var(--ink); }
+
+  .math {
+    margin: 24px 0; font-size: 16px; line-height: 1.4;
+    padding: 0 0 0 20px; border-left: 2px solid var(--rule);
+  }
+  .math .where {
+    display: block; font-family: var(--sans); font-size: 13px;
+    color: var(--ink-muted); margin-top: 10px;
+  }
+
+  .footer {
+    margin-top: 80px; padding-top: 28px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono); font-size: 11px; color: var(--ink-muted);
+    letter-spacing: 0.04em; line-height: 1.7;
+  }
+  .footer .accent { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<div class="container">
+
+<!-- ============================== TITLE ============================== -->
+<header class="title-block">
+  <div>
+    <div class="title-meta">Implementation notes · Stage 1 retrospective</div>
+    <h1>What we <em>built</em>,<br>what it <em>found</em>.</h1>
+    <p class="subtitle">Twelve steps from empty repo to a sealed-evaluation Discovery loop, the algorithms that kept it honest, and the negative result it cleanly reported.</p>
+  </div>
+  <div class="title-right">
+    <div>SPY · 2010 – 2024</div>
+    <div>Stage 1 / Discovery</div>
+    <div><span class="v">v0.1.0</span> · commit 72bc9cf</div>
+    <div>2026 · 05 · 23</div>
+  </div>
+</header>
+
+<!-- ============================== §0 HEADLINE ============================== -->
+<section id="headline">
+<div class="section-marker">
+  <span class="section-num">§ 0</span>
+  <h2>The headline</h2>
+</div>
+
+<p class="lede">Stage 1 is <em>complete and honest</em>. The 13-submodule Orchestrator runs end-to-end, both Anthropic Opus 4.7 and MIMO v2.5 Pro have driven full Discovery loops, the sealed test has been opened exactly once per run — and on the SPY 20/50 SMA-cross baseline, <em>H1 is rejected</em>. The strategy loses to buy-and-hold on the sealed window by 0.75 Sharpe units. The framework reported it cleanly, exactly as <code>PROPOSAL.html §0</code> warned might happen.</p>
+
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-label">Modules</div>
+    <div class="kpi-value">13</div>
+    <div class="kpi-sub">Orchestrator submodules built</div>
+  </div>
+  <div class="kpi teal">
+    <div class="kpi-label">Tests</div>
+    <div class="kpi-value">330</div>
+    <div class="kpi-sub">passing · 5 live LLM calls</div>
+  </div>
+  <div class="kpi gold">
+    <div class="kpi-label">Edit types</div>
+    <div class="kpi-value">8 / 8</div>
+    <div class="kpi-sub">All PROPOSAL §6.2 types</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">H1 verdict</div>
+    <div class="kpi-value small">−0.75</div>
+    <div class="kpi-sub">ΔSharpe vs buy-and-hold</div>
+  </div>
+</div>
+
+<div class="aside warn">
+<span class="aside-label">Why this is good news</span>
+A 12-step Discovery framework that returned a fake positive on a 20-trial SMA baseline would be a far worse outcome than what we got. The negative result is the first piece of evidence that the gate, redaction, and sealed-evaluation protocol actually <em>work</em> — and that the LBG action space is not yet rich enough to beat a trivial benchmark.
+</div>
+</section>
+
+<!-- ============================== §1 ARCHITECTURE ============================== -->
+<section id="architecture">
+<div class="section-marker">
+  <span class="section-num">§ 1</span>
+  <h2>The architecture, as built</h2>
+</div>
+
+<p>The Orchestrator is a deterministic Python control plane. It schedules every LLM call, applies every edit, runs every invariant, and writes every artifact. <em>The Orchestrator itself contains no LLM call</em> — its determinism is the credibility of the experiment. Three LLM roles sit at the leaves; everything else is plain Python.</p>
+
+<div class="figure">
+<div class="chart-wrap" style="background: var(--paper-warm); padding: 28px 24px;">
+<svg viewBox="0 0 700 470" width="100%" role="img">
+  <title>Stage 1 module layout — 13 Orchestrator submodules around 3 LLM roles</title>
+
+  <!-- outer Orchestrator frame -->
+  <rect x="20" y="20" width="660" height="430" fill="#fbfaf6" stroke="#1a1a1c" stroke-width="1.5" rx="3"/>
+  <text x="35" y="40" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="0.08em" fill="#8b3a2f">ORCHESTRATOR · deterministic, no LLM</text>
+
+  <!-- LLM roles (center) -->
+  <rect x="280" y="180" width="140" height="110" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.5" rx="3"/>
+  <text x="350" y="200" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" letter-spacing="0.06em" fill="#8b3a2f">LLM ROLES</text>
+  <text x="350" y="222" text-anchor="middle" font-family="Fraunces, serif" font-size="14" fill="#1a1a1c">Editor</text>
+  <text x="350" y="242" text-anchor="middle" font-family="Fraunces, serif" font-size="14" fill="#1a1a1c">Reflector</text>
+  <text x="350" y="262" text-anchor="middle" font-family="Fraunces, serif" font-size="14" fill="#1a1a1c">Curator</text>
+  <text x="350" y="282" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#6b6b70">opus 4.7 · mimo 2.5</text>
+
+  <!-- 13 submodules around -->
+  <g font-family="Fraunces, serif" font-size="11.5" fill="#1a1a1c">
+    <!-- left column: input/setup -->
+    <rect x="40" y="60" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="115" y="83" text-anchor="middle">ContextBuilder</text>
+
+    <rect x="40" y="106" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="115" y="129" text-anchor="middle">RoleRunner</text>
+
+    <rect x="40" y="152" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="115" y="175" text-anchor="middle">ProposalParser</text>
+
+    <rect x="40" y="198" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="115" y="221" text-anchor="middle">CandidateBuilder</text>
+
+    <rect x="40" y="244" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="115" y="267" text-anchor="middle">SandboxExecutor</text>
+
+    <rect x="40" y="290" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="115" y="313" text-anchor="middle">InvariantRunner</text>
+
+    <rect x="40" y="336" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="115" y="359" text-anchor="middle">BacktestRunner</text>
+
+    <!-- right column: gate / memory / artifacts -->
+    <rect x="510" y="60" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="585" y="83" text-anchor="middle">ValidationGate</text>
+
+    <rect x="510" y="106" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="585" y="129" text-anchor="middle">HypothesisScorer</text>
+
+    <rect x="510" y="152" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="585" y="175" text-anchor="middle">MemoryManager</text>
+
+    <rect x="510" y="198" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="585" y="221" text-anchor="middle">SkillManager</text>
+
+    <rect x="510" y="244" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="585" y="267" text-anchor="middle">GitManager</text>
+
+    <rect x="510" y="290" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="585" y="313" text-anchor="middle">SealedVault</text>
+
+    <rect x="510" y="336" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="585" y="359" text-anchor="middle">ReportBuilder</text>
+  </g>
+
+  <!-- arrows in/out of LLM roles -->
+  <g stroke="#8b3a2f" stroke-width="0.8" fill="none" opacity="0.55">
+    <path d="M 190 78 L 280 200" stroke-dasharray="2 2"/>
+    <path d="M 190 124 L 280 215"/>
+    <path d="M 280 235 L 190 313"/>
+    <path d="M 420 200 L 510 78" stroke-dasharray="2 2"/>
+    <path d="M 420 215 L 510 124"/>
+    <path d="M 420 245 L 510 170"/>
+    <path d="M 420 260 L 510 220" stroke-dasharray="2 2"/>
+    <path d="M 420 280 L 510 312"/>
+  </g>
+
+  <!-- redaction barrier annotation -->
+  <line x1="240" y1="180" x2="240" y2="290" stroke="#b88a2c" stroke-width="2" stroke-dasharray="4 3"/>
+  <line x1="460" y1="180" x2="460" y2="290" stroke="#b88a2c" stroke-width="2" stroke-dasharray="4 3"/>
+  <text x="208" y="178" font-family="JetBrains Mono, monospace" font-size="8" fill="#b88a2c" letter-spacing="0.08em">REDACTION</text>
+  <text x="472" y="178" font-family="JetBrains Mono, monospace" font-size="8" fill="#b88a2c" letter-spacing="0.08em">REDACTION</text>
+
+  <!-- bottom strip: stages -->
+  <rect x="40" y="395" width="620" height="38" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1.2" rx="2"/>
+  <text x="50" y="412" font-family="JetBrains Mono, monospace" font-size="9" letter-spacing="0.08em" fill="#2d6a5c">DOWNSTREAM · no LLM</text>
+  <text x="200" y="420" font-family="Fraunces, serif" font-size="12.5" fill="#1a1a1c">Stage 2 · forward validation</text>
+  <text x="430" y="420" font-family="Fraunces, serif" font-size="12.5" fill="#1a1a1c">Stage 3 · paper trading</text>
+</svg>
+</div>
+<div class="figure-caption"><strong>Figure 1.</strong> The 13 deterministic submodules surround the three LLM-driven roles in the middle. Yellow dashed lines are the structural redaction layer: agents never receive raw OHLCV, calendar years, or validation numbers. Stage 2 and Stage 3 reuse the same backtest engine with no LLM.</div>
+</div>
+
+<h3>The thirteen submodules, briefly</h3>
+
+<table>
+  <thead>
+    <tr><th style="width:28%">Module</th><th>What it owns</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>ContextBuilder</code></td><td>Assembles the Editor / Reflector / Curator views. Loads recent trial summaries (categorical val signals only), four semantic-memory documents, and active skills from <code>SkillManager</code>.</td></tr>
+    <tr><td><code>RoleRunner</code></td><td>Provider-agnostic LLM wrapper. Reads <code>LBG_PROVIDER</code>; speaks the Anthropic SDK against either api.anthropic.com or MIMO's anthropic-compatible endpoint. Two-way redaction guards every call.</td></tr>
+    <tr><td><code>ProposalParser</code></td><td>Two-layer Pydantic validation of Editor YAML. Outer schema checks <code>EditProposal</code>; inner schema picks one of 8 payload models by <code>EditType</code>. <code>extra=forbid</code> on every model.</td></tr>
+    <tr><td><code>CandidateBuilder</code></td><td>Applies the parsed edit to <code>strategy.yaml</code> + <code>indicators/</code>. All eight edit types implemented, including <code>simplify</code> and <code>revert_to_trial_N</code> (reads historical files via <code>git show</code>).</td></tr>
+    <tr><td><code>SandboxExecutor</code></td><td>Restricted-namespace <code>exec</code> for agent-authored indicator code. Stripped builtins, whitelisted imports (<code>numpy</code>, <code>pandas</code>, <code>math</code>), <code>signal.SIGALRM</code> wall-clock timeout.</td></tr>
+    <tr><td><code>InvariantRunner</code></td><td>Five AST static checks + dynamic <code>prefix_stability</code>. Failures are recorded to <code>memory/invariant_failures.jsonl</code> with line numbers; the candidate never reaches backtest.</td></tr>
+    <tr><td><code>BacktestRunner</code></td><td>Vectorised SPY daily backtest, ~150 LOC. Open-to-open returns, 5 bps + 0.5 bp cost, ddof-1 Sharpe annualised at 252. Returns full daily-return series for downstream bootstrap.</td></tr>
+    <tr><td><code>ValidationGate</code></td><td>Multi-objective decision in the order from §9: too_few_trades → drawdown_regression → turnover → complexity → utility_lcb → Pareto → overfit_gap → no_meaningful_improvement. Redacted to one of five categorical signals for the LLM.</td></tr>
+    <tr><td><code>HypothesisScorer</code></td><td>Mechanically buckets <code>train.sharpe_delta</code> into five categories and matches against the Editor's enumerated expectation. Confirms / partially-confirms / disconfirms. <em>The Reflector cannot override this.</em></td></tr>
+    <tr><td><code>MemoryManager</code></td><td>Append-only writes to four jsonl streams (trials, reflections, invariant_failures, agent_compute) and bullet appends to four markdown semantic memory files. <code>write_md</code> reserved for the Curator.</td></tr>
+    <tr><td><code>SkillManager</code></td><td>Read/write <code>skills/&lt;skill_id&gt;.yaml</code> with the §6.2 schema (trigger, recipe, evidence, failure modes, complexity_cost). Active skills are loaded into <code>EditorContext.skills</code>.</td></tr>
+    <tr><td><code>GitManager</code></td><td>One commit per trial subject-formatted <code>trial NNNN: &lt;summary&gt;</code>; one branch per Curator cycle <code>curator/cycle-NNN</code>. <code>read_file_at_ref</code> + <code>list_tree_at_ref</code> for historical revert.</td></tr>
+    <tr><td><code>SealedVault</code></td><td>Write-once container for <code>sealed_test_final.json</code>. Chmods the file to <code>0o444</code> after writing; second write raises <code>SealedVaultError</code>.</td></tr>
+    <tr><td><code>ReportBuilder</code></td><td>Renders a single static HTML from logged artifacts. Per-trial table, signal histogram, semantic memory dump, sealed verdict, token totals.</td></tr>
+  </tbody>
+</table>
+
+<h3>Three LLM roles, two providers</h3>
+
+<p>The three LLM-driven roles share a single <code>RoleRunner</code> with a provider registry:</p>
+
+<span class="code-label">lbg/orchestrator/role_runner.py · PROVIDERS</span>
+<pre><span class="n">PROVIDERS = {
+  "anthropic": ProviderConfig(
+    api_key_env="ANTHROPIC_API_KEY",
+    base_url=None,                          </span><span class="c"># SDK default → api.anthropic.com</span><span class="n">
+    default_model="claude-opus-4-7"),
+  "mimo": ProviderConfig(
+    api_key_env="MIMO_API_KEY",
+    base_url="https://api.xiaomimimo.com/anthropic",
+    default_model="mimo-v2.5-pro"),
+}</span></pre>
+
+<p>The Anthropic SDK is the only client library; MIMO is invoked via its anthropic-compatible REST endpoint with a different <code>base_url</code>. Switching providers is one flag: <code>RoleRunner(provider="mimo")</code> or environment <code>LBG_PROVIDER=mimo</code>. The rest of the Orchestrator never knows which model answered.</p>
+
+<div class="aside note">
+<span class="aside-label">Why a provider abstraction matters here</span>
+The H1 verdict, the per-trial gate, the invariant suite — none of these depend on which LLM generated the proposal. Validating that we get the <em>same sealed metrics</em> regardless of provider (we do, to the last decimal) is a proof that the Orchestrator's determinism claim survives provider swaps. See §7 for the cross-provider sanity check.
+</div>
+</section>
+
+<!-- ============================== §2 DISCOVERY LOOP ============================== -->
+<section id="loop">
+<div class="section-marker">
+  <span class="section-num">§ 2</span>
+  <h2>The Discovery loop, in motion</h2>
+</div>
+
+<p>One trial is one budget step. Each step proposes, builds, gates, reflects, and commits — or aborts cleanly and moves on. The loop is small enough to write out:</p>
+
+<span class="code-label">Algorithm 1 · one trial</span>
+<pre><span class="k">for</span><span class="n"> i </span><span class="k">in</span><span class="n"> range(budget):
+  trial_id = start_id + i                              </span><span class="c"># sequential, even on abort</span><span class="n">
+  ctx       = ContextBuilder.editor_view(incumbent)
+  proposal  = RoleRunner.editor(ctx, trial_id)         </span><span class="c"># LLM call #1</span><span class="n">
+  candidate = CandidateBuilder.apply(incumbent, proposal)
+
+  </span><span class="k">if</span><span class="n"> InvariantRunner.fail(candidate, df_train):       </span><span class="c"># AST + prefix_stability + sandbox</span><span class="n">
+    MemoryManager.append_invariant_failure(...); </span><span class="k">continue</span><span class="n">
+
+  train  = BacktestRunner.run(candidate, df_train)
+  val    = BacktestRunner.run(candidate, df_val)
+
+  gate   = ValidationGate.decide(incumbent_outcome, candidate_outcome)
+  signal = ValidationGate.redact(gate)                 </span><span class="c"># one of 5 categorical values</span><span class="n">
+  outcome = HypothesisScorer.compare(proposal, signal, train.sharpe_delta)
+
+  refl   = RoleRunner.reflector(ctx, proposal,         </span><span class="c"># LLM call #2</span><span class="n">
+                                outcome, signal, train.metrics)
+
+  MemoryManager.append_trial(record)                   </span><span class="c"># trials.jsonl</span><span class="n">
+  MemoryManager.append_reflection(refl.record)         </span><span class="c"># reflections.jsonl</span><span class="n">
+  MemoryManager.append_to_md(refl.record.updates)      </span><span class="c"># 4 semantic md files</span><span class="n">
+  GitManager.commit_trial(trial_id, edit_summary)
+
+  </span><span class="k">if</span><span class="n"> gate.accepted:
+    incumbent, incumbent_outcome = candidate, candidate_outcome
+  </span><span class="k">else</span><span class="n">:
+    restore_working_tree(incumbent)
+
+  </span><span class="k">if</span><span class="n"> Curator.should_run(accepted_count):                </span><span class="c"># every 10 accepted</span><span class="n">
+    Curator.run(cycle=...)                             </span><span class="c"># LLM call #3, shadow mode</span><span class="n">
+
+</span><span class="c"># end of loop</span><span class="n">
+sealed_metrics = BacktestRunner.run(incumbent, df_sealed)
+h1_verdict     = compute_h1_verdict(sealed.returns, df_sealed)
+SealedVault.open_and_write({..., h1_verdict})         </span><span class="c"># write-once</span><span class="n">
+ReportBuilder.build()                                  </span><span class="c"># final HTML</span><span class="n"></span></pre>
+
+<p>Two LLM calls per trial (Editor + Reflector). A third LLM call fires per Curator cycle, every 10 accepted trials. In a 20-trial run with 0 accepted, the loop costs 40 LLM calls.</p>
+
+<h3>Trial outcome state machine</h3>
+
+<div class="figure">
+<div class="chart-wrap" style="padding: 24px 18px;">
+<svg viewBox="0 0 720 280" width="100%" role="img">
+  <title>Trial outcome state machine</title>
+
+  <!-- start -->
+  <circle cx="60" cy="140" r="20" fill="#1a1a1c"/>
+  <text x="60" y="174" text-anchor="middle" font-family="Fraunces, serif" font-size="11" fill="#6b6b70">start</text>
+
+  <!-- Editor -->
+  <rect x="100" y="115" width="100" height="50" fill="#fbfaf6" stroke="#8b3a2f" rx="3"/>
+  <text x="150" y="140" text-anchor="middle" font-family="Fraunces, serif" font-size="13">Editor</text>
+  <text x="150" y="156" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#6b6b70">LLM #1</text>
+
+  <!-- aborted (top) -->
+  <rect x="240" y="20" width="120" height="42" fill="#fbfaf6" stroke="#a4a4a8" stroke-dasharray="3 2" rx="3"/>
+  <text x="300" y="40" text-anchor="middle" font-family="Fraunces, serif" font-size="12">aborted</text>
+  <text x="300" y="55" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#6b6b70">parse / redact</text>
+
+  <!-- Build/Invariants -->
+  <rect x="240" y="115" width="120" height="50" fill="#fbfaf6" stroke="#8b3a2f" rx="3"/>
+  <text x="300" y="138" text-anchor="middle" font-family="Fraunces, serif" font-size="12">Build + Invariants</text>
+  <text x="300" y="154" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#6b6b70">AST + prefix_stab</text>
+
+  <!-- invariant fail -->
+  <rect x="240" y="220" width="120" height="42" fill="#fbfaf6" stroke="#a4a4a8" stroke-dasharray="3 2" rx="3"/>
+  <text x="300" y="240" text-anchor="middle" font-family="Fraunces, serif" font-size="12">invariant_failure</text>
+  <text x="300" y="255" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#6b6b70">no backtest</text>
+
+  <!-- Gate -->
+  <rect x="400" y="115" width="120" height="50" fill="#fbfaf6" stroke="#2d6a5c" rx="3"/>
+  <text x="460" y="138" text-anchor="middle" font-family="Fraunces, serif" font-size="13">ValidationGate</text>
+  <text x="460" y="154" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#6b6b70">multi-objective</text>
+
+  <!-- accept -->
+  <rect x="560" y="80" width="140" height="42" fill="#fbfaf6" stroke="#2d6a5c" rx="3"/>
+  <text x="630" y="100" text-anchor="middle" font-family="Fraunces, serif" font-size="12">accepted</text>
+  <text x="630" y="115" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#2d6a5c">incumbent ← candidate</text>
+
+  <!-- reject -->
+  <rect x="560" y="170" width="140" height="42" fill="#fbfaf6" stroke="#8b3a2f" rx="3"/>
+  <text x="630" y="190" text-anchor="middle" font-family="Fraunces, serif" font-size="12">rejected</text>
+  <text x="630" y="205" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8b3a2f">restore working tree</text>
+
+  <!-- arrows -->
+  <g stroke="#1a1a1c" stroke-width="1" fill="none" marker-end="url(#arrow)">
+    <path d="M 80 140 L 100 140"/>
+    <path d="M 200 140 L 240 140"/>
+    <path d="M 200 130 Q 220 90 240 50"/>           <!-- abort -->
+    <path d="M 360 140 L 400 140"/>
+    <path d="M 300 165 L 300 220"/>                  <!-- invariant fail -->
+    <path d="M 520 130 Q 540 110 560 101"/>          <!-- accept -->
+    <path d="M 520 150 Q 540 170 560 191"/>          <!-- reject -->
+  </g>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L8,5 L0,10 z" fill="#1a1a1c"/>
+    </marker>
+  </defs>
+
+  <!-- gate categories tag -->
+  <text x="460" y="92" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="8" letter-spacing="0.08em" fill="#6b6b70">5 categorical signals</text>
+</svg>
+</div>
+<div class="figure-caption"><strong>Figure 2.</strong> An Editor call produces a proposal; parser/redaction failure routes to <em>aborted</em> with no trial record. A successful build then runs AST + sandbox + <code>prefix_stability</code>; failure routes to <em>invariant_failure</em>. Only candidates that survive both reach the gate, and the gate's verdict is what the Reflector sees and explains.</div>
+</div>
+</section>
+
+<!-- ============================== §3 INVARIANT STACK ============================== -->
+<section id="invariants">
+<div class="section-marker">
+  <span class="section-num">§ 3</span>
+  <h2>Layered defenses against agent code</h2>
+</div>
+
+<p>An LLM that can author Python and influences a backtest is, on day one, an adversary against the metrics — through accident, not malice. The invariant stack is what keeps it from reward-hacking its way to a fake Sharpe.</p>
+
+<div class="figure">
+<div class="chart-wrap" style="padding: 24px;">
+<svg viewBox="0 0 700 350" width="100%" role="img">
+  <title>Layered invariants</title>
+
+  <!-- Five concentric or stacked layers -->
+  <g font-family="Fraunces, serif">
+
+    <!-- L1: Schema -->
+    <rect x="60" y="40" width="580" height="44" fill="#fbfaf6" stroke="#1a1a1c" stroke-width="1.2" rx="2"/>
+    <text x="80" y="60" font-size="13">1 · ProposalParser</text>
+    <text x="630" y="60" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#6b6b70">Pydantic · extra=forbid</text>
+    <text x="80" y="77" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">Rejects malformed YAML, unknown edit types, smuggled fields. No file ever touched.</text>
+
+    <!-- L2: AST static -->
+    <rect x="60" y="96" width="580" height="44" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.2" rx="2"/>
+    <text x="80" y="116" font-size="13">2 · AST static (5 checks)</text>
+    <text x="630" y="116" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#8b3a2f">no_future_shift · no_negative_indexing · no_forward_fill_future · whitelisted_imports · pure_function</text>
+    <text x="80" y="133" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">Catches <code>shift(-1)</code>, <code>bfill</code>, <code>import os</code>, <code>print/open/eval</code> in indicator code.</text>
+
+    <!-- L3: Sandbox -->
+    <rect x="60" y="152" width="580" height="44" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.2" rx="2"/>
+    <text x="80" y="172" font-size="13">3 · SandboxExecutor</text>
+    <text x="630" y="172" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#8b3a2f">stripped builtins · SIGALRM timeout</text>
+    <text x="80" y="189" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">Runtime <code>__import__</code> hook + 42 safe builtins. <code>import os</code> in a function body still raises.</text>
+
+    <!-- L4: prefix_stability -->
+    <rect x="60" y="208" width="580" height="44" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.2" rx="2"/>
+    <text x="80" y="228" font-size="13">4 · prefix_stability  <tspan font-family="JetBrains Mono, monospace" font-size="10" fill="#6b6b70">(dynamic)</tspan></text>
+    <text x="630" y="228" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#8b3a2f">∀ t : f(D)[t] == f(D[:t+1])[t]</text>
+    <text x="80" y="245" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">Perturbs <code>D_&gt;t</code>; catches whole-series normalisation, global percentile, hidden lookahead.</text>
+
+    <!-- L5: Cost model + position invariance -->
+    <rect x="60" y="264" width="580" height="44" fill="#fbfaf6" stroke="#b88a2c" stroke-width="1.2" rx="2"/>
+    <text x="80" y="284" font-size="13">5 · Gate-side runtime checks</text>
+    <text x="630" y="284" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#b88a2c">cost_model_required · max_position · sandbox_execution</text>
+    <text x="80" y="301" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">Backtest with zero cost on non-zero turnover ⇒ rejected. No implicit leverage.</text>
+
+    <text x="60" y="332" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="0.06em" fill="#6b6b70">Each layer is strict enough that the layer below it is defense in depth, not duplication.</text>
+  </g>
+</svg>
+</div>
+<div class="figure-caption"><strong>Figure 3.</strong> Five layers between an LLM-generated indicator and a backtest. AST static catches what the agent <em>writes</em>; the sandbox catches what survives static analysis at runtime; <code>prefix_stability</code> catches the semantically subtle leaks the AST can never see. In our 20-trial Anthropic run, 12 of 20 trials were stopped by one of these layers before reaching the gate.</div>
+</div>
+
+<h3>The single most load-bearing check</h3>
+
+<p>Of the five layers, <code>prefix_stability</code> is the one that justifies the others' existence. The formal statement, from PROPOSAL §4.5:</p>
+
+<div class="math">
+\[
+f\!\left(D_{1:T}\right)\!\bigl[t\bigr] \;=\; f\!\left(D_{1:t}\right)\!\bigl[t\bigr] \qquad \forall\, t \in \{1, \ldots, T\}
+\]
+<span class="where">For any indicator <em>f</em>, its value at time <em>t</em> when applied to the full series must equal its value at <em>t</em> when applied to the prefix ending at <em>t</em>. Stricter than scanning the AST for <code>shift(-1)</code>; catches normalisation, percentile, every channel through which <em>D<sub>&gt;t</sub></em> could enter <em>f(D)[t]</em>.</span>
+</div>
+
+<p>Operationalised: sample 30 random <em>t</em>s, replace <code>df.iloc[t+1:]</code> with a randomised OHLCV block (every row scaled by <code>U(0.5, 1.5)</code>, OHL co-scaled to preserve high≥close≥low), recompute the indicator, and compare the head <code>[0..t]</code> to the unperturbed baseline. Any difference greater than <code>atol=1e-12</code> is a leak. Two leaky LLM-authored indicators we caught in the wild:</p>
+
+<table>
+  <thead>
+    <tr><th>Indicator</th><th>Why it leaks</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>whole_series_zscore</code></td>
+      <td><code>(s - s.mean()) / s.std()</code>. The mean and std at <em>t</em>=500 depend on every future row. AST can't see this — no <code>shift</code>, no <code>iloc</code>, no fill. <code>prefix_stability</code> catches it on the first perturbation: every value at <em>t</em>≤500 changes when <em>D<sub>&gt;500</sub></em> changes.</td>
+    </tr>
+    <tr>
+      <td><code>normalize_to_global_max</code></td>
+      <td><code>close / close.max()</code>. Identical structural issue, even simpler. First differing index after perturbation: <code>0</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Both were generated by the LLM Editor unprompted during dry runs of the framework. Both were rejected before any backtest. That is the layer working.</p>
+
+<div class="aside warn">
+<span class="aside-label">An honest limit</span>
+<code>prefix_stability</code> sampling cannot prove no-lookahead — it can only refute it. With <code>n_samples=30</code>, a leak that happens at one particular <em>t</em> in 3000 will pass roughly 99% of the time. Production runs sample more aggressively and the Curator records every false-pass as evidence to widen the sample. The current default is enough for daily-bar indicators in our DSL but is not a substitute for a formal proof.
+</div>
+</section>
+
+<!-- ============================== §4 GATE ============================== -->
+<section id="gate">
+<div class="section-marker">
+  <span class="section-num">§ 4</span>
+  <h2>The validation gate</h2>
+</div>
+
+<p>The per-trial gate is the part of the system most likely to silently misalign with the H1 verdict if you're not careful. It is <em>not</em> the H1 verdict. It is intentionally looser so the Discovery loop does not starve, but strict enough that fluke accepts on a thin validation window don't poison the search.</p>
+
+<span class="code-label">lbg/gate/decision.py · decide()</span>
+<pre><span class="k">def</span><span class="n"> decide(incumbent, candidate, cfg):
+  </span><span class="k">if</span><span class="n"> candidate.train.num_trades &lt; cfg.min_trades:        </span><span class="k">return</span><span class="n"> Reject("too_few_trades")
+  </span><span class="k">if</span><span class="n"> candidate.val.max_drawdown &lt; incumbent.val.max_drawdown * 1.15:
+                                                          </span><span class="k">return</span><span class="n"> Reject("drawdown_regression")
+  </span><span class="k">if</span><span class="n"> candidate.val.turnover &gt; cfg.max_turnover:           </span><span class="k">return</span><span class="n"> Reject("turnover_too_high")
+  </span><span class="k">if</span><span class="n"> candidate.complexity - incumbent.complexity &gt; cfg.max_delta:
+                                                          </span><span class="k">return</span><span class="n"> Reject("complexity_increase")
+
+  u_cand = utility_lcb_sharpe(candidate.val.returns, α=0.20)
+  u_inc  = utility_lcb_sharpe(incumbent.val.returns,  α=0.20)
+  </span><span class="k">if</span><span class="n"> u_cand &gt; u_inc + cfg.eps:                            </span><span class="k">return</span><span class="n"> Accept("utility_improvement")
+
+  </span><span class="k">if</span><span class="n"> pareto_dominates(candidate, incumbent, cfg.eps):     </span><span class="k">return</span><span class="n"> Accept("pareto_improvement")
+
+  </span><span class="k">if</span><span class="n"> candidate.train.sharpe - candidate.val.sharpe &gt; cfg.max_gap:
+                                                          </span><span class="k">return</span><span class="n"> Reject("overfit_gap")
+  </span><span class="k">return</span><span class="n"> Reject("no_meaningful_improvement")</span></pre>
+
+<h3>Why one-sided utility LCB at α = 0.20</h3>
+
+<p>The Lo (2002) asymptotic standard error for the sample Sharpe estimator under iid daily returns:</p>
+
+<div class="math">
+\[
+\widehat{\mathrm{SE}}(\hat S) \;\approx\; \sqrt{\frac{1 + \tfrac{1}{2}\hat S^{2}}{n}} \cdot \sqrt{252}
+\]
+<span class="where"><em>n</em> = validation-window length (~505 daily bars in split_B). <em>Ŝ</em> = annualised point estimate. The one-sided lower bound at α=0.20 uses <code>z<sub>0.80</sub> ≈ 0.842</code> — looser than 95% CI on purpose so the per-trial gate doesn't reject every honest small improvement on a 500-bar window.</span>
+</div>
+
+<p>The gate compares <em>candidate LCB</em> to <em>incumbent LCB</em>, not point estimates. A candidate must beat the incumbent's lower-confidence Sharpe by at least <code>EPS = 0.005</code>. Two candidates with identical realised returns score equal LCBs, so the gate falls through to the Pareto check — which can still accept on the basis of <em>complexity</em>, <em>drawdown</em>, or <em>turnover</em>.</p>
+
+<h3>The five categorical signals the LLM sees</h3>
+
+<p>Behind the gate is rich numeric reasoning. The LLM sees one of five strings:</p>
+
+<table>
+  <thead>
+    <tr><th>External signal</th><th>Internal reasons mapped here</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="yes"><code>accepted</code></td><td><code>accept_utility_improvement</code>, <code>accept_pareto_improvement</code></td></tr>
+    <tr><td class="no"><code>rejected_drawdown_regression</code></td><td>val MDD worse than incumbent × 1.15</td></tr>
+    <tr><td class="no"><code>rejected_turnover</code></td><td>val turnover exceeded cap (default 10/yr)</td></tr>
+    <tr><td class="no"><code>rejected_complexity</code></td><td>Δcomplexity exceeded MAX_DELTA (default 3.0)</td></tr>
+    <tr><td class="no"><code>rejected_no_significant_improvement</code></td><td><code>too_few_trades</code>, <code>overfit_gap</code>, <code>no_meaningful_improvement</code> — the catch-all "didn't move the needle"</td></tr>
+  </tbody>
+</table>
+
+<p>The collapse of three internal reasons into <code>rejected_no_significant_improvement</code> is intentional. The LLM should not learn to distinguish "I made too few trades" from "I overfit train" — both mean "your edit did not progress the strategy", and the right response is the same: try a different shape of edit. Distinguishing them in agent context would invite reward hacking on the easier of the two.</p>
+
+<h3>Complexity, the full formula</h3>
+
+<p>Five terms, all weights locked by §20 lock-list:</p>
+
+<div class="math">
+\[
+\mathrm{Complexity}(H) \;=\; \lambda_1 |A_k| + \lambda_2 |\text{filters}| + \lambda_3 |\text{params}| + \lambda_4 \cdot \mathrm{LOC} + \lambda_5 \cdot \#\text{branches}
+\]
+<span class="where">Weights (frozen): λ<sub>1</sub>=1.0 (indicators), λ<sub>2</sub>=0.5 (filters), λ<sub>3</sub>=0.1 (params), λ<sub>4</sub>=0.005 (effective LOC across all indicator files), λ<sub>5</sub>=0.05 (If/While/For/Try AST nodes). LOC + branch are summed across <em>distinct</em> indicator files — two specs sharing one <code>fn</code> don't double-count.</span>
+</div>
+
+<p>An <code>add_indicator</code> that imports a 50-line, 3-branch ATR implementation contributes <code>1.0 + 0.005·50 + 0.05·3 = 1.4</code> to complexity. <code>MAX_DELTA = 3.0</code> means about two such additions in one trial; the third must wait for a Curator <code>simplify</code> pass.</p>
+</section>
+
+<!-- ============================== §5 SEALED + H1 ============================== -->
+<section id="sealed">
+<div class="section-marker">
+  <span class="section-num">§ 5</span>
+  <h2>The sealed window and the H1 verdict</h2>
+</div>
+
+<p>The single most important architectural invariant is that the agent <em>never sees split_C</em>. Not its data, not its metrics, not the calendar dates of its boundaries. The Orchestrator opens it once at the end of the run, writes the verdict to a write-once vault, and the human reads it.</p>
+
+<div class="figure">
+<div class="chart-wrap" style="background: var(--paper-warm); padding: 32px 24px 24px;">
+<svg viewBox="0 0 700 200" width="100%" role="img">
+  <title>Three-split protocol on SPY 2010 – 2024</title>
+
+  <line x1="40" y1="120" x2="660" y2="120" stroke="#1a1a1c" stroke-width="0.8"/>
+
+  <g font-family="Fraunces, serif" font-size="11" fill="#6b6b70">
+    <text x="40" y="170" text-anchor="middle">2010</text>
+    <text x="412" y="170" text-anchor="middle">2019</text>
+    <text x="495" y="170" text-anchor="middle">2021</text>
+    <text x="660" y="170" text-anchor="middle">2024</text>
+  </g>
+
+  <g>
+    <line x1="40" y1="115" x2="40" y2="125" stroke="#1a1a1c"/>
+    <line x1="412" y1="115" x2="412" y2="125" stroke="#1a1a1c"/>
+    <line x1="495" y1="115" x2="495" y2="125" stroke="#1a1a1c"/>
+    <line x1="660" y1="115" x2="660" y2="125" stroke="#1a1a1c"/>
+  </g>
+
+  <rect x="40" y="80" width="372" height="35" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.2" rx="2"/>
+  <text x="226" y="103" text-anchor="middle" font-family="Fraunces, serif" font-size="13" fill="#1a1a1c">split_A · train · 2264 bars</text>
+
+  <rect x="412" y="80" width="83" height="35" fill="#fbfaf6" stroke="#b88a2c" stroke-width="1.2" rx="2"/>
+  <text x="453.5" y="103" text-anchor="middle" font-family="Fraunces, serif" font-size="12" fill="#1a1a1c">split_B · val · 505</text>
+
+  <rect x="495" y="80" width="165" height="35" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1.2" rx="2"/>
+  <text x="577.5" y="103" text-anchor="middle" font-family="Fraunces, serif" font-size="13" fill="#1a1a1c">split_C · sealed · 1005</text>
+
+  <!-- agent visibility -->
+  <text x="40" y="40" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="0.06em" fill="#8b3a2f">agent sees: train metrics (raw)</text>
+  <text x="412" y="40" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="0.06em" fill="#b88a2c">→ categorical signal only</text>
+  <text x="495" y="40" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="0.06em" fill="#2d6a5c">→ never</text>
+
+  <!-- write-once marker -->
+  <line x1="660" y1="60" x2="660" y2="80" stroke="#2d6a5c" stroke-width="1" stroke-dasharray="2 2"/>
+  <text x="660" y="55" text-anchor="end" font-family="Fraunces, serif" font-style="italic" font-size="11" fill="#2d6a5c">SealedVault.open_and_write()</text>
+</svg>
+</div>
+<div class="figure-caption"><strong>Figure 4.</strong> The three splits are aliased so the LLM cannot infer the calendar. Years on the axis here are for human readers only; the splits arrive at the agent as <code>split_A</code> / <code>split_B</code> / <code>split_C</code>. Vault opens once.</div>
+</div>
+
+<h3>The H1 test in one expression</h3>
+
+<p>The final verdict is a moving-block bootstrap confidence interval on the <em>paired difference</em> in sealed Sharpe between LBG-Trader and the strongest pre-registered baseline:</p>
+
+<div class="math">
+\[
+\Delta\hat{S} \;=\; \hat{S}_{\text{LBG}} - \hat{S}_{B^{*}}
+\quad\text{with}\quad
+\mathrm{CI}_{95\%}(\Delta\hat{S}) \;=\; \bigl[\hat{q}_{2.5\%},\, \hat{q}_{97.5\%}\bigr]
+\]
+<span class="where"><em>q̂</em> percentiles taken across 1000 bootstrap resamples; each resample draws ⌈n / block_len⌉ overlapping blocks of length 10 from the paired daily-returns series with replacement and recomputes both Sharpes. <em>B</em>* is the stronger of the two pre-registered baselines (buy-and-hold, sixty-forty) by point Sharpe on split_C.</span>
+</div>
+
+<p>The <em>strong</em> criterion is <code>CI.lower &gt; 0</code>. The <em>weak</em> criterion is <code>ΔS&#770; &gt; 0</code>. Both criteria are reported; the strong is what the verdict turns on.</p>
+
+<h3>Why a block bootstrap</h3>
+
+<p>Daily SPY returns have non-negligible autocorrelation, especially in volatility. An iid bootstrap (resample individual days) would erase that structure and inflate the apparent precision of the Sharpe estimate. Moving blocks of length 10 preserve short-horizon autocorrelation while still providing enough independent draws for a stable 95% CI from <em>n</em>=1000.</p>
+
+<h3>What the vault contains</h3>
+
+<span class="code-label">artifacts/sealed/sealed_test_final.json</span>
+<pre><span class="n">{
+  "sealed_at_utc": "2026-05-23T...",
+  "strategy_name": "sma_cross_baseline",
+  "sharpe": 0.108, "max_drawdown": -0.280, "turnover": 4.27,
+  "num_trades": 17, "cagr": 0.0059, "final_equity": 1.024,
+  "complexity": 2.405,
+  "h1_verdict": {
+    "strategy_sharpe":     0.108,
+    "best_baseline_name":  "buy_and_hold",
+    "best_baseline_sharpe": 0.861,
+    "delta_sharpe":       -0.753,
+    "ci_lower":           -1.440,
+    "ci_upper":            0.003,
+    "alpha": 0.05, "n_bootstrap": 1000, "block_len": 10,
+    "h1_strong": false,
+    "h1_weak":   false
+  }
+}</span></pre>
+
+<p>The file is <code>chmod 0o444</code>'d after writing. Any second call raises <code>SealedVaultError</code>. The vault is the project's single load-bearing claim about generalisation — and it cannot be tampered with via the Orchestrator.</p>
+</section>
+
+<!-- ============================== §6 SYCOPHANCY DEFENSE ============================== -->
+<section id="sycophancy">
+<div class="section-marker">
+  <span class="section-num">§ 6</span>
+  <h2>Defenses against sycophancy</h2>
+</div>
+
+<p>An LLM Reflector asked "was this trial confirmed?" will tend to answer yes, especially if the system prompt cares about progress. The defense is structural, not exhortatory: we never ask the Reflector that question.</p>
+
+<div class="pullquote">
+"Memory is what happened. The Reflector <em>explains</em>; the Orchestrator <em>judges</em>."
+</div>
+
+<h3>HypothesisScorer.compare — the mechanical part</h3>
+
+<p>The Editor's proposal includes two enumerated predictions:</p>
+
+<ul>
+  <li><strong>expected_train_signal</strong> ∈ {strong_improvement, mild_improvement, neutral, mild_regression, strong_regression}</li>
+  <li><strong>expected_validation_signal</strong> ∈ {accept, reject}</li>
+</ul>
+
+<p>After the gate runs, the Orchestrator computes <code>delta_sharpe_train = candidate.train.sharpe − incumbent.train.sharpe</code> and buckets it into the same five categories using fixed thresholds <code>(±0.05, ±0.30)</code>. The Reflector is then told the result — not asked for it.</p>
+
+<table>
+  <thead>
+    <tr><th>train bucket</th><th>val match</th><th>HypothesisOutcome</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>matched</td><td>matched</td><td class="yes"><code>confirmed</code></td></tr>
+    <tr><td>mismatched</td><td>mismatched</td><td class="no"><code>disconfirmed</code></td></tr>
+    <tr><td colspan="2">exactly one of the two matched</td><td><code>partially_confirmed</code></td></tr>
+  </tbody>
+</table>
+
+<p>The Reflector's job is then narrow: <em>given</em> the outcome, explain mechanically what in the strategy's mechanics drove it. The system prompt forbids restating the outcome, forbids judging the hypothesis, and requires bullet-shaped updates to four semantic-memory documents. <code>ReflectorOutputPayload</code> has <em>no</em> <code>hypothesis_outcome</code> field — the schema makes overriding the mechanical result structurally impossible.</p>
+
+<h3>Three layers of redaction</h3>
+
+<div class="ladder">
+  <div class="rung">
+    <div class="rung-tag">L1</div>
+    <div class="rung-body"><strong>Structural.</strong> <code>PastTrialSummary</code> has no <code>validation_sharpe</code> / <code>validation_max_drawdown</code> / <code>validation_turnover</code> field. The Editor literally cannot see val metrics because the dataclass that carries trial history does not contain them. Test <code>test_past_trial_summary_omits_validation_metrics</code> asserts this on every CI run.</div>
+  </div>
+  <div class="rung">
+    <div class="rung-tag">L2</div>
+    <div class="rung-body"><strong>Textual, outgoing.</strong> Every assembled prompt is scanned by <code>assert_redacted</code> before <code>messages.create</code> fires. Patterns: 4-digit years in <code>[1990, 2050]</code>, ISO dates, 35 named market events (<em>covid</em>, <em>gfc</em>, <em>lehman</em>, <em>brexit</em>, <em>9/11</em>, …). A hit raises <code>RedactionError</code> before any token reaches the network.</div>
+  </div>
+  <div class="rung">
+    <div class="rung-tag">L3</div>
+    <div class="rung-body"><strong>Textual, incoming.</strong> The same scanner runs on the LLM's raw response. If a model hallucinates "after the 2020 drawdown..." into its reflection, we crash hard rather than persist a leaky bullet into <code>accepted_rules.md</code>. The whole trial is aborted; no Editor turn ever sees it.</div>
+  </div>
+</div>
+
+<h3>What the Reflector actually accumulates</h3>
+
+<p>Even with zero accepted trials, the Reflector produces real, mechanical, evidence-grounded bullets. From the MIMO run's <code>failed_directions.md</code>:</p>
+
+<div class="aside">
+"Switching to volatility_target sizing alone on a high-frequency SMA-cross strategy without restructuring entry/exit rules causes excessive position resizing and trade proliferation, yielding no net improvement."<br><br>
+"Widening the slow SMA from 50 to 100 (keeping fast at 20) reduces trade count but delays exits enough to worsen Sharpe and cause drawdown regression in validation; the slower crossover is too blunt a filter."
+</div>
+
+<p>These are unforced, post-hoc explanations of <em>why the gate said no</em>. They name the mechanism (<em>excessive position resizing</em>, <em>blunt filter</em>), not just the symptom. Three trials in, the system already has a non-trivial map of dead ends — and the Editor reads it on the next turn.</p>
+</section>
+
+<!-- ============================== §7 EXPERIMENTS ============================== -->
+<section id="experiments">
+<div class="section-marker">
+  <span class="section-num">§ 7</span>
+  <h2>The experiment, and what it found</h2>
+</div>
+
+<p>Two budget-20 long Discovery runs, one per provider, both starting from the same baseline strategy.</p>
+
+<h3>The baseline</h3>
+
+<p>SMA 20/50 long-only cross. Enter when 20-period SMA crosses above 50-period; exit on the inverse. Fixed fraction sizing at 100% of capital. Cost 5.5 bps per side. Baseline metrics on each split:</p>
+
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-label">split_A · train</div>
+    <div class="kpi-value">0.693</div>
+    <div class="kpi-sub">MDD -24%, 46 trades</div>
+  </div>
+  <div class="kpi teal">
+    <div class="kpi-label">split_B · val</div>
+    <div class="kpi-value">0.933</div>
+    <div class="kpi-sub">MDD -15%, 7 trades</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">split_C · sealed</div>
+    <div class="kpi-value">0.108</div>
+    <div class="kpi-sub">MDD -28%, 17 trades</div>
+  </div>
+  <div class="kpi gold">
+    <div class="kpi-label">buy_and_hold · sealed</div>
+    <div class="kpi-value">0.861</div>
+    <div class="kpi-sub">the bar to clear</div>
+  </div>
+</div>
+
+<p>The baseline's val window happens to be more favourable than its train window (val Sharpe &gt; train Sharpe). The sealed window — a four-year stretch that includes a major drawdown and a recovery — is brutal. The SMA cross gets chopped up.</p>
+
+<h3>What the two providers proposed</h3>
+
+<div class="two-col">
+  <div class="col-card">
+    <h4>Anthropic Opus 4.7</h4>
+    <ul style="font-family: var(--sans); font-size: 13.5px; line-height: 1.55;">
+      <li>8 completed trials</li>
+      <li>0 accepted, 8 rejected by gate</li>
+      <li>12 invariant failures (mostly <em>filter references undeclared indicator</em>)</li>
+      <li>$1.44 in tokens, 218 s wall-clock</li>
+      <li>Explored <em>structural</em> edits: change_sizing_mode, change_exit_rule, add_indicator</li>
+    </ul>
+  </div>
+  <div class="col-card alt">
+    <h4>MIMO v2.5 Pro</h4>
+    <ul style="font-family: var(--sans); font-size: 13.5px; line-height: 1.55;">
+      <li>4 completed trials</li>
+      <li>0 accepted, 4 rejected by gate</li>
+      <li>4 invariant failures + 12 parser aborts (missing YAML fences)</li>
+      <li>not metered, 1116 s wall-clock (5× slower)</li>
+      <li>Explored <em>parameter-space</em>: SMA period sweeps 50→{75, 100}</li>
+    </ul>
+  </div>
+</div>
+
+<h3>Per-trial Sharpe, both providers</h3>
+
+<div class="figure">
+<div class="chart-wrap" style="padding: 18px 12px;">
+  <canvas id="trialChart" height="280"></canvas>
+</div>
+<div class="figure-caption"><strong>Figure 5.</strong> Each candidate's Sharpe on split_A (train, dark) and split_B (val, light), reconstructed by re-running policy + backtest on the per-trial commit. The baseline line is at the top (train 0.693, val 0.933). Trials marked <code>noop</code> are <code>add_indicator</code> / <code>add_filter</code> edits that did not wire into entry/exit — the candidate is bit-identical to the baseline. The single train-Sharpe spike at Anthropic trial 2 (0.854) corresponds to <em>one</em> traded position over nine years, rejected by <code>min_trades</code>.</div>
+</div>
+
+<h3>The shape of failure</h3>
+
+<p>Three patterns survive both runs:</p>
+
+<ol>
+  <li><strong>Both providers independently discovered the same best improvement.</strong> <code>change_sizing_mode → volatility_target</code> produced train Sharpe 0.722 (a +0.029 lift over baseline) on Anthropic trial 1 <em>and</em> MIMO trial 0 — bit-identical numbers. This is the strongest evidence that the Orchestrator's determinism claim survives provider swaps, and a small confirmation of the LBG idea that good edits are <em>discoverable</em>.</li>
+  <li><strong>Every real improvement on train made val <em>worse</em>.</strong> Vol-target sizing: val Sharpe 0.933 → 0.876. SMA period widening: val Sharpe 0.933 → 0.223. The val window is a regime peculiarly favourable to the baseline; any move costs you. This is exactly what a generalisation-resistant gate must catch.</li>
+  <li><strong>Acceptance rate = 0 / 24.</strong> Not by design — by data. With <code>min_trades=20</code> and a <code>1.15×</code> MDD floor on a small val window, the gate is unforgiving, and the LLM's single-step edits cannot solve "this baseline is near a local optimum within its DSL". This is the negative result.</li>
+</ol>
+
+<h3>The sealed verdict, both runs</h3>
+
+<p>Identical to the last decimal because sealed evaluation runs on the final incumbent — and both runs end with the same incumbent (the baseline, since neither run accepted anything):</p>
+
+<div class="figure">
+<div class="chart-wrap" style="padding: 24px 18px;">
+<svg viewBox="0 0 700 200" width="100%" role="img">
+  <title>H1 verdict bracket — sealed paired Sharpe difference</title>
+
+  <!-- axis -->
+  <line x1="60" y1="120" x2="660" y2="120" stroke="#1a1a1c" stroke-width="0.8"/>
+  <g font-family="JetBrains Mono, monospace" font-size="10" fill="#6b6b70">
+    <text x="60"  y="148" text-anchor="middle">-1.5</text>
+    <text x="180" y="148" text-anchor="middle">-1.0</text>
+    <text x="300" y="148" text-anchor="middle">-0.5</text>
+    <text x="420" y="148" text-anchor="middle">0.0</text>
+    <text x="540" y="148" text-anchor="middle">+0.5</text>
+    <text x="660" y="148" text-anchor="middle">+1.0</text>
+  </g>
+  <line x1="420" y1="60" x2="420" y2="135" stroke="#2d6a5c" stroke-width="1" stroke-dasharray="3 3"/>
+  <text x="420" y="50" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="11" fill="#2d6a5c">H1 strong: CI.lower &gt; 0</text>
+
+  <!-- CI band -->
+  <rect x="74.4" y="92" width="346.4" height="20" fill="#8b3a2f" opacity="0.18"/>
+  <line x1="74.4" y1="80" x2="74.4" y2="124" stroke="#8b3a2f" stroke-width="2"/>
+  <line x1="420.8" y1="80" x2="420.8" y2="124" stroke="#8b3a2f" stroke-width="2"/>
+  <text x="74.4" y="172" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8b3a2f">-1.44</text>
+  <text x="420.8" y="172" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8b3a2f">+0.003</text>
+  <text x="247" y="83" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#8b3a2f">95% CI of paired ΔSharpe (block bootstrap)</text>
+
+  <!-- point estimate -->
+  <circle cx="239.36" cy="102" r="5" fill="#1a1a1c"/>
+  <text x="239.36" y="190" text-anchor="middle" font-family="Fraunces, serif" font-size="12" fill="#1a1a1c">point estimate -0.75</text>
+</svg>
+</div>
+<div class="figure-caption"><strong>Figure 6.</strong> The 95% block-bootstrap CI of <em>Sharpe(LBG) − Sharpe(buy_and_hold)</em> on split_C. The interval is <code>[-1.44, +0.003]</code>; the upper bound barely brushes zero. <em>H1 strong</em> requires the lower bound &gt; 0 — clearly false. <em>H1 weak</em> requires the point estimate &gt; 0 — also false. The strategy is statistically worse than buying and holding on this window.</div>
+</div>
+
+<h3>Tokens, walls, and dollars</h3>
+
+<table>
+  <thead>
+    <tr><th>Provider</th><th class="num">elapsed s</th><th class="num">trials done</th><th class="num">in tok</th><th class="num">out tok</th><th class="num">cost</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Anthropic Opus 4.7</td>
+      <td class="num">218</td>
+      <td class="num">8 / 20</td>
+      <td class="num">59 073</td>
+      <td class="num">7 390</td>
+      <td class="num">$1.44</td>
+    </tr>
+    <tr>
+      <td>MIMO v2.5 Pro</td>
+      <td class="num">1 116</td>
+      <td class="num">4 / 20</td>
+      <td class="num">4 526</td>
+      <td class="num">9 092</td>
+      <td class="num">—</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>MIMO is roughly 5× slower per trial but produces noticeably <em>more</em> output tokens per response. Its proposals are more verbose in their reasoning section. Different provider, different style — same algorithmic surface area, same H1 conclusion.</p>
+
+<div class="aside note">
+<span class="aside-label">A bug exposed by MIMO</span>
+The MIMO run revealed that the original loop's trial-id allocation came from <code>max(trials.jsonl) + 1</code>. Aborted trials (parser/redaction failures) don't write to <code>trials.jsonl</code>, so the loop could spin retrying the same <code>trial_id</code> indefinitely. With MIMO occasionally dropping its YAML fence, this manifested as 12 consecutive aborts on the same trial_id 4. Fixed by replacing <code>next_trial_id()</code> with a sequential counter offset by the initial id. Two regression tests pin the invariant. Anthropic's earlier 20-trial run had been exposed to the same bug; the symptom was less visible because Anthropic rarely lost its YAML fence.
+</div>
+</section>
+
+<!-- ============================== §8 IMPLICATIONS ============================== -->
+<section id="implications">
+<div class="section-marker">
+  <span class="section-num">§ 8</span>
+  <h2>What this means, and what we do next</h2>
+</div>
+
+<p>The honest reading of the H1 verdict is uncomfortable: the LBG framework, given the SMA 20/50 baseline and a 20-trial budget, did not produce a strategy that beats buying and holding. That's a result, not a failure of execution. Three sources for the result, in priority order:</p>
+
+<div class="ladder">
+  <div class="rung">
+    <div class="rung-tag">1 / data</div>
+    <div class="rung-body"><strong>The sealed window is hard.</strong> Split_C covers a multi-regime stretch of SPY that contains both a major drawdown and a vigorous recovery. The SMA cross was always going to be chopped up in regime changes. Buy-and-hold's sealed Sharpe of 0.861 reflects the strong tailwind a long-only equity holding gets on that window — and the SMA cross, by definition, sits out part of that rally.</div>
+  </div>
+  <div class="rung">
+    <div class="rung-tag">2 / DSL</div>
+    <div class="rung-body"><strong>The action space is narrow.</strong> Single-step <code>parameter_change</code> / <code>add_filter</code> / <code>change_sizing_mode</code> edits cannot transform an SMA cross into a fundamentally different strategy. The framework's strongest improvement — vol-target sizing — moved train Sharpe by 0.029. The gate cannot accept a candidate this thin, and even if it did, the val window penalises any deviation from the baseline. The DSL needs more <em>compositional</em> edits, or the Editor needs to plan multi-trial sequences.</div>
+  </div>
+  <div class="rung">
+    <div class="rung-tag">3 / horizon</div>
+    <div class="rung-body"><strong>20 trials is too few.</strong> PROPOSAL §10 sketched ~50 trials as the working budget. At our observed acceptance rate of 0 over 24 trials across both providers, even 50 wouldn't help: the Editor isn't learning to compose, just sampling local edits. The next experiment is not "more budget"; it's "better Editor priors" — either through richer skill artifacts, multi-step planning, or a structurally larger DSL.</div>
+  </div>
+</div>
+
+<h3>What ships next</h3>
+
+<table>
+  <thead>
+    <tr><th>Next</th><th>Why</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Editor multi-step planning</td>
+      <td>The biggest single observed weakness. Trial-N proposals frequently reference indicators that the Editor imagined would be added in a hypothetical trial N+1. Either the prompt admits this and asks for an N-trial plan, or the orchestrator runs a Curator-style outer loop that lets the Editor see its own future-step intentions.</td>
+    </tr>
+    <tr>
+      <td>Built-in indicator templates</td>
+      <td>Roughly 5/8 of Anthropic's trials were noop <code>add_indicator</code> calls — the Editor inserted RSI / ATR / regime indicators without wiring them. A small library of pre-vetted indicators (RSI, ATR, MACD, ADX, realised vol) with declared trigger semantics would let the agent reach for <em>filter</em> edits that actually do work.</td>
+    </tr>
+    <tr>
+      <td>SkillManager active mode</td>
+      <td>Shadow Curator works; active Curator (Curator-proposed strategy simplifications) is gated on "the system has proven stable". We have not yet seen 10 accepted trials in a single run, so the trigger has never fired. Once it does, the strict <code>change</code> path for Curator-authored edits needs auditing.</td>
+    </tr>
+    <tr>
+      <td>Stage 4 broker adapter</td>
+      <td>Out of scope for the current sprint per direction. Stage 3's <code>PaperTradingEngine</code> already provides the per-bar streaming surface a live broker would consume; a real adapter is a few hundred LOC plus paperwork.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The framework is built. The defenses are real. The bookkeeping is honest. The next move is on the action space, not the architecture.</p>
+
+<div class="pullquote">
+"A framework that produced a positive H1 on SMA(20/50) with 20 trials would not be evidence of LBG. It would be evidence of bias — somewhere."
+</div>
+</section>
+
+<!-- ============================== FOOTER ============================== -->
+<footer class="footer">
+<div>LBG-Trader · Stage 1 retrospective · 2026-05-23</div>
+<div>repo · <span class="accent">commit 72bc9cf</span> · 330 tests · 19 377 LOC · <em>uv run pytest -q</em> · <em>uv run ruff check</em></div>
+<div>see also · <span class="accent">PROPOSAL.html</span> · the source-of-truth specification for everything § 1-7 references</div>
+</footer>
+
+</div>
+
+<script>
+const CTX = (id) => document.getElementById(id).getContext('2d');
+const PAPER = '#fbfaf6';
+const INK = '#1a1a1c';
+const INK_MUTED = '#6b6b70';
+const ACCENT = '#8b3a2f';
+const ACCENT_SOFT = '#b76b5e';
+const TEAL = '#2d6a5c';
+const TEAL_SOFT = '#7baba1';
+const GOLD = '#b88a2c';
+
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+Chart.defaults.font.size = 11.5;
+Chart.defaults.color = INK_MUTED;
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+Chart.defaults.plugins.legend.labels.boxHeight = 12;
+
+/* ============ Figure 5: per-trial sharpe (train + val) ============ */
+new Chart(CTX('trialChart'), {
+  type: 'bar',
+  data: {
+    labels: [
+      'A·0 add_ind',   'A·1 sizing',    'A·2 exit',      'A·3 add_ind*',
+      'A·4 add_ind*',  'A·5 add_filt*', 'A·6 add_filt*', 'A·7 add_ind*',
+      'M·0 sizing',    'M·1 add_ind*',  'M·2 sma 50→100','M·3 sma 50→75',
+    ],
+    datasets: [
+      {
+        label: 'train sharpe (split_A)',
+        data: [0.693, 0.722, 0.854, 0.693, 0.693, 0.693, 0.693, 0.693,
+               0.722, 0.693, 0.633, 0.681],
+        backgroundColor: ACCENT,
+        borderRadius: 0,
+        barPercentage: 0.85,
+        categoryPercentage: 0.85,
+      },
+      {
+        label: 'val sharpe (split_B)',
+        data: [0.933, 0.876, 0.726, 0.933, 0.933, 0.933, 0.933, 0.933,
+               0.876, 0.933, 0.223, 0.579],
+        backgroundColor: TEAL_SOFT,
+        borderRadius: 0,
+        barPercentage: 0.85,
+        categoryPercentage: 0.85,
+      },
+    ],
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', align: 'end' },
+      tooltip: {
+        backgroundColor: INK,
+        titleFont: { family: "'Fraunces', serif", weight: 400 },
+        bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
+        padding: 10,
+      },
+    },
+    scales: {
+      x: {
+        ticks: { color: INK_MUTED, font: { family: "'JetBrains Mono', monospace", size: 10 } },
+        grid: { display: false },
+      },
+      y: {
+        beginAtZero: true,
+        max: 1.05,
+        ticks: {
+          color: INK_MUTED,
+          font: { family: "'JetBrains Mono', monospace", size: 10 },
+          stepSize: 0.2,
+        },
+        grid: { color: '#e8e4d8' },
+      },
+    },
+  },
+  plugins: [{
+    id: 'baselineLines',
+    afterDraw(chart) {
+      const { ctx, chartArea: { left, right }, scales: { y } } = chart;
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1;
+      // baseline train
+      ctx.strokeStyle = ACCENT;
+      ctx.beginPath();
+      ctx.moveTo(left, y.getPixelForValue(0.693));
+      ctx.lineTo(right, y.getPixelForValue(0.693));
+      ctx.stroke();
+      // baseline val
+      ctx.strokeStyle = TEAL;
+      ctx.beginPath();
+      ctx.moveTo(left, y.getPixelForValue(0.933));
+      ctx.lineTo(right, y.getPixelForValue(0.933));
+      ctx.stroke();
+      // labels
+      ctx.setLineDash([]);
+      ctx.font = "10px 'JetBrains Mono', monospace";
+      ctx.fillStyle = ACCENT;
+      ctx.fillText('baseline train 0.693', right - 130, y.getPixelForValue(0.693) - 5);
+      ctx.fillStyle = TEAL;
+      ctx.fillText('baseline val 0.933', right - 120, y.getPixelForValue(0.933) - 5);
+      ctx.restore();
+    }
+  }],
+});
+</script>
+
+</body>
+</html>
