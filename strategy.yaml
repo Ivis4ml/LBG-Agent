@@ -1,0 +1,28 @@
+name: sma_cross_baseline
+
+indicators:
+  - name: sma_fast
+    fn: sma
+    params:
+      period: 20
+  - name: sma_slow
+    fn: sma
+    params:
+      period: 50
+
+entry:
+  rule: cross_above
+  fast: sma_fast
+  slow: sma_slow
+
+exit:
+  rule: cross_below
+  fast: sma_fast
+  slow: sma_slow
+
+filters: []
+
+sizing:
+  mode: fixed_fraction
+  fraction: 1.0
+  max_position: 1.0

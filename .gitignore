@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# uv
+.venv/
+.python-version
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Per-developer Claude Code settings
+.claude/settings.local.json
+
+# Secrets
+.env
+
+# Cached market data
+data/
+
+# Large knowledge / factor library data (code in lbg/knowledge/ + scripts/ is tracked)
+knowledge/
+libs/

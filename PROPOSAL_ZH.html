@@ -1,0 +1,3401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LBG-Trader — 研究提案（中文版）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Noto+Serif+SC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    processEscapes: true,
+    processEnvironments: true
+  },
+  svg: {
+    fontCache: 'global',
+    scale: 1.0
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+    ignoreHtmlClass: 'no-mathjax'
+  }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" id="MathJax-script" async></script>
+<style>
+  :root {
+    --ink: #1a1a1c;
+    --ink-soft: #2c2c30;
+    --ink-muted: #6b6b70;
+    --ink-faint: #a4a4a8;
+    --paper: #fbfaf6;
+    --paper-warm: #f5f1e8;
+    --rule: #d8d4c8;
+    --rule-soft: #e8e4d8;
+    --accent: #8b3a2f;
+    --accent-soft: #b76b5e;
+    --teal: #2d6a5c;
+    --gold: #b88a2c;
+    --serif: 'Fraunces', 'Noto Serif SC', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+    --sans: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.78;
+    font-feature-settings: "kern", "liga", "onum";
+  }
+
+  .grain {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.03;
+    z-index: 100;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .container {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 80px 32px 120px;
+  }
+
+  .title-block {
+    border-top: 2px solid var(--ink);
+    border-bottom: 1px solid var(--rule);
+    padding: 32px 0 24px;
+    margin-bottom: 64px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: end;
+  }
+
+  .title-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 18px;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 64px;
+    line-height: 1.0;
+    letter-spacing: -0.025em;
+    font-feature-settings: "kern", "liga", "ss01";
+    margin-bottom: 12px;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--accent);
+    font-weight: 300;
+  }
+
+  .subtitle {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 22px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    font-weight: 300;
+    max-width: 540px;
+  }
+
+  .title-right {
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+  }
+
+  .title-right .v { color: var(--accent); font-weight: 500; }
+
+  section { margin-bottom: 72px; }
+
+  .section-marker {
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+    margin-bottom: 28px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
+  .section-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    font-weight: 500;
+  }
+
+  h2 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 32px;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+  }
+
+  h3 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 21px;
+    line-height: 1.45;
+    letter-spacing: -0.005em;
+    margin: 36px 0 14px;
+    color: var(--ink);
+  }
+
+  h4 {
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin: 28px 0 10px;
+  }
+
+  p { margin-bottom: 18px; text-wrap: pretty; }
+
+  .lede {
+    font-size: 21px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+    font-weight: 400;
+    margin-bottom: 32px;
+    padding: 0 0 0 20px;
+    border-left: 2px solid var(--accent);
+  }
+
+  .lede em { font-style: italic; color: var(--accent); }
+
+  p a, li a, .aside a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--accent-soft);
+    transition: border-bottom-style 0.15s ease;
+  }
+  p a:hover, li a:hover, .aside a:hover {
+    border-bottom-style: solid;
+  }
+  p a strong, li a strong { color: inherit; font-weight: 500; }
+
+  .cite-code {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.03em;
+    color: var(--ink-muted) !important;
+    border-bottom: none !important;
+    padding: 0 2px;
+    margin-left: 2px;
+    vertical-align: baseline;
+  }
+  .cite-code:hover { color: var(--accent) !important; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 14px;
+    background: var(--paper-warm);
+    padding: 1px 6px;
+    border-radius: 2px;
+    color: var(--ink-soft);
+  }
+
+  em { font-style: italic; }
+  strong { font-weight: 600; color: var(--ink); }
+
+  .pullquote {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 26px;
+    line-height: 1.5;
+    color: var(--ink);
+    margin: 44px 0 44px -20px;
+    padding: 0 0 0 20px;
+    border-left: 3px solid var(--accent);
+    max-width: 600px;
+  }
+
+  .aside {
+    background: var(--paper-warm);
+    border-left: 3px solid var(--gold);
+    padding: 20px 24px;
+    margin: 28px 0;
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--ink-soft);
+  }
+
+  .aside-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .aside.warn {
+    border-left-color: var(--accent);
+  }
+  .aside.warn .aside-label { color: var(--accent); }
+
+  pre {
+    background: var(--ink);
+    color: #e8e4d8;
+    padding: 20px 24px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.65;
+    margin: 24px 0;
+  }
+
+  pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+    font-size: 13px;
+  }
+
+  .code-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: -16px;
+    margin-top: 24px;
+    display: block;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 24px 0;
+    font-family: var(--sans);
+    font-size: 14px;
+  }
+
+  thead th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--ink-muted);
+    border-bottom: 1.5px solid var(--ink);
+    padding: 10px 12px 10px 0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  tbody td {
+    padding: 10px 12px 10px 0;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top;
+    line-height: 1.65;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  td code { font-size: 12.5px; }
+
+  ol, ul { margin: 16px 0 24px 28px; }
+  li { margin-bottom: 10px; line-height: 1.78; padding-left: 4px; }
+  ul li::marker { color: var(--accent); }
+  ol li::marker {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink-muted);
+    font-weight: 500;
+  }
+
+  .figure { margin: 36px 0; }
+
+  .figure-caption {
+    font-family: var(--sans);
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--ink-muted);
+    margin-top: 10px;
+    padding: 4px 0 4px 12px;
+    border-left: 2px solid var(--rule);
+  }
+
+  .figure-caption strong { color: var(--ink); font-weight: 500; }
+
+  .chart-wrap {
+    background: var(--paper-warm);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 20px;
+    position: relative;
+  }
+
+  .chart-wrap canvas { max-width: 100%; }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    margin: 28px 0;
+  }
+
+  .col-card {
+    background: var(--paper-warm);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 24px 26px;
+  }
+
+  .col-card h4 { margin-top: 0; color: var(--accent); }
+  .col-card.alt { background: var(--paper); border-color: var(--ink-soft); }
+  .col-card.alt h4 { color: var(--teal); }
+
+  .hypo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin: 28px 0;
+  }
+
+  .hypo {
+    background: var(--paper-warm);
+    border-top: 3px solid var(--accent);
+    padding: 18px 20px;
+    border-radius: 0 0 4px 4px;
+  }
+
+  .hypo.h2 { border-top-color: var(--teal); }
+  .hypo.h3 { border-top-color: var(--gold); }
+
+  .hypo-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--ink-muted);
+    margin-bottom: 6px;
+  }
+
+  .hypo h5 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 17px;
+    margin-bottom: 10px;
+    line-height: 1.45;
+  }
+
+  .hypo p {
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.65;
+    margin: 0;
+    color: var(--ink-soft);
+  }
+
+  .part-marker {
+    text-align: center;
+    margin: 100px 0 60px;
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 300;
+    color: var(--accent);
+  }
+
+  .part-marker .roman {
+    font-size: 36px;
+    display: block;
+    margin-bottom: 8px;
+    letter-spacing: 0.1em;
+  }
+
+  .part-marker .part-title {
+    font-family: var(--sans);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    font-style: normal;
+  }
+
+  .ornament {
+    text-align: center;
+    color: var(--accent);
+    font-size: 16px;
+    margin: 36px 0;
+    letter-spacing: 0.6em;
+  }
+
+  .lock-list {
+    background: var(--ink);
+    color: var(--paper-warm);
+    padding: 28px 32px;
+    border-radius: 4px;
+    margin: 32px 0;
+  }
+
+  .lock-list h4 { color: var(--gold); margin-top: 0; }
+  .lock-list ol { margin: 0 0 0 22px; }
+  .lock-list ol li {
+    color: var(--paper-warm);
+    margin-bottom: 8px;
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .lock-list ol li::marker { color: var(--gold); }
+  .lock-list code {
+    background: rgba(255,255,255,0.08);
+    color: var(--gold);
+  }
+
+  .stage-row {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 24px;
+    padding: 24px 0;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
+  .stage-row:last-child { border-bottom: none; }
+
+  .stage-num {
+    font-family: var(--serif);
+    font-size: 42px;
+    font-weight: 300;
+    color: var(--accent);
+    line-height: 1;
+    font-style: italic;
+  }
+
+  .stage-num .stage-label {
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    font-style: normal;
+    display: block;
+    margin-top: 6px;
+  }
+
+  .stage-content h4 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 18px;
+    text-transform: none;
+    letter-spacing: -0.005em;
+    color: var(--ink);
+  }
+
+  .stage-content p {
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+
+  .stage-content .stage-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+  }
+
+  .milestone {
+    border-left: 2px solid var(--rule);
+    padding: 4px 0 24px 24px;
+    margin-left: 8px;
+    position: relative;
+  }
+
+  .milestone::before {
+    content: "";
+    position: absolute;
+    left: -7px;
+    top: 6px;
+    width: 12px;
+    height: 12px;
+    background: var(--paper);
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+  }
+
+  .milestone-week {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .milestone h4 {
+    margin: 0 0 8px;
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 16px;
+    text-transform: none;
+    letter-spacing: -0.005em;
+    font-weight: 500;
+  }
+
+  .milestone p {
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+    margin-bottom: 0;
+  }
+
+  .role-table {
+    margin: 28px 0;
+  }
+
+  .role-row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 24px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
+  .role-row:last-child { border-bottom: none; }
+
+  .role-when {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding-top: 2px;
+  }
+
+  .role-title {
+    font-family: var(--serif);
+    font-size: 17px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    font-style: italic;
+    color: var(--ink);
+  }
+
+  .role-desc {
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  footer {
+    margin-top: 100px;
+    padding-top: 28px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-muted);
+    letter-spacing: 0.05em;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .math {
+    background: var(--paper-warm);
+    border-left: 3px solid var(--ink);
+    padding: 18px 26px;
+    margin: 22px 0;
+    border-radius: 0 4px 4px 0;
+    overflow-x: auto;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--ink);
+  }
+
+  .math mjx-container[jax="SVG"][display="true"] {
+    margin: 6px 0;
+  }
+
+  .math mjx-container svg {
+    color: var(--ink);
+  }
+
+  .math .where {
+    display: block;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--rule);
+    font-family: var(--serif);
+    font-size: 13.5px;
+    font-style: italic;
+    color: var(--ink-muted);
+    line-height: 1.75;
+  }
+
+  .math .where code,
+  .math .where em,
+  .math .where strong {
+    font-style: normal;
+  }
+  .math .where em { font-style: italic; }
+
+  .schematic-label {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    background: rgba(184,138,44,0.08);
+    border: 1px solid var(--gold);
+    padding: 3px 10px;
+    border-radius: 2px;
+    margin-bottom: 12px;
+  }
+
+  .spec-table {
+    font-size: 12.5px;
+  }
+
+  .spec-table thead th {
+    font-size: 11px;
+  }
+
+  .spec-table tbody td {
+    padding: 8px 10px 8px 0;
+  }
+
+  .spec-table .yes { color: var(--teal); font-weight: 500; }
+  .spec-table .no { color: var(--accent); }
+  .spec-table .partial { color: var(--gold); font-style: italic; }
+
+  @media (min-width: 1100px) {
+    .toc {
+      position: fixed;
+      left: 32px;
+      top: 80px;
+      width: 200px;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      line-height: 1.8;
+      color: var(--ink-muted);
+      letter-spacing: 0.03em;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .toc a {
+      display: block;
+      color: var(--ink-muted);
+      text-decoration: none;
+      padding: 2px 0;
+      border-left: 1.5px solid transparent;
+      padding-left: 10px;
+      transition: all 0.2s;
+    }
+    .toc a:hover, .toc a.active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+    }
+    .toc-label {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 14px;
+      margin-top: 16px;
+      font-weight: 500;
+    }
+    .toc-label:first-child { margin-top: 0; }
+  }
+
+  @media (max-width: 1100px) {
+    .toc { display: none; }
+  }
+
+  @media (max-width: 720px) {
+    h1 { font-size: 44px; }
+    .title-block { grid-template-columns: 1fr; }
+    .title-right { text-align: left; }
+    .two-col { grid-template-columns: 1fr; }
+    .hypo-grid { grid-template-columns: 1fr; }
+    .container { padding: 48px 22px 80px; }
+    .role-row, .stage-row { grid-template-columns: 1fr; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<nav class="toc">
+  <div class="toc-label">第一部分 · 推理过程</div>
+  <a href="#thinking">§1 提案如何成型</a>
+  <a href="#what">§2 本项目是什么</a>
+  <a href="#primer">§2.5 术语速查表</a>
+  <a href="#prior">§3 在已有工作中的位置</a>
+
+  <div class="toc-label">第二部分 · 方法论</div>
+  <a href="#thesis">§4 论点与假设</a>
+  <a href="#formal">§4.5 形式化定义</a>
+  <a href="#twoaction">§5 两个动作空间</a>
+  <a href="#agent">§6 三类 LLM 角色</a>
+  <a href="#orchestrator">§6.5 编排器</a>
+  <a href="#memory">§6.6 记忆与技能档</a>
+  <a href="#factorlib">§6.7 因子库作为原材料</a>
+  <a href="#trialwalk">§6.8 一次试验端到端</a>
+  <a href="#data">§7 数据与划分</a>
+  <a href="#backtest">§8 回测</a>
+  <a href="#protocol">§9 不变量与门控</a>
+  <a href="#attack">§9.5 攻击与拦截</a>
+  <a href="#evaluation">§10 评测</a>
+  <a href="#evalmath">§10.5 评测数学</a>
+  <a href="#hlfit">§10.6 兑现 HL 性质</a>
+
+  <div class="toc-label">第三部分 · 生命周期</div>
+  <a href="#stages">§11 四个阶段</a>
+  <a href="#engines">§12 两个引擎</a>
+  <a href="#rediscovery">§13 周期性重新发现</a>
+  <a href="#universe">§14 标的池过滤器</a>
+  <a href="#online">§15 在线 HL</a>
+  <a href="#human">§16 人的位置</a>
+
+  <div class="toc-label">第四部分 · 计划</div>
+  <a href="#report">§17 最终报告</a>
+  <a href="#plan">§18 工程计划</a>
+  <a href="#risks">§19 风险</a>
+  <a href="#lock">§20 锁定清单</a>
+</nav>
+
+<div class="container">
+
+<header class="title-block">
+  <div>
+    <div class="title-meta">研究提案与产品规范 · v2026.05.22 r3 · 规范冻结</div>
+    <h1>LBG-Trader<span style="color: var(--accent-soft);">.</span></h1>
+    <div class="subtitle">一个在交易中实现 <em>超越梯度的学习</em>（Learning Beyond Gradients）的框架：从密封式科学评测到有纪律的部署。</div>
+  </div>
+  <div class="title-right">
+    Repo&nbsp;&nbsp;<span class="v">lbg-trader</span><br>
+    Paper&nbsp;<span class="v">Sealed-HS</span><br>
+    作者&nbsp;Xin Zhou<br>
+    状态&nbsp;草稿
+  </div>
+</header>
+
+<section id="abstract">
+<p class="lede">
+本文同时规范了一个研究产物及其后续可成长为的产品。核心论断可被检验：一个由编码型智能体驱动的框架，能通过代码编辑维护一个持久的交易启发式系统，使其同时达到 <em>科学上可信</em>（密封评测、不变量套件、脱敏反馈）和 <em>工程上可部署</em>（产物冻结、周期性重新发现、实盘执行）。四阶段生命周期正是连接这两项要求的设计。
+</p>
+
+<p>正文分为四部分。第一部分记录设计如何走到今天的形态，包括若干次具有决定意义的重新构造。第二部分给出方法规范，说明系统是什么、如何学习、如何评测。第三部分规范生命周期，即从发现到实盘部署的四个阶段，以及使两者得以并存的工程切分。第四部分是计划：工程里程碑、风险、已锁定的决策。</p>
+</section>
+
+<div class="part-marker">
+  <span class="roman">I.</span>
+  <span class="part-title">本文设计背后的推理</span>
+</div>
+
+<section id="thinking">
+<div class="section-marker">
+  <span class="section-num">§ 1</span>
+  <h2>本提案如何走到今天</h2>
+</div>
+
+<p>项目最初源自一个问题：Jiayi Weng 提出的 <a href="https://trinkle23897.github.io/learning-beyond-gradients/"><em>Learning Beyond Gradients</em></a><a href="https://github.com/Trinkle23897/learning-beyond-gradients" class="cite-code">[code]</a>（LBG）思想（以编码型智能体维护一个启发式软件系统作为学习对象）能否移植到交易领域？交易看似是合适的应用方向：反馈可被执行、回放免费、基于规则的策略是工业默认；但同时它也比我们考虑过的任何其他领域都更剧烈地考验 LBG 最脆弱的几个假设（分布漂移、信噪比低、回测面对抗性强）。</p>
+
+<p>设计在定稿前经历了若干轮重新构造。其中五轮足够重要，需要明确记录。</p>
+
+<h3>重构一：这是 LBG，还是 LLM 引导的贝叶斯优化？</h3>
+
+<p>早期版本中，智能体只能编辑一个枚举有限的 YAML 策略文件。一个直接的问题（<em>智能体究竟在编辑代码，还是只是在调 YAML 参数？</em>）暴露了这一版本并非真正的 LBG。它是一种带有持久记忆的 LLM 引导贝叶斯优化（BO），披着 LBG 的术语外衣。按照 Weng 的定义，真正的 LBG 要求智能体编写 <em>代码</em>：新的技术指标函数、新的状态识别器、新的子策略。</p>
+
+<p>修正不是把仅有 YAML 的版本作为 "LBG 第一阶段"，而是认识到 "仅 YAML" 和 "程序合成" 是两个共享基础设施的不同项目。仅 YAML 的配置被重新定位为程序合成系统内部的一个 <em>消融实验</em>。如果完整的 LBG-Trader 不能击败它自己的 DSL-only 消融基线，那么程序合成层就毫无贡献，LBG 论断按其自身标准失败。</p>
+
+<h3>重构二：这是一个智能体，还是一个框架？</h3>
+
+<p>把三个角色称作"智能体"是一种重要的措辞错误。<em>编辑器</em>、<em>反思器</em>、<em>策展器</em> 并非自主、面向目标的循环。每一个都是一次结构化的 LLM 调用，输入和输出均带类型。整个系统是一个 <em>确定性的编排框架</em>，负责调度这些调用，并在调用之间维护持久的启发式系统。这一区分将本项目与 TradingAgents 类工作（每根 K 线都调用 LLM 决定交易）拉开距离，并将其归入 LangProp 类工作（LLM 作为代码空间的优化器）。</p>
+
+<div class="pullquote">
+  "LBG-Trader 不是一个智能体。它是一个利用三类 LLM 角色维护启发式系统的框架。"
+</div>
+
+<h3>重构三：这是研究产物，还是产品？</h3>
+
+<p>原始文档将项目定位为一个密封式研究产物，交付物是一份评测裁定报告。一个直接的请求（<em>我希望它至少在仿真层面被实际使用</em>）暴露了这种定位的不完整。诚实的回答是：密封评测与持续部署在同一模式下存在内在张力，二者不可兼得。解决方案是一个四阶段生命周期：密封评测的发现阶段、前向验证阶段、模拟交易阶段、实盘资金阶段。策略在两次重新发现 <em>之间</em> 是冻结的，仅在重新发现 <em>时刻</em> 被刷新。每一次重新发现消耗一段全新的密封窗口数据。这正是量化行业实际采用的做法，既保留每一次裁定的科学可信度，又支持持续运行。</p>
+
+<p>仍然存在的诱惑（让智能体在线运行、持续学习、永不冻结）在 §15 中得到了诚实讨论。简言之：那是另一个研究问题，而不是本项目的延伸。</p>
+
+<h3>重构四：从故事到规范</h3>
+
+<p>本文上一版本把故事讲清楚了，但停在了"无法实现"这一边。一次仔细的审阅指出了四处规范空白：启发式系统被命名但未被形式化；编排器被默认存在但未被规范；记忆被描述为若干文件，却没有作为带类型的状态系统加技能档产物来定义；评测仍然是一份指标清单，而不是一个预注册的统计检验。本版本在 §4.5、§6.5、§6.6 和 §10.5 中弥补了这些空白。叙述章节保持不动；规范章节是新增的。只关心论证的读者可在第二部分 §6 之后停下；希望真正构建系统的读者可从 §4.5 开始读到 §10.5。</p>
+
+<h3>重构五：单次门控与最终裁定</h3>
+
+<p>对规范版本的一次审阅暴露了一个更隐蔽的问题：验证门控的统计严格度在两种截然不同的用途之间被混为一谈。在仅有约 500 个交易日的验证窗口上，对 <em>每一次</em> 试验都要求 95% 置信区间下界严格大于 0 的配对自助检验，将使发现循环陷入饥饿，并把接受偏向那些改变换手率的编辑；这些编辑比微妙的 alpha 改进更容易产生统计显著差异。§9 中的修正是：单次门控使用一个更宽松的多目标效用下界加帕累托改进准则；最终 H1 裁定则把严格的配对自助检验保留给一次性的密封评测。§10.5 的统计装置保持不变；被放宽的是单次试验诊断。本版本还以 <em>前缀稳定性</em> 作为无前瞻不变量的正式名称，引入了"因子卡片"（alpha card）这一从策略产物中切出已接受信号的薄产物，并明确承认：禁止数据窥探的机制只能防范文本层面的泄漏，无法防范底层 LLM 在预训练中对特定历史时期形成的先验。</p>
+
+<p style="font-family: var(--serif); font-style: italic; color: var(--ink-muted); margin-top: 24px;">这五次重构确定后，本提案对第一阶段里程碑冻结为规范。进一步的讨论应归入实现仓库的 <code>IMPLEMENTATION.md</code> 与预注册的 <code>analysis_plan.yaml</code>，不再写入本文。</p>
+
+</section>
+
+<section id="what">
+<div class="section-marker">
+  <span class="section-num">§ 2</span>
+  <h2>用一段话说清楚这是什么</h2>
+</div>
+
+<p class="lede">
+LBG-Trader 是一个框架，它调度三类结构化的 LLM 角色（编辑器、反思器、策展器）来维护一个持久的交易启发式系统。智能体的动作空间同时覆盖 Python 指标编写与 DSL 配置编辑。一套包含不变量与脱敏反馈的密封评测协议管控发现阶段。已通过密封测试的策略成为冻结产物，进入独立的执行引擎，依次走完前向验证、模拟交易，以及（可选的）实盘资金阶段。周期性的重新发现在新的密封窗口上刷新策略。框架本身是产品；策略是框架的输出。
+</p>
+</section>
+
+<section id="primer">
+<div class="section-marker">
+  <span class="section-num">§ 2.5</span>
+  <h2>术语速查表</h2>
+</div>
+
+<p>本文融合了三个领域的词汇：交易、机器学习、软件系统。同时精通三者的读者很少。本节是一份紧凑的术语表，便于读者在阅读后续章节时不必频繁跳转查证。术语按主题分组；想按字母顺序查阅的读者可扫描斜体词条。</p>
+
+<h3>交易类术语</h3>
+
+<table class="spec-table">
+  <thead>
+    <tr><th style="width: 22%;">术语</th><th>含义</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><em>OHLCV</em></td><td>开盘价、最高价、最低价、收盘价、成交量。一根 K 线由这五个数字概括（我们用日线）。15 年 SPY 数据就是一张约 3,780 行的表。</td></tr>
+    <tr><td><em>复权收盘价</em>（<code>AdjC</code>）</td><td>对分红与拆股做事后调整后的收盘价。使用 <code>AdjC</code> 可让"1 拆 2"看起来像平滑减半，而不是突然不连续，从而保证总收益计算正确。</td></tr>
+    <tr><td><em>SPY</em></td><td>跟踪标普 500 指数的最大 ETF。选 SPY 是因为它流动性好（普通订单不会冲击价格）、覆盖宽（无单一公司风险）、研究充分（任何超额收益都来之不易）。</td></tr>
+    <tr><td><em>仓位</em>（position）</td><td>当前持有的资产数量，按资金比例表示。\(p_t = 1\) 为满仓，\(p_t = 0\) 为空仓，\(p_t = 0.5\) 为半仓。本里程碑禁止 \(p_t > 1\)（无杠杆）和 \(p_t < 0\)（无做空）。</td></tr>
+    <tr><td><em>信号</em> / <em>指标</em>（signal / indicator）</td><td>由历史价格计算得到、策略据以决定仓位的数值。例：20 日均线是一个指标；"价格 &gt; 20 日均线则买入"的规则把它变成信号。</td></tr>
+    <tr><td><em>夏普比率</em>（Sharpe ratio）</td><td>年化平均收益除以年化收益波动率：\(\sqrt{252}\cdot\bar r / \sigma(r)\)。把"赚没赚钱"翻译为"考虑波动后赚没赚钱"。夏普 1.0 算好；2.0 罕见；0 与抛硬币相当。</td></tr>
+    <tr><td><em>回撤</em>（drawdown）</td><td>净值曲线相对历史最高点的下降幅度。<em>最大回撤</em> 是测试期内最差的一次。50% 最大回撤的策略，即便长期夏普不错，真人也很难承受。</td></tr>
+    <tr><td><em>换手率</em>（turnover）</td><td>仓位日均变动：\(\overline{|p_t - p_{t-1}|}\)。换手率高意味着频繁交易；低意味着季度调仓。换手率乘以成本即交易摩擦的拖累。</td></tr>
+    <tr><td><em>基点</em>（basis point, bp）</td><td>百分之一的百分之一（即万分之一）。100 美元交易上 5 bp 的成本为 0.005 美元。锁定的单边成本 5.5 bp 意味着一次完整往返成本 11 bp，单笔小，累积大。</td></tr>
+    <tr><td><em>成交</em> / <em>成交模型</em>（fill / fill model）</td><td>关于订单何时、以什么价格实际成交的假设。我们采用"信号在第 \(t\) 根 K 线收盘产生，第 \(t+1\) 根 K 线开盘成交"，这是日线的标准纪律，可防止用收盘价信息在同一收盘成交。</td></tr>
+    <tr><td><em>滑点</em>（slippage）</td><td>你想要的价格与实际成交价之间的差距。本项目以 0.5 bp 计入有效成本。</td></tr>
+    <tr><td><em>Alpha</em>（阿尔法）</td><td>无法用"持有市场"解释的超额收益部分。"阿尔法信号"即任何被相信能在扣除成本后产生超额收益的信号。</td></tr>
+    <tr><td><em>Beta</em>（贝塔）</td><td>对大盘的敏感度。SPY 自身按定义 beta 为 1.0。"半数时间做多 SPY"的纯多策略 beta 约 0.5。</td></tr>
+    <tr><td><em>制度</em>（regime）</td><td>市场统计特征大致稳定的一段时期：牛市、熊市、高波动、低波动等。"制度切换"（2020 年新冠崩盘、2022 年加息熊市）是不连续点，常使在前一制度上调好的策略失效。</td></tr>
+    <tr><td><em>回测</em>（backtest）</td><td>把策略作用于历史数据，看它当时会怎么做。本项目整个体系的存在原因，就是因为朴素回测会系统性地说谎。</td></tr>
+    <tr><td><em>净值曲线</em>（equity curve）</td><td>组合价值随时间的累积值：\(\text{Equity}_t = \prod_{s\le t}(1+r_s)\)，从 1.0 起步。策略的视觉外形。</td></tr>
+    <tr><td><em>前瞻</em>（lookahead）</td><td>不小心使用未来信息作出过去的决策。这个 bug 在回测里把平庸策略变得貌似神奇、在实盘里把它们变得灾难性。</td></tr>
+  </tbody>
+</table>
+
+<h3>LLM 智能体类术语</h3>
+
+<table class="spec-table">
+  <thead>
+    <tr><th style="width: 22%;">术语</th><th>含义</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><em>LBG</em></td><td>Learning Beyond Gradients。智能体通过 <em>编辑源代码</em> 而非梯度下降更新权重来进行学习的范式。被维护的代码是"学习对象"。</td></tr>
+    <tr><td><em>启发式系统</em>（heuristic system）</td><td>智能体所维护的代码、配置与笔记的集合。本项目中即 <code>strategy.yaml</code>、<code>indicators/*.py</code> 以及记忆文件。在试验 \(k\) 时记作 \(H_k\)。</td></tr>
+    <tr><td><em>试验</em>（trial）</td><td>发现循环的一次迭代：编辑器提议 → 不变量检查 → 回测 → 门控判定 → 反思器解释 → 记忆更新 → 通过则 git 提交。每次发现运行预算 50 次试验。</td></tr>
+    <tr><td><em>编辑器 / 反思器 / 策展器</em>（Editor / Reflector / Curator）</td><td>三类 LLM 角色。编辑器每次试验提议一次编辑；反思器解释结果发生的原因；策展器周期性压缩记忆并抽取可复用技能。每一个都是一次结构化调用，不是自主循环。</td></tr>
+    <tr><td><em>编排器</em>（Orchestrator）</td><td>按顺序调用三类 LLM 角色、运行不变量与回测、应用门控、写入记忆、提交 git 的确定性 Python 控制平面。其自身不含任何 LLM 调用。</td></tr>
+    <tr><td><em>结构化输出</em>（structured output）</td><td>要求 LLM 返回带类型的对象（本项目用符合 schema 的 YAML），而非自由文本。若输出解析失败，该次试验直接拒绝，不会触发回测。</td></tr>
+    <tr><td><em>DSL</em></td><td>领域专用语言。本项目指 <code>strategy.yaml</code> 中策略解释器能识别的小型 YAML 语法（过滤条件、仓位算法、出场规则）。编辑 DSL 是两个动作空间之一，另一个是编写新的 Python 指标。</td></tr>
+    <tr><td><em>密封评测</em>（sealed evaluation）</td><td>一种协议：把一段数据（本项目为 2021–2024）从智能体和任何中间决策中锁开，仅在运行末尾揭开一次作为最终裁定。借自临床试验方法学。</td></tr>
+    <tr><td><em>不变量</em>（invariant）</td><td>候选编辑在被允许回测之前必须满足的性质。我们使用静态不变量（对代码做 AST 分析）和动态不变量（扰动数据并验证时刻 \(t\) 的输出不变）。失败则该次试验被拒。</td></tr>
+    <tr><td><em>前缀稳定性</em>（prefix-stability）</td><td>"无前瞻"的正式名称：指标在时刻 \(t\) 的取值必须等于只用至 \(t\) 为止的数据计算所得。比扫描 <code>shift(-1)</code> 更强，能捕获全序列归一化、含未来信息的分位数等微妙泄漏。</td></tr>
+    <tr><td><em>脱敏反馈</em>（redacted feedback）</td><td>告诉 LLM "已接受 / 因回撤恶化拒绝" 等类别，但绝不展示原始验证数值。防止智能体通过无梯度试错过拟合验证集。</td></tr>
+    <tr><td><em>奖励黑客</em>（reward hacking）</td><td>智能体找到设计者未预期的方式让分数升高（如使用未来数据、规避成本、隐藏亏损交易）。不变量套件的存在就是为了让此类行为可被系统性检出。</td></tr>
+    <tr><td><em>消融</em>（ablation）</td><td>移除某一组件（无记忆、无策展器、无程序合成）后运行系统，以隔离该组件的贡献。任何关于"系统为何有效"的诚实论断都需要消融实验支撑。</td></tr>
+    <tr><td><em>技能档</em>（skill / skill artifact）</td><td>策展器从一组被接受的试验中抽取的带类型 YAML 对象：触发条件 + 编辑配方 + 证据 + 已知失败模式。不是自由形式的摘要。</td></tr>
+    <tr><td><em>双时间尺度</em>（two-timescale）</td><td>外层循环（LLM 编辑代码）每次发现运行约 50 次；内层循环（策略决定仓位）每次回测约 3,700 次。两者相差五个数量级。我们绝不把它们合并。</td></tr>
+  </tbody>
+</table>
+
+<h3>统计与系统类术语</h3>
+
+<table class="spec-table">
+  <thead>
+    <tr><th style="width: 22%;">术语</th><th>含义</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><em>分块自助法</em>（block bootstrap）</td><td>针对存在序列相关性的数据的重抽样方法。不重抽单日（那会假设独立），而是重抽连续 10 天的块，做 1,000 次以计算置信区间。块长选 10 是因为日收益在 1–2 周尺度上存在明显序列相关。</td></tr>
+    <tr><td><em>置信区间</em>（confidence interval, CI）</td><td>以给定概率包含真值的区间。"\(\Delta\)夏普的 95% CI 为 [0.05, 0.40]"意味着产生该区间的程序在重复实验中有 95% 的时间能覆盖真值。</td></tr>
+    <tr><td><em>帕累托改进</em>（Pareto improvement）</td><td>在所有目标上不变差、且至少在一个目标上严格更好的改变。候选者在 Sharpe 不变的前提下使回撤更小，即在 (Sharpe, drawdown) 上帕累托改进。即便效用未上升，本项目的门控也会接受这类候选。</td></tr>
+    <tr><td><em>预注册</em>（pre-registration）</td><td>在 <em>看到</em> 结果之前承诺会运行哪些检验、用哪段数据。防御实证 ML 中最常见的隐性不诚实：看到数据之后再决定测量什么。</td></tr>
+    <tr><td><em>族系误差率</em>（family-wise error rate, FWER）</td><td>同时运行多个检验时，<em>任一</em> 检验为假阳性的概率。本项目用 Holm-Bonferroni 将次级比较的 FWER 控制在 0.05。</td></tr>
+    <tr><td><em>AST</em>（抽象语法树）</td><td>Python <code>ast</code> 模块产生的源代码结构化表示。静态不变量遍历 AST 以检测禁用模式（<code>.shift(-1)</code>、文件 I/O、白名单外 import）而无需实际执行代码。</td></tr>
+    <tr><td><em>沙箱</em>（sandbox）</td><td>受限的 Python 执行环境。候选指标代码在白名单命名空间、CPU 时限内运行，且无文件系统与网络访问。</td></tr>
+    <tr><td><em>JSONL</em></td><td>JSON Lines，每行一个 JSON 对象，仅追加。事件日志选用它，因易于流式读取且崩溃安全。</td></tr>
+    <tr><td><em>Parquet</em></td><td>表格数据的列式二进制文件格式。读取比 CSV 快、无损、可按内容哈希版本化。SPY 历史存于单一 parquet 文件。</td></tr>
+  </tbody>
+</table>
+
+<p>本文余下出现的术语，若不在上述表内，要么属于标准编程概念（git 提交、schema、命名空间），要么是我们自创且会在首次出现时定义。读者可随时回查本节。</p>
+</section>
+
+<section id="prior">
+<div class="section-marker">
+  <span class="section-num">§ 3</span>
+  <h2>本项目在已有工作中的位置</h2>
+</div>
+
+<p>三条研究脉络在此交汇。它们通常彼此互不对话；本项目至少要做的一件事，就是迫使它们之间发生对话。</p>
+
+<h3>LBG 脉络（LangProp、Weng、PolicyEvolve、PIBR）</h3>
+
+<p><a href="https://trinkle23897.github.io/learning-beyond-gradients/">Weng 在 2026 年的博文</a>是直接动机，但更深的先例是 <a href="https://arxiv.org/abs/2401.10314"><strong>LangProp</strong></a><a href="https://github.com/shuishida/LangProp" class="cite-code">[code]</a>（Ishida 等，ICLR 2024 工作坊）。LangProp 已经把"LLM 作为代码优化器，依赖可执行反馈"的范式形式化为 PyTorch-Lightning 风格的框架，并在 CARLA 自动驾驶环境中加以应用。Weng 相对于 LangProp 的额外贡献，在于明确把被维护的软件系统命名为 <em>学习对象</em>（启发式系统），并通过实验证明该范式在 Atari 套件规模、配合强编码型智能体的条件下可以工作。<a href="https://arxiv.org/abs/2509.06053"><strong>PolicyEvolve</strong></a>（2025）与 <a href="https://arxiv.org/abs/2512.21024"><strong>PIBR</strong></a>（2025）则把同一思想扩展到多人博弈论领域。</p>
+
+<p>这一脉络缺失的是：尚无人将 LBG 带入回测本身具有对抗性的领域：反馈噪声大、历史样本有限、分布漂移是常态、智能体若有机会就会奖励黑客评测框架。交易正是这样的领域。</p>
+
+<h3>LLM 交易脉络（TradingAgents、FinMem、FinAgent、QuantAgent）</h3>
+
+<p>这一脉络已经拥挤，但与 LBG 互不重叠。<a href="https://arxiv.org/abs/2412.20138">TradingAgents</a><a href="https://github.com/TauricResearch/TradingAgents" class="cite-code">[code]</a>、<a href="https://arxiv.org/abs/2311.13743">FinMem</a><a href="https://github.com/pipiku915/FinMem-LLM-StockTrading" class="cite-code">[code]</a>、<a href="https://arxiv.org/abs/2402.18485">FinAgent</a>、<a href="https://arxiv.org/abs/2509.09995">QuantAgent</a><a href="https://github.com/Y-Research-SBU/QuantAgent" class="cite-code">[code]</a>（Y-Research-SBU 2025）、<a href="https://github.com/HKUDS/Vibe-Trading">HKUDS Vibe-Trading</a> 等工作都把 LLM 智能体 <em>作为交易员</em>：在每一根决策 K 线上调用 LLM 产生买卖动作。该脉络中的"记忆"指的是过往市场状态的记忆，而非过往代码编辑实验的记忆。最接近的概念近亲是早期的 <a href="https://arxiv.org/abs/2402.03755">QuantAgent（Wang 等，2024）</a>，它使用 writer/judge 内外双循环来精炼 alpha 挖掘脚本。</p>
+
+<p>我们与这一脉络的差别是结构性的、而非渐进性的：<strong>我们在回测和执行期间从不调用 LLM</strong>。LLM 只在缓慢的外层循环中运行，在两次试验之间编辑代码。这正是 §5 所称的双时间尺度切分。</p>
+
+<h3>Hermes 脉络（持续学习、持久记忆）</h3>
+
+<p><a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/curator">Hermes Agent</a> 的三层认知架构（<code>run_conversation</code> 处理单次任务，<code>maybe_extract</code> 将有用的模式提交到技能档，<code>curator_cycle</code> 周期性打分、合并、裁剪）是构造持久学习的工作蓝图。我们直接借用这一架构，将三层重命名为编辑器、反思器、策展器，并专门针对交易作特化。</p>
+</section>
+
+
+<div class="part-marker">
+  <span class="roman">II.</span>
+  <span class="part-title">方法论</span>
+</div>
+
+<section id="thesis">
+<div class="section-marker">
+  <span class="section-num">§ 4</span>
+  <h2>论点与假设</h2>
+</div>
+
+<p class="lede">
+论点：一个由编码型智能体驱动的框架，能通过程序编辑与配置编辑两条路径维护一个持久的启发式系统，进而产生 <em>可泛化</em> 的交易策略；但这一结论只有在一个明确阻止智能体奖励黑客回测、阻止验证信号渗入搜索过程的评测协议下，才可能成立。
+</p>
+
+<p>本提案承诺三个假设，并将其视作等价。我们并不私下偏好 H1 胜出。任意一种结局都可成稿。</p>
+
+<div class="hypo-grid">
+  <div class="hypo">
+    <div class="hypo-label">H1 · 肯定结论</div>
+    <h5>LBG 在密封评测下可泛化</h5>
+    <p>具备持久记忆与程序合成能力的编码型智能体框架，在密封测试上所产出的策略，优于随机搜索、贝叶斯优化、单次 LLM 提案以及仅编辑 YAML 的 LLM 搜索基线。</p>
+  </div>
+  <div class="hypo h2">
+    <div class="hypo-label">H2 · 方法论结论</div>
+    <h5>密封协议是必需的基础设施</h5>
+    <p>如果缺乏密封划分、脱敏验证与不变量套件，LBG 的表观表现将被过拟合、验证泄漏或奖励黑客所夸大。各项消融实验应使这一夸大幅度可被量化。</p>
+  </div>
+  <div class="hypo h3">
+    <div class="hypo-label">H3 · 诚实零假设</div>
+    <h5>LBG 可能在交易上不成立</h5>
+    <p>即便所有控制都已就位，编码型智能体的学习仍可能无法迁移到密封测试。交易的分布漂移与低信噪比也许已经超出 LBG 的表达能力。这一结论本身可独立成稿。</p>
+  </div>
+</div>
+
+<p>协议被设计为：若 H1 失败，我们仍然知道为何失败；若 H1 成立，我们有证据说明它正是因为记忆、压缩与程序合成而成立，而不是尽管有这些机制仍然成立。</p>
+</section>
+
+<section id="formal">
+<div class="section-marker">
+  <span class="section-num">§ 4.5</span>
+  <h2>形式化定义</h2>
+</div>
+
+<p>在规范框架内部细节之前，先固定它所操作的对象。本节有意简短；其价值在于对"被学习的对象是什么、被测量的对象是什么"做毫无歧义的陈述。</p>
+
+<h3>市场过程</h3>
+
+<p>市场数据是日频 K 线的序列：</p>
+
+<div class="math">
+\[
+D = \{x_t\}_{t=1}^{T}, \qquad x_t = (O_t, H_t, L_t, C_t, \text{AdjC}_t, V_t, \text{div}_t, \text{splits}_t)
+\]
+<span class="where">本里程碑中，标的池为单一标的（SPY），频率为日频，\(T \approx 3{,}780\) 根 K 线，覆盖 2010–2024 年。数据被划分为 \(D_\text{train}\)、\(D_\text{val}\)、\(D_\text{test}\)，在所有智能体可见的上下文中以别名 <code>split_A/B/C</code> 出现。</span>
+</div>
+
+<h3>启发式系统作为学习对象</h3>
+
+<p>这是将 LBG 与超参数优化区分开的形式化定义。被优化的对象不是一个参数向量，而是一个持久的、多组件的 <em>启发式系统</em>，按试验编号索引：</p>
+
+<div class="math">
+\[
+H_k = (A_k,\ C_k,\ P,\ I,\ M_k,\ S_k,\ E,\ G_k)
+\]
+<span class="where">
+\(A_k\) · 指标程序集合（<code>indicators/*.py</code>）<br>
+\(C_k\) · 策略 DSL 配置（<code>strategy.yaml</code>）<br>
+\(P\) · 确定性策略解释器（<code>policy_interpreter.py</code>，跨试验保持固定）<br>
+\(I\) · 不变量套件（<code>invariants/*.py</code>，跨试验保持固定）<br>
+\(M_k\) · 记忆存储（<code>memory/*.jsonl</code>、<code>accepted_rules.md</code>、<code>failed_directions.md</code>）<br>
+\(S_k\) · 技能档存储（<code>skills/*.yaml</code>）<br>
+\(E\) · 评测协议（划分、门控、指标；固定）<br>
+\(G_k\) · git 谱系（提交、分支、标签）
+</span>
+</div>
+
+<p>对照很鲜明。超参数优化运行的是：</p>
+
+<div class="math">
+\[
+\theta_k \;\longrightarrow\; \text{score}_k \;\longrightarrow\; \theta_{k+1}
+\]
+</div>
+
+<p>LBG-Trader 运行的是：</p>
+
+<div class="math">
+\[
+H_k \;\longrightarrow\; \text{proposal}_k \;\longrightarrow\; H'_k \;\longrightarrow\; \text{feedback}_k \;\longrightarrow\; H_{k+1}
+\]
+</div>
+
+<p>提案是一次代码或配置编辑；候选系统是应用该编辑后的系统；反馈来自不变量与验证门控产生的分类信号。被更新的状态是一个软件产物，而不是一个数值。</p>
+
+<h3>策略与仓位</h3>
+
+<p>策略是一个由历史观测映射到目标仓位的纯函数：</p>
+
+<div class="math">
+\[
+\pi_H : X_{\le t} \;\longrightarrow\; p_{t+1}, \qquad p_{t+1} \in [0, 1]
+\]
+<span class="where">本里程碑限定为仅做多、无杠杆。第 \(t\) 根 K 线收盘时计算出的信号决定从第 \(t+1\) 根 K 线开盘开始持有的仓位，这从结构上排除了"收盘对收盘"的前瞻泄漏。</span>
+</div>
+
+<h3>前缀稳定性：指标编写契约</h3>
+
+<p>任何由智能体编写的指标必须满足的最重要性质是 <em>前缀稳定性</em>。直观地说：在时刻 \(t\) 的指标取值，只能依赖到 \(t\) 为止可获得的数据，而绝不能依赖此后才观测到的数据。</p>
+
+<div class="math">
+\[
+f\!\left(D_{1:T}\right)\!\bigl[t\bigr] \;=\; f\!\left(D_{1:t}\right)\!\bigl[t\bigr] \qquad \forall\, t \in \{1, \ldots, T\}
+\]
+<span class="where">对智能体编写的任意指标函数 \(f\)，将其应用于完整序列时在索引 \(t\) 处的取值，必须等于将其应用于截止到 \(t\) 的前缀序列时在索引 \(t\) 处的取值。这是"无前瞻"的形式化陈述。它比简单扫描 AST 中的 <code>shift(-1)</code> 模式更严格：还能捕获全序列归一化、含未来泄漏的滚动窗口运算，以及任何其他可能让 \(D_{>t}\) 的信息进入 \(f(D)[t]\) 的路径。</span>
+</div>
+
+<p>编排器的动态前瞻不变量（§9）将其工程实现：对随机抽样的若干 \(t\)，扰动 \(D_{>t}\) 并重新求值候选指标，断言 \(f(D)[t]\) 不变。任何违反前缀稳定性的指标无法进入回测。</p>
+
+<p>之所以将其列为单独命名的不变量，原因在于经验：研究人员在指标实现中最容易意外引入未来信息的形式，是看似无害的全序列变换。例如用整个时期的均值和标准差做 z-score 归一化、用整段序列的分位数做截断、用 <code>fillna(method='bfill')</code> 反向填充。这些操作在 AST 层面看不出问题，但在数值上会让早期时点已经"知道"晚期数据的统计特性。前缀稳定性正面回应了这一类错误。</p>
+
+<h3>收益与成本</h3>
+
+<p>策略的日度收益，扣除交易成本：</p>
+
+<div class="math">
+\[
+r_{t+1}(H) \;=\; p_{t+1} \cdot R_{t+1} \;-\; c \cdot \lvert\, p_{t+1} - p_t \,\rvert
+\]
+<span class="where">
+\(R_{t+1}\) 为标的的开盘对开盘收益，使用复权收盘价以处理拆分与分红。<br>
+\(c\) 为有效的单边交易成本，锁定为 \(c = 0.00055\)（基础 5 bp 加 0.5 bp 的滑点代理）。<br>
+成本项由不变量强制：任何候选回测若存在非零换手率却产生零成本，将被拒绝。
+</span>
+</div>
+
+<h3>评测指标</h3>
+
+<p>被门控与最终报告消费的指标定义无歧义：</p>
+
+<div class="math">
+\[
+\text{Sharpe}(H, D) \;=\; \sqrt{252}\;\cdot\;\frac{\overline{r_t(H)}}{\operatorname{std}\bigl(r_t(H)\bigr)}
+\]
+
+\[
+\begin{aligned}
+\text{Equity}_t &= \prod_{s \le t} (1 + r_s) \\[2pt]
+\text{Peak}_t &= \max_{s \le t}\, \text{Equity}_s \\[2pt]
+\text{DD}_t &= \frac{\text{Equity}_t}{\text{Peak}_t} - 1 \\[2pt]
+\text{MaxDD} &= \min_{t}\, \text{DD}_t
+\end{aligned}
+\]
+
+\[
+\text{Turnover}(H, D) \;=\; \overline{\lvert\, p_t - p_{t-1} \,\rvert}
+\]
+
+\[
+\begin{aligned}
+\text{Complexity}(H) \;=\; & \lambda_1 \cdot \lvert A_k \rvert \;+\; \lambda_2 \cdot \lvert \text{filters} \rvert \;+\; \lambda_3 \cdot \lvert \text{params}_{\text{non-default}} \rvert \\
+& +\; \lambda_4 \cdot \operatorname{LOC}(\text{indicators}) \;+\; \lambda_5 \cdot \#\operatorname{branches}(P_C)
+\end{aligned}
+\]
+<span class="where">复杂度权重 \(\lambda_1 \ldots \lambda_5\) 属于锁定清单的一部分，必须在任何发现运行开始之前冻结。策展器（§6.6）读取这一标量以评估系统膨胀；门控将 \(\Delta\text{Complexity}\) 作为拒绝标准之一。</span>
+</div>
+
+<p>这就是本提案其余部分所依赖的全部形式化装置。任何进一步的内容（自助置信区间、假设结果评分、选择偏倚控制）都将在 §10.5 中分层引入。</p>
+</section>
+
+<section id="twoaction">
+<div class="section-marker">
+  <span class="section-num">§ 5</span>
+  <h2>两个动作空间、两种时间尺度</h2>
+</div>
+
+<p>本项目最重要的一处构造，也是将其与文献中所有 LLM 交易论文区分得最清晰的一条界线，是：两个完全分离的动作空间运行在两种完全分离的时间尺度上。</p>
+
+<div class="figure">
+<div class="chart-wrap" style="background: var(--paper-warm); padding: 32px 24px;">
+<svg viewBox="0 0 700 360" width="100%" role="img" aria-labelledby="twoact-title">
+<title id="twoact-title">两个动作空间：智能体在试验时间尺度上编辑代码，策略在日频时间尺度上决定仓位</title>
+
+<defs>
+  <marker id="arr1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#8b3a2f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+
+<text x="20" y="30" font-family="Inter, sans-serif" font-size="11" letter-spacing="1.5" fill="#6b6b70">外层 · 框架编辑代码</text>
+<text x="20" y="46" font-family="Fraunces, serif" font-style="italic" font-size="14" fill="#8b3a2f">试验时间尺度 · 数十秒 · 每次发现运行约 50 次事件</text>
+
+<rect x="20" y="60" width="660" height="100" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.5" rx="3"/>
+
+<g font-family="Fraunces, serif" font-size="13" fill="#1a1a1c">
+  <text x="40" y="88">编辑器 LLM 读取</text>
+  <text x="40" y="108" font-family="JetBrains Mono, monospace" font-size="11" fill="#6b6b70">strategy.yaml · indicators/*.py · memory/*</text>
+  <text x="40" y="138" font-style="italic" fill="#8b3a2f">→ 提出单次编辑：新指标函数、参数修改、过滤条件添加</text>
+</g>
+
+<line x1="350" y1="160" x2="350" y2="190" stroke="#8b3a2f" stroke-width="1.5" marker-end="url(#arr1)"/>
+<text x="360" y="180" font-family="Fraunces, serif" font-style="italic" font-size="12" fill="#8b3a2f">应用编辑</text>
+
+<text x="20" y="220" font-family="Inter, sans-serif" font-size="11" letter-spacing="1.5" fill="#6b6b70">内层 · 策略决定仓位</text>
+<text x="20" y="236" font-family="Fraunces, serif" font-style="italic" font-size="14" fill="#2d6a5c">日频时间尺度 · 0.1 ms · 每次回测约 3700 次事件</text>
+
+<rect x="20" y="250" width="660" height="100" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1.5" rx="3"/>
+
+<g font-family="Fraunces, serif" font-size="13" fill="#1a1a1c">
+  <text x="40" y="278">对每根 K 线 t 在 2010..2024 内：</text>
+  <text x="40" y="298" font-family="JetBrains Mono, monospace" font-size="11" fill="#6b6b70">features(t) → policy_interpreter(strategy.yaml) → position(t)</text>
+  <text x="40" y="326" font-style="italic" fill="#2d6a5c">→ 完全确定性，循环中无 LLM，可回放</text>
+</g>
+
+</svg>
+</div>
+<div class="figure-caption"><strong>图 1。</strong> 两个动作空间。框架在试验时间尺度上编辑启发式系统（每次发现运行约 50 次事件）。策略在日频时间尺度上决定仓位（每次回测约 3,700 次事件）。两者的事件率相差五个数量级。TradingAgents 类工作把它们压缩进同一个循环，每根 K 线都调用一次 LLM；我们刻意不这么做，正是这种切分使研究可信度与实盘部署同时成为可能。</div>
+</div>
+
+<table>
+  <thead>
+    <tr><th style="width: 32%;">属性</th><th style="width: 34%;">外层（框架）</th><th>内层（策略）</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>频率</td><td>每次发现运行约 50 次事件</td><td>每次回测约 3,700 次事件</td></tr>
+    <tr><td>延迟</td><td>数十秒（LLM 调用）</td><td>零点几毫秒（纯函数）</td></tr>
+    <tr><td>确定性</td><td>随机（LLM）</td><td>确定性</td></tr>
+    <tr><td>可审计性</td><td>git 提交 + <code>trials.jsonl</code></td><td>由产物完全可复现</td></tr>
+    <tr><td>单次事件成本</td><td>token、美元</td><td>CPU 周期、微秒</td></tr>
+    <tr><td>被优化的对象</td><td>启发式系统</td><td>给定系统下的组合收益</td></tr>
+    <tr><td>是否用于部署</td><td>仅在重新发现时</td><td>每日运行，无限期</td></tr>
+  </tbody>
+</table>
+
+<div class="aside">
+<span class="aside-label">这一切分为何关键</span>
+双时间尺度设计是 §12 中"发现引擎/执行引擎"二分得以成立的前提。它同时使每根 K 线的实盘交易代价低廉（从不调用 LLM），并使密封评测在语义上成立（LLM 在部署期间看不到实盘数据，因此实盘数据在下一次重新发现之前始终未被触碰）。如果缺乏这一切分，项目要么在 token 上贵到无法承受，要么在科学上自相矛盾。
+</div>
+
+<div class="aside">
+<span class="aside-label">策略产物与因子产物</span>
+本领域常见的一处混淆是把 <em>alpha</em>（预测未来收益的信号）与 <em>strategy</em>（信号、风险、仓位、出场的完整机器）混为一谈。本里程碑出于简化考虑将二者合并在同一 YAML 中，但底层的切分确实存在：\(\alpha_t = f_A(X_{\le t})\) 是 <code>indicators/</code> 中的指标程序，\(\text{position}_t = g_C(\alpha_t,\, \text{risk}_t)\) 则是策略解释器作用于 DSL 配置的结果。后续里程碑可能把 <code>alpha.yaml</code>、<code>strategy.yaml</code>、<code>risk.yaml</code> 拆为独立产物，以支持因子库式工作流，使每张因子卡片携带自己的证据并可在不同组合间组合使用。本里程碑下，单文件足够，分层概念在此存档。
+</div>
+
+<h3>两个动作空间，具体起来是什么样</h3>
+
+<p>本节的抽象区分在看到一次具体试验的形态后会变得直观得多。下面并列两次试验，均出自同一启发式系统起点，且都以"接受"结束。左侧的 DSL 编辑是贝叶斯优化基线也能做出的动作；右侧的程序合成是任何参数搜索都产生不了的，因为它给特征表新增了一列。</p>
+
+<div class="two-col">
+  <div class="col-card">
+    <h4>动作空间 A · DSL 编辑</h4>
+    <p style="font-family: var(--sans); font-size: 13px; color: var(--ink-soft); margin-bottom: 12px;">编辑类型：<code>parameter_change</code>。编辑器调整 <code>strategy.yaml</code> 中的一个数字，不写任何新代码。</p>
+    <p style="font-family: var(--sans); font-size: 12.5px; color: var(--ink-muted); margin-bottom: 4px;">编辑前 —— <code>strategy.yaml</code> 片段：</p>
+    <pre style="font-size: 11.5px; line-height: 1.55; margin: 0 0 14px;">filters:
+  - name: above_sma
+    indicator: sma
+    window: 20
+    relation: price_gt</pre>
+    <p style="font-family: var(--sans); font-size: 12.5px; color: var(--ink-muted); margin-bottom: 4px;">编辑器提案（YAML 输出）：</p>
+    <pre style="font-size: 11.5px; line-height: 1.55; margin: 0 0 14px;">type: parameter_change
+target: strategy.yaml
+path: filters[0].window
+old: 20
+new: 50
+hypothesis: |
+  Shorter SMA flips position
+  too often in 2018-style chop.
+  A longer window should
+  reduce false signals.</pre>
+    <p style="font-family: var(--sans); font-size: 12.5px; color: var(--ink-soft); margin: 0;">产物中改变的：一个整数。计算上改变的：指标的回看长度。特征表的 <em>列集合</em> 完全相同。</p>
+  </div>
+  <div class="col-card alt">
+    <h4>动作空间 B · 程序合成</h4>
+    <p style="font-family: var(--sans); font-size: 13px; color: var(--ink-soft); margin-bottom: 12px;">编辑类型：<code>add_indicator</code>。编辑器在 <code>indicators/</code> 中写入一个新 Python 函数，并在 <code>strategy.yaml</code> 中引用。</p>
+    <p style="font-family: var(--sans); font-size: 12.5px; color: var(--ink-muted); margin-bottom: 4px;">新文件 —— <code>indicators/vol_adj_momentum.py</code>：</p>
+    <pre style="font-size: 11.5px; line-height: 1.55; margin: 0 0 14px;">def vol_adj_momentum(df, lookback=60,
+                     vol_lookback=20):
+    """Prefix-stable: uses only past."""
+    ret = df['AdjC'].pct_change()
+    mom = ret.rolling(lookback).sum()
+    vol = ret.rolling(vol_lookback).std()
+    return (mom / vol).shift(1)</pre>
+    <p style="font-family: var(--sans); font-size: 12.5px; color: var(--ink-muted); margin-bottom: 4px;"><code>strategy.yaml</code> 的 diff：</p>
+    <pre style="font-size: 11.5px; line-height: 1.55; margin: 0 0 14px;">filters:
++ - name: momentum_pos
++   indicator: vol_adj_momentum
++   params: {lookback: 60,
++            vol_lookback: 20}
++   relation: gt
++   threshold: 0.0</pre>
+    <p style="font-family: var(--sans); font-size: 12.5px; color: var(--ink-soft); margin: 0;">改变的是：一列新特征（波动率调整动量）被加入系统，加上一条使用它的规则。任何对 <code>strategy.yaml</code> 的参数搜索都无法产生这个信号。</p>
+  </div>
+</div>
+
+<div class="aside">
+<span class="aside-label">这对 H1 裁定为何重要</span>
+§10 中的 DSL-only 消融对应于：让编辑器仅被允许做左侧那种试验。完整 LBG-Trader 两种都能做。如果程序合成类试验从未产生能通过验证、且能切实提升密封夏普的编辑，右侧那一列就在白吃饭，H1 自身的可证伪检验将失败。两动作空间的框架正是把一个本来含糊的对比变成可被度量的对比。
+</div>
+</section>
+
+<section id="agent">
+<div class="section-marker">
+  <span class="section-num">§ 6</span>
+  <h2>三类 LLM 角色</h2>
+</div>
+
+<p>框架把 LLM 的使用分解为三个结构化角色。每一个都是一次类型化输入、类型化输出的 LLM 调用，而非自主循环。这种分解是按职责进行的：将 <em>提议</em>、<em>评估</em>、<em>压缩</em> 三件事彼此分开，能够阻断 LLM 在被要求评估自身过往提案时所表现出的奉承偏倚。</p>
+
+<div class="figure">
+<div class="chart-wrap" style="background: var(--paper-warm); padding: 32px 28px;">
+<svg viewBox="0 0 700 420" width="100%" role="img">
+<title>三类 LLM 角色：编辑器、反思器、策展器，围绕一个持久的启发式系统</title>
+
+<defs>
+  <marker id="arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#1a1a1c" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+
+<rect x="40" y="30" width="180" height="80" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.5" rx="3"/>
+<text x="130" y="56" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">编辑器</text>
+<text x="130" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">提出单次编辑</text>
+<text x="130" y="92" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">附带假设</text>
+
+<rect x="260" y="30" width="180" height="80" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1.5" rx="3"/>
+<text x="350" y="56" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">反思器</text>
+<text x="350" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">解释结果</text>
+<text x="350" y="92" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">更新记忆</text>
+
+<rect x="480" y="30" width="180" height="80" fill="#fbfaf6" stroke="#b88a2c" stroke-width="1.5" rx="3"/>
+<text x="570" y="56" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">策展器</text>
+<text x="570" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">压缩记忆</text>
+<text x="570" y="92" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">每接受 10 次触发</text>
+
+<line x1="220" y1="70" x2="256" y2="70" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arr3)"/>
+<line x1="440" y1="70" x2="476" y2="70" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arr3)"/>
+
+<text x="240" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#6b6b70">试验结束</text>
+<text x="460" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#6b6b70">N 次接受后</text>
+
+<rect x="40" y="160" width="620" height="80" fill="#fbfaf6" stroke="#d8d4c8" stroke-width="1" rx="3"/>
+<text x="60" y="184" font-family="Inter, sans-serif" font-size="11" letter-spacing="1" fill="#6b6b70">启发式系统（持久）</text>
+<text x="60" y="208" font-family="JetBrains Mono, monospace" font-size="11" fill="#1a1a1c">strategy.yaml · indicators/*.py · trials.jsonl</text>
+<text x="60" y="224" font-family="JetBrains Mono, monospace" font-size="11" fill="#1a1a1c">accepted_rules.md · failed_directions.md · reflections.jsonl</text>
+
+<line x1="130" y1="110" x2="130" y2="156" stroke="#8b3a2f" stroke-width="1.2" marker-end="url(#arr3)"/>
+<line x1="350" y1="110" x2="350" y2="156" stroke="#2d6a5c" stroke-width="1.2" marker-end="url(#arr3)"/>
+<line x1="570" y1="110" x2="570" y2="156" stroke="#b88a2c" stroke-width="1.2" marker-end="url(#arr3)"/>
+
+<text x="245" y="270" text-anchor="end" font-family="Inter, sans-serif" font-size="11" letter-spacing="1" fill="#6b6b70">外层循环 · git</text>
+<rect x="260" y="260" width="180" height="80" fill="#1a1a1c" stroke="#1a1a1c" stroke-width="1" rx="3"/>
+<text x="350" y="286" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#fbfaf6">外层循环</text>
+<text x="350" y="306" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#a4a4a8">不变量 · 回测</text>
+<text x="350" y="322" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#a4a4a8">门控 · 提交</text>
+
+<line x1="350" y1="244" x2="350" y2="256" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arr3)"/>
+
+<text x="370" y="376" font-family="Fraunces, serif" font-style="italic" font-size="13" fill="#8b3a2f">→ 接受时提交到 main 分支</text>
+<line x1="440" y1="300" x2="540" y2="300" stroke="#1a1a1c" stroke-width="0.8" stroke-dasharray="3 3"/>
+<text x="550" y="304" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">git 历史</text>
+
+</svg>
+</div>
+<div class="figure-caption"><strong>图 2。</strong> 三类 LLM 角色。外层循环是确定性 Python，负责调度这三类角色，运行不变量与回测，应用验证门控，并提交被接受的编辑。启发式系统作为 git 跟踪的持久产物存在于底层。每一次试验对应一次提交；每一次策展器周期对应一个分支。</div>
+</div>
+
+<h3>编辑器</h3>
+
+<p>编辑器读取当前启发式系统的状态，提出恰好一次编辑，并附上假设。动作空间被结构化为八种离散编辑类型：</p>
+
+<table>
+  <thead>
+    <tr><th>编辑类型</th><th>动作内容</th><th>风险面</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>add_indicator</code></td><td>编写新的纯函数 Python 指标</td><td>前瞻、沙箱逃逸</td></tr>
+    <tr><td><code>parameter_change</code></td><td>修改 YAML 中的某个数值参数</td><td>低</td></tr>
+    <tr><td><code>add_filter</code></td><td>使用已有指标新增入场过滤条件</td><td>低</td></tr>
+    <tr><td><code>remove_filter</code></td><td>移除某个过滤条件</td><td>低</td></tr>
+    <tr><td><code>change_sizing_mode</code></td><td>切换仓位算法</td><td>隐性杠杆</td></tr>
+    <tr><td><code>change_exit_rule</code></td><td>修改止损或持仓期限</td><td>低</td></tr>
+    <tr><td><code>simplify</code></td><td>移除某个组件，须做退化检查</td><td>能力损失</td></tr>
+    <tr><td><code>revert_to_trial_N</code></td><td>回滚到先前的某次提交</td><td>无</td></tr>
+  </tbody>
+</table>
+
+<p>编辑器的输出是结构化的 YAML 提案，从不为自由文本。它必须包含一个显式假设，其中预期信号是枚举值，而不是自由形式的预测。这种离散枚举正是反思器证伪环节得以机械化、而非沦为主观判断的前提。</p>
+
+<span class="code-label">编辑器输出 schema</span>
+<pre>trial_id: 23
+hypothesis: |
+  Recent rejected trials suggest fixed_fraction sizing is too
+  aggressive during high-vol periods. Switching to volatility_target
+  should reduce exposure when vol is elevated.
+
+proposed_edit:
+  type: change_sizing_mode
+  change:
+    sizing:
+      mode: volatility_target
+      target_vol: 0.12
+      max_position: 1.0
+
+expected_train_signal:     mild_improvement
+expected_validation_signal: accept
+
+fallback_if_rejected: |
+  Try volatility-aware sizing with weaker target_vol (0.08).</pre>
+
+<h3>反思器</h3>
+
+<p>反思器在回测与门控之后运行。关键之处在于："假设是否得到确认？"这一问题 <em>不</em> 由 LLM 回答；它由外层循环机械地比较编辑器枚举的预期信号与实际信号后给出。反思器的职责是 <em>解释</em> 结果，而不是 <em>评判</em> 结果。这是本项目对 LLM 奉承偏倚的主要防线。</p>
+
+<h3>策展器</h3>
+
+<p>策展器每接受 10 次试验运行一次。初始阶段为 <em>影子</em> 策展器：它只能压缩记忆（合并已接受规则、裁剪被新证据推翻的失败方向、报告复杂度指标），而不能修改 <code>strategy.yaml</code>。一旦系统被证明稳定，可启用 <em>主动</em> 策展器，使其提出策略简化建议，并须经过强制的验证复查。策展器使用可用的最强模型（Opus），原因在于压缩是系统中语义要求最高的操作。</p>
+</section>
+
+<section id="orchestrator">
+<div class="section-marker">
+  <span class="section-num">§ 6.5</span>
+  <h2>编排器</h2>
+</div>
+
+<p>三类 LLM 角色仅在外部调度器的指令下工作。这个调度器（<em>编排器</em>）是一个确定性的控制平面，使整个框架可复现、可审计、能够抵御奖励黑客攻击。它是系统中 <em>不允许</em> 由 LLM 承担的部分。</p>
+
+<p class="lede" style="font-size: 17px; margin-bottom: 24px;">
+编排器是一段确定性的 Python 控制平面。它调度结构化 LLM 调用，强制信息边界，应用候选编辑，运行不变量与回测，决定接受或拒绝，更新记忆，并将产物提交到 git。它不作任何主观判断。
+</p>
+
+<h3>组成模块</h3>
+
+<p>编排器被拆分为十三个具有单一职责的模块。这种拆分使每个模块都可被独立测试，并允许在不损害密封评测有效性的前提下替换模块实现。</p>
+
+<table class="spec-table">
+  <thead>
+    <tr><th style="width: 28%;">模块</th><th>职责</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>ContextBuilder</code></td><td>构造每次 LLM 调用所看到的角色专属上下文；强制脱敏。</td></tr>
+    <tr><td><code>RoleRunner</code></td><td>以类型化输入调用 LLM（编辑器、反思器或策展器），并要求类型化输出。</td></tr>
+    <tr><td><code>ProposalParser</code></td><td>对编辑器的 YAML 输出做语法解析与 schema 校验；无法解析的提案直接拒绝，不会触发回测。</td></tr>
+    <tr><td><code>CandidateBuilder</code></td><td>将解析后的编辑应用到一个候选 git 分支；门控接受之前不触碰 <code>main</code>。</td></tr>
+    <tr><td><code>SandboxExecutor</code></td><td>在受限命名空间中运行候选指标代码，并设置超时与内存限制。</td></tr>
+    <tr><td><code>InvariantRunner</code></td><td>执行 schema、AST 静态、动态前瞻、数据窥探、成本模型等检查；对失败进行分类。</td></tr>
+    <tr><td><code>BacktestRunner</code></td><td>运行训练集、验证集回测；运行末次密封回测（仅一次）。</td></tr>
+    <tr><td><code>ValidationGate</code></td><td>应用多目标门控，包括分块自助统计检验；输出脱敏后的分类信号。</td></tr>
+    <tr><td><code>HypothesisScorer</code></td><td>机械地比较编辑器枚举的预期信号与实际信号；反思器无权执行该比较。</td></tr>
+    <tr><td><code>MemoryManager</code></td><td>写入仅追加的事件记忆；应用反思器产生的压缩记忆更新。</td></tr>
+    <tr><td><code>SkillManager</code></td><td>维护技能档存储；策展器的输出经此模块写入。</td></tr>
+    <tr><td><code>GitManager</code></td><td>每次试验一次提交，每个策展器周期一个分支；提供完整审计谱系。</td></tr>
+    <tr><td><code>SealedVault</code></td><td>仅写一次的容器，存放 <code>sealed_test_final.json</code>；拒绝任何二次写入。</td></tr>
+    <tr><td><code>ReportBuilder</code></td><td>由所有记录产物生成最终 HTML 报告。</td></tr>
+  </tbody>
+</table>
+
+<h3>发现循环的形式化描述</h3>
+
+<p>完整发现流程足够小，可以完整写出。下面是实现必须满足的契约：</p>
+
+<span class="code-label">算法 1 · 发现循环</span>
+<pre>def discovery_loop(H0, D_train, D_val, D_sealed, budget):
+    H = H0
+    sealed_opened = False
+
+    for k in range(budget.max_trials):
+        # 1. 构建角色专属上下文（脱敏在此处强制执行）
+        ctx = ContextBuilder.editor_view(H)
+
+        # 2. 编辑器提出单次编辑，并附带显式假设
+        proposal = RoleRunner.editor(ctx)
+
+        # 3. 解析与 schema 校验
+        if not ProposalParser.valid(proposal):
+            MemoryManager.log_reject(k, "invalid_proposal")
+            continue
+
+        # 4. 将编辑应用到候选分支
+        H_candidate = CandidateBuilder.apply(H, proposal)
+
+        # 5. 在任何回测之前先运行不变量
+        inv = InvariantRunner.run(H_candidate)
+        if not inv.all_pass():
+            outcome = inv.failure_category   # safety / quality / hard
+            MemoryManager.log_invariant_failure(k, proposal, inv)
+            RoleRunner.reflector(ContextBuilder.reflector_view(
+                proposal=proposal, train=None,
+                validation_signal=outcome, decision="reject"))
+            continue
+
+        # 6. 训练集与私有验证集回测
+        train_result = BacktestRunner.run(H_candidate, split="train")
+        val_result   = BacktestRunner.run(H_candidate, split="validation")
+
+        # 7. 机械化门控；智能体看不到任何数值
+        decision = ValidationGate.decide(H, H_candidate, train_result, val_result)
+        signal   = ValidationGate.redact(decision)
+
+        # 8. 机械化假设结果判定
+        hyp_outcome = HypothesisScorer.compare(
+            expected=proposal.expected_validation_signal,
+            actual=signal)
+
+        # 9. 反思器只做解释（不评判），并写入记忆更新
+        reflection = RoleRunner.reflector(ContextBuilder.reflector_view(
+            proposal=proposal,
+            train=train_result.public_summary(),
+            validation_signal=signal,
+            decision=decision.kind,
+            hypothesis_outcome=hyp_outcome))
+        MemoryManager.apply(reflection)
+
+        # 10. 提交或丢弃
+        if decision.accept:
+            H = GitManager.merge_candidate(H_candidate)
+            SkillManager.maybe_extract(H, proposal, reflection)
+
+        MemoryManager.log_trial(...)
+
+        # 11. 策展器按调度运行，不会因事件被动触发
+        if CuratorScheduler.should_run(H):
+            c = RoleRunner.curator(ContextBuilder.curator_view(H))
+            MemoryManager.apply_curator(c)
+            GitManager.commit_curator_branch(c)
+
+    # 12. 密封测试恰好打开一次，由编排器执行，绝不由 LLM 执行
+    assert not sealed_opened
+    sealed_result = BacktestRunner.run(H, split="sealed")
+    SealedVault.write_once("sealed_test_final.json", sealed_result)
+    return ReportBuilder.build(H, sealed_result)</pre>
+
+<h3>信息边界</h3>
+
+<p>编排器最重要的职责是强制每个角色能看到什么、不能看到什么。下表具有规范性：任何违反它的实现都使裁定失效。</p>
+
+<table class="spec-table">
+  <thead>
+    <tr>
+      <th style="width: 25%;">数据对象</th>
+      <th>编辑器</th>
+      <th>反思器</th>
+      <th>策展器</th>
+      <th>编排器</th>
+      <th>最终报告</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><code>strategy.yaml</code></td><td class="yes">读/编辑</td><td class="yes">读</td><td class="yes">读</td><td class="yes">读/写</td><td class="yes">读</td></tr>
+    <tr><td><code>indicators/*.py</code></td><td class="partial">按类型编辑</td><td class="yes">读</td><td class="yes">读</td><td class="yes">读/写</td><td class="yes">读</td></tr>
+    <tr><td>训练摘要</td><td class="yes">完整</td><td class="yes">完整</td><td class="partial">聚合形式</td><td class="yes">完整</td><td class="yes">完整</td></tr>
+    <tr><td>训练收益序列</td><td class="no">无</td><td class="no">无</td><td class="no">无</td><td class="yes">完整</td><td class="yes">完整</td></tr>
+    <tr><td>验证信号</td><td class="partial">类别</td><td class="partial">类别</td><td class="partial">历史聚合</td><td class="yes">完整</td><td class="yes">完整</td></tr>
+    <tr><td>验证数值</td><td class="no">无</td><td class="no">无</td><td class="no">无</td><td class="yes">完整</td><td class="yes">完整</td></tr>
+    <tr><td>密封测试</td><td class="no">无</td><td class="no">无</td><td class="no">无</td><td class="partial">仅最终</td><td class="yes">完整</td></tr>
+    <tr><td>原始 OHLCV</td><td class="no">无</td><td class="no">无</td><td class="no">无</td><td class="yes">完整</td><td class="partial">附录</td></tr>
+    <tr><td>日历年份</td><td class="no">无</td><td class="no">无</td><td class="no">无</td><td class="yes">是</td><td class="yes">是</td></tr>
+  </tbody>
+</table>
+
+<p>由上表导出四条绝对规则：</p>
+
+<ul>
+  <li>LLM 角色绝不看到原始验证数值。</li>
+  <li>LLM 角色绝不看到密封测试数据，无论在其开启之前或之后。</li>
+  <li>LLM 角色绝不看到原始 OHLCV；只能看到特征与指标。</li>
+  <li>LLM 角色绝不看到日历年份或命名的市场事件。</li>
+</ul>
+
+<div class="aside warn">
+<span class="aside-label">为何编排器不能是 LLM</span>
+编排器存在的全部意义在于它不作判断。让 LLM 担任编排器会暴露三类问题：它会受自身奉承偏倚影响（"假设是否被确认？接受！"），可能通过隐蔽的上下文构造将原始数值泄漏给其他角色，且无法被确定性地审计。这里的确定性不是审美偏好，而是支撑本文中每一项密封评测论断的承重假设。
+</div>
+</section>
+
+<section id="memory">
+<div class="section-marker">
+  <span class="section-num">§ 6.6</span>
+  <h2>记忆与技能档</h2>
+</div>
+
+<p>本框架中的"记忆"不是"LLM 记住了什么"。它是一套结构化的持久状态文件系统，按层划分，每一层具有不同的生命周期、审计保证与消费者。混淆这些层正是 Hermes 类系统逐步退化的方式；将它们彼此分开，则使持久化从"碎片记录"上升为"科学积累"。</p>
+
+<h3>四层记忆</h3>
+
+<table class="spec-table">
+  <thead>
+    <tr><th style="width: 22%;">层次</th><th>文件</th><th>属性</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>事件记忆</strong></td>
+      <td><code>memory/trials.jsonl</code>、<code>reflections.jsonl</code>、<code>invariant_failures.jsonl</code>、<code>agent_compute.jsonl</code></td>
+      <td>仅追加，永不重写。这是"发生了什么"的真值日志。</td>
+    </tr>
+    <tr>
+      <td><strong>语义记忆</strong></td>
+      <td><code>memory/accepted_rules.md</code>、<code>failed_directions.md</code>、<code>open_questions.md</code>、<code>do_not_repeat.md</code></td>
+      <td>由反思器压缩，面向读者的散文体。供编辑器作为上下文使用。</td>
+    </tr>
+    <tr>
+      <td><strong>技能档存储</strong></td>
+      <td><code>skills/*.yaml</code></td>
+      <td>由策展器策展。带结构的编辑配方（下文详述）。</td>
+    </tr>
+    <tr>
+      <td><strong>产物记忆</strong></td>
+      <td><code>artifacts/accepted/trial_NNNN/</code>、<code>artifacts/sealed/</code>、<code>artifacts/reports/</code></td>
+      <td>冻结的文件系统快照，由 git 提交支撑。</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>编辑器读取语义记忆和技能档，而不直接读取事件记忆。原因是机械性的：把 50 次试验的原始 JSONL 喂给每一次编辑器调用，会撑爆上下文窗口，并以本应被反思器过滤掉的噪声污染决策。事件记忆用于审计；语义记忆与技能档用于复用。</p>
+
+<h3>试验记录 schema</h3>
+
+<p><code>trials.jsonl</code> 中每次试验对应一行：</p>
+
+<span class="code-label">试验记录</span>
+<pre>{
+  "trial_id": 23,
+  "parent_commit": "abc123",
+  "candidate_commit": "def456",
+  "role_outputs": {
+    "editor_output_path":    "runs/0023/editor.yaml",
+    "reflector_output_path": "runs/0023/reflector.yaml"
+  },
+  "edit": {
+    "type": "change_sizing_mode",
+    "target": "strategy.yaml",
+    "summary": "fixed_fraction -> volatility_target"
+  },
+  "hypothesis": {
+    "text": "...",
+    "expected_train_signal": "mild_improvement",
+    "expected_validation_signal": "accept"
+  },
+  "invariants": {
+    "schema": "pass",
+    "ast_static": "pass",
+    "dynamic_lookahead": "pass",
+    "cost_model": "pass",
+    "no_data_snooping": "pass"
+  },
+  "train_metrics": {
+    "sharpe": 0.91, "max_drawdown": -0.13,
+    "turnover": 0.24, "num_trades": 38
+  },
+  "validation_signal": "accepted",
+  "hypothesis_outcome": "confirmed",
+  "decision": "accept",
+  "complexity_before": 4.0,
+  "complexity_after":  5.0,
+  "agent_compute": {
+    "editor_input_tokens": 12000,    "editor_output_tokens": 1300,
+    "reflector_input_tokens": 4000,  "reflector_output_tokens": 700,
+    "model_editor": "sonnet",        "model_reflector": "sonnet",
+    "wall_clock_sec": 42.1
+  }
+}</pre>
+
+<h3>技能档：压缩后的可复用编辑配方</h3>
+
+<p>一份 <em>技能档</em> 并非摘要。它是策展器从一组被接受试验中抽取出的带类型对象。这一区分必须清晰陈述：</p>
+
+<div class="pullquote" style="font-size: 22px; margin: 28px 0 28px -20px;">
+  "记忆是'发生了什么'。技能档是'带证据、带已知失败模式的压缩可复用编辑配方'。"
+</div>
+
+<span class="code-label">技能档示例（skills/vol_target_after_drawdown_regression.yaml）</span>
+<pre>skill_id: vol_target_after_drawdown_regression
+status: active
+
+trigger:
+  validation_signal: rejected_drawdown_regression
+  common_context:
+    - fixed_fraction sizing currently active
+    - trend-following signal passes train
+    - turnover or drawdown elevated
+
+recipe:
+  edit_type: change_sizing_mode
+  change:
+    sizing:
+      mode: volatility_target
+      target_vol_range: [0.08, 0.15]
+      max_position: 1.0
+
+evidence:
+  accepted_trials: [12, 18, 27]
+  rejected_trials_that_motivated_it: [9, 11]
+
+known_failure_modes:
+  - target_vol below 0.08 often undertrades
+  - target_vol above 0.15 can fail drawdown gate
+
+complexity_cost: 1.0
+last_curated_at_trial: 30</pre>
+
+<p>这一 schema 正是使策展器在 LBG 意义上成为 <em>历史压缩算子</em> 而非"摘要撰写者"的关键。技能档必须引用具体证据（试验编号），必须描述触发条件，必须枚举失败模式，并且必须在每一次策展器周期被复审。最近无正向证据的技能档将被废弃；与新证据矛盾的技能档将被合并或裁剪。</p>
+
+<p>§10.5 中定义的"模式复用率"度量了编辑器在提出编辑时引用现有技能档的频率，这是对技能档存储是否真的在起作用的直接实证检验。</p>
+
+<h3>因子卡片：信号产物的导出</h3>
+
+<p>对于每一次被接受、且其编辑新增或修改了某个指标的试验，编排器导出一张 <em>因子卡片</em>：一种仅包含信号层（指标程序与其参数）的薄产物，与策略的风险与执行包装相分离。这正是 §5 中的旁注被工程化的结果。</p>
+
+<span class="code-label">alpha_cards/trial_NNNN.yaml</span>
+<pre>alpha_id: vol_adjusted_momentum_trial_0023
+source_trial: 23
+source_commit: def456
+
+signal:
+  indicator: vol_adjusted_momentum
+  parameters:
+    lookback: 60
+    vol_lookback: 20
+  normalization: rolling_zscore_252d
+  horizon_days: 5
+
+evidence:
+  train_summary:    { sharpe: 0.91, max_dd: -0.13, turnover: 0.24 }
+  validation_signal: accepted
+  sealed_summary:   null   # 仅在密封测试打开后填充
+
+usage_envelope:
+  intended_universe: filter spec (see §14)
+  intended_horizon:  short_term
+  composable_with:   [vol_target_sizing, drawdown_stop]
+  not_composable_with: []
+
+known_failure_modes:
+  - "Underperforms in low-vol regimes (validated on split_B subset)"
+  - "Turnover sensitive to lookback &lt; 20"
+
+status: accepted | rejected | exploratory | deprecated</pre>
+
+<p>因子卡片之所以存在，有两个原因。其一，它为后续里程碑（多个 alpha 组合为投资组合）预先准备好抽象：卡片 schema 使这种组合可被自动化处理。其二，它使项目的产出成为一个 <em>已评测信号的图书馆</em>，而不仅仅是单一策略产物。这种形态更接近专业量化研究小组实际消费研究成果的方式。本里程碑下，卡片被导出，但系统只交易一个组合后的单一策略；多 alpha 组合方向作为未来扩展。</p>
+</section>
+
+<section id="factorlib">
+<div class="section-marker">
+  <span class="section-num">§ 6.7</span>
+  <h2>因子库作为原材料</h2>
+</div>
+
+<p>一个能把本提案大部分内容串起来的观察：<strong>几乎每一个已发表的量化因子，本质上都是历史 K 线的一个前缀稳定纯函数</strong>。Aroon、RSI、ADX、应计盈余、Amihud 流动性、订单流不平衡、波动率调整动量——输入不同，动机不同，但目标形态相同：一个从"价格+量"历史映射到逐 K 线数值的函数。一个无法写成此形态的因子，几乎必然违反无前瞻规则，本不该被发表。</p>
+
+<p>这正是智能体 <code>add_indicator</code> 编辑类型瞄准的形态。编辑器的编写契约（§9）、AST 检查、沙箱、前缀稳定性，全部对准同一目标。这意味着既有的量化因子文献，从 LBG-Trader 的视角看，就是一份候选 Python 函数的 <em>种子库</em>，编辑器可从中汲取。本项目不必从空白页起步。</p>
+
+<h3>磁盘上的布局</h3>
+
+<p>该资源物理上存放于 <code>knowledge/factors/</code>，刻意与 <code>memory/</code> 分离。这一切分至关重要：<code>memory/</code> 是发现循环 <em>在运行过程中</em> 产生并维护的（§6.6）；<code>knowledge/</code> 是只读材料，存在于任何运行之前，且被所有运行共享。把两者混在一起会模糊"memory 是本次发现产出的东西"这条边界，而 §6.6 的四层记忆分类正依赖此边界成立。</p>
+
+<p>布局采用两层结构：一个用于检索的追加式 JSONL 索引，加上每份因子-版本一份不可变的档案文件以供全文阅读。</p>
+
+<pre>knowledge/factors/
+├── index.jsonl                       # 564 行，每行一份档案；append-only
+└── dossiers/
+    ├── Aroon_20260427_023945.txt     # 不可变；一份完整研究档案
+    ├── ADX_20260427_112322.txt
+    └── ...                           # 共 564 份
+</pre>
+
+<p><code>index.jsonl</code> 的一行：</p>
+
+<span class="code-label">knowledge/factors/index.jsonl（一行）</span>
+<pre>{"factor_name": "Aroon",
+ "version": "v1",
+ "ts": "20260427_023945",
+ "path": "dossiers/Aroon_20260427_023945.txt",
+ "category": "趋势 / 动量",
+ "parse_status": "strict",
+ "one_line": "Aroon-Up = ((N - days_since_high) / N) * 100; Aroon-Down = (N - days_since_low) / N * 100; ..."}</pre>
+
+<p>当前索引由 <code>scripts/migrate_factors.py</code> 生成，覆盖 564 份档案，含趋势-动量类（Aroon、ADX、MACD、RSI）、微观结构类（Amihud 流动性、逆向选择成本、订单流不平衡、深度不平衡）、会计与基本面类（应计盈余、Altman Z-score、分析师分歧），以及自适应族（Adaptive Laguerre、AMA、波动率调整变体）。每份档案由离线 LLM 研究流程生成，<em>尚未在真实回测上得到验证</em>。从 LBG-Trader 的视角看，它们是 <em>假设</em>，不是 <em>结果</em>。</p>
+
+<h3>解析状态：对"哪些有结构"的诚实记录</h3>
+
+<p>这些档案由不同 LLM 运行在不同时间撰写，约 40% 含有严格 JSON 无法解析的内容（通常是裸 LaTeX <code>\frac{}</code> 未转义，或 schema 在批次间漂移）。与其假装 564 份都是干净 JSON，索引明确记录已知状态：</p>
+
+<table class="spec-table" style="margin: 14px 0;">
+  <thead>
+    <tr><th><code>parse_status</code></th><th>数量</th><th>含义</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>strict</code></td><td>336</td><td>直接经 <code>json.loads</code> 加载，检索层可使用结构化字段。</td></tr>
+    <tr><td><code>fixed</code></td><td>2</td><td>对非法反斜杠转义后才加载成功，结构可用但略经归一化。</td></tr>
+    <tr><td><code>raw</code></td><td>226</td><td>无法解析。档案以原始文本保留；索引中的 <code>one_line</code> 是正则抽取的片段。</td></tr>
+  </tbody>
+</table>
+
+<p>338 份可解析档案中，271 份抽得明确 <code>category</code>；其余使用非标准 schema，无可识别的类别键。编辑器与检索助手被告知哪些档案有结构、哪些只有原始文本，从不把后者当作有可靠结构的内容处理。</p>
+
+<h3>追加式设计</h3>
+
+<p>索引文件是 <em>仅追加</em> 的，刻意效仿 <code>memory/trials.jsonl</code>（§6.6）的纪律。新增一份档案——或为已有因子的研究新增一个版本——只有一个动作：在 <code>index.jsonl</code> 追加一行，并在 <code>dossiers/</code> 下放入一份新的不可变文件。废弃某因子则在新追加的行上设 <code>status: deprecated</code> 字段，而不是改写旧行。其好处与任何追加式日志一致：天然崩溃安全、grep 友好、保留完整版本历史、并发扩展无合并冲突。</p>
+
+<p>两点值得指出。其一，<em>档案本身不可变</em>：下季度重新研究 Aroon 因子会产出新文件 <code>Aroon_20260815_xxxxxx.txt</code>，而不是覆盖。检索按时间戳选最新版本；旧版本仍是可被引用的历史产物。其二，<em>索引可无限增长</em>；当前 564 行约 420 KB；即便 50,000 行也只有约 35 MB，仍可 grep、仍可在内存中缓存。</p>
+
+<h3>编辑器如何使用</h3>
+
+<p>检索助手在 <code>lbg/knowledge/factors.py</code>，提供三个刻意保持极小的函数：</p>
+
+<pre>from lbg.knowledge import search, get_dossier, load_index
+
+hits = search("vol-adjusted momentum", top_k=5)
+# → 按子串匹配排序的元数据列表
+
+dossier = get_dossier("Aroon")
+# → 可解析时返回 JSON；否则返回 {'_raw': ..., '_parse_failed': True}
+
+all_entries = load_index()
+# → 全部 564 条元数据；进程内缓存
+</pre>
+
+<p>检索是对 factor_name / category / one_line 三字段的子串匹配。在 564 条规模下用嵌入是过度工程。若语料规模将来上升到几千条，可在不改变外部接口的前提下替换为真正的检索索引——这正是它独立成模块的理由。</p>
+
+<p><code>ContextBuilder</code> 用当前试验上下文（最近的拒绝、在位策略的过滤条件）派生的关键词调用 <code>search()</code>，取前几条命中，把它们的 <code>one_line</code> 摘要塞进编辑器提示。编辑器若需完整档案，可按 factor_name 引用，<code>get_dossier</code> 按需取出。要点：<em>每次试验编辑器只看到小而相关的切片，从不把 564 份档案当批量上下文</em>。</p>
+
+<p>该库 <em>不</em> 被允许跳过任何不变量或密封评测检查。档案引用只是假设文本中的证据，而不是对前缀稳定性或验证门控的豁免。一个背后有五篇论文的因子，仍可能在 SPY 2021–2024 的密封测试上失败；一旦失败，它就像任何其他候选一样被拒。该库是搜索的输入，不是权威性输出。</p>
+
+<h3>那么 LBG-Trader 的真正产出是什么</h3>
+
+<p>若框架按设计运行，因子卡片导出流程（§6.6）在多次发现运行积累后，将产出种子库的 <em>已验证子集</em>——一个在所研究标的池上、在锁定协议下确实展示出在密封测试上有增量贡献的因子库。对照如下：</p>
+
+<table class="spec-table" style="margin: 14px 0;">
+  <thead>
+    <tr>
+      <th style="width: 30%;">资源</th>
+      <th>认证了什么</th>
+      <th>没有认证什么</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>外部因子档案</strong>（如 <code>knowledge/factors/dossiers/Aroon_*.txt</code>）</td>
+      <td>该因子有公认的学术或行业定义；其一般金融动机已被阐述。</td>
+      <td>是否在本标的池上、在本成本模型下、经过本过拟合控制后，产生增量夏普。</td>
+    </tr>
+    <tr>
+      <td><strong>LBG-Trader 因子卡片</strong>（<code>alpha_cards/trial_NNNN.yaml</code>）</td>
+      <td>一份具体的参数化实现已通过前缀稳定性、已通过验证集多目标门控；且（H1 成立后）在预注册分析下对密封测试改进有贡献。</td>
+      <td>该因子在密封测试未含的制度下能否持续生效——由第二阶段前向验证回答。</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="aside">
+<span class="aside-label">这一重新构造为何重要</span>
+<p style="margin: 0 0 8px;">本项目最具雄心的论断（我们也应明示）是：LBG-Trader <em>最持久的输出</em> 不是任何单一策略产物，而是因子卡片这份缓慢生长的图书馆。一次成功的发现运行产出一个冻结策略，加若干新的已验证因子卡片。策略在下一次重新发现时失效；因子卡片留存、携带证据、可在未来策略间组合，并在其证据失效时被干净地废弃。</p>
+<p style="margin: 0;">在这一构造下，<code>knowledge/factors/</code> 是 <em>之前</em> 的图景（论断而无验证），多次发现运行之后的因子卡片集是 <em>之后</em> 的图景（论断 + 验证 + 参数化 + 可组合性元数据）。若 H1 成立，框架的经济价值正是这两份图书馆之间的差量。</p>
+</div>
+
+<h3>对 §18 工程计划的实际影响</h3>
+
+<p>这一重新构造影响四处工程选择，其中两处已经在代码树中：</p>
+
+<ul>
+  <li><strong>检索助手</strong>——<em>已交付。</em><code>lbg/knowledge/factors.py</code> 暴露 <code>search()</code>、<code>get_dossier()</code>、<code>load_index()</code>。当前规模下子串匹配足够；接口稳定到将来可在不改调用方的前提下替换为嵌入检索。</li>
+  <li><strong>追加式索引</strong>——<em>已交付。</em><code>scripts/migrate_factors.py</code> 从 <code>knowledge/factors/dossiers/</code> 重建 <code>knowledge/factors/index.jsonl</code>。新档案可丢入 <code>dossiers/</code> 后重建索引；稳态下也可在上游研究流程产出时直接追加一行。</li>
+  <li><strong>因子卡片 schema 锁定。</strong> 因子卡片旨在比其源策略更长寿，其 schema 因而承重。§6.6 中的 schema 现在被视作锁定清单（§20）的一部分，而非实现细节。</li>
+  <li><strong>跨策略因子复用。</strong> 后续里程碑可把现有因子卡片作为新一次发现运行的启发式系统起点。密封性仍然保持（采用新的密封窗口），框架得以把过往优秀发现摊销使用。</li>
+</ul>
+</section>
+
+<section id="trialwalk">
+<div class="section-marker">
+  <span class="section-num">§ 6.8</span>
+  <h2>一次试验的端到端示范</h2>
+</div>
+
+<p>前三节描述各个组成部分。本节看它们在一次具体试验上协同工作，使读者看到每个模块的输入和输出。试验取一个真实的 <code>add_indicator</code> 案例：编辑器引入新的"波动率调整动量"信号，不变量检查全过，门控基于帕累托改进接受，反思器解释结果。我们沿 §6.5 算法 1 的十二步流程，逐步展示每一步的实际文件与输出。</p>
+
+<h3>试验开始前的状态</h3>
+
+<p>发现循环已进入预算 50 次中的第 \(k = 23\) 次。当前启发式系统 \(H_{22}\) 含：</p>
+
+<ul>
+  <li><code>indicators/</code> 下 2 个指标文件：<code>sma.py</code>、<code>rsi.py</code>（自带的初始集合）。</li>
+  <li>一个 <code>strategy.yaml</code>，含 1 个过滤条件（价格 &gt; 50 日 SMA），仓位算法为 <code>long_only_fraction</code>，比例 0.5。</li>
+  <li><code>trials.jsonl</code> 中 22 条记录；其中 9 条被接受，13 条因各种原因被拒。</li>
+  <li><code>accepted_rules.md</code> 中已记录：纯趋势跟随在 SPY 上在高波动期表现欠佳。</li>
+</ul>
+
+<h3>步骤 1–2 · 构建上下文与调用编辑器</h3>
+
+<p>编排器的 <code>ContextBuilder</code> 组装编辑器输入：当前 <code>strategy.yaml</code>、现有指标的文档字符串（非完整代码）、压缩后的语义记忆、最近若干次被拒试验的类别信号。它 <em>不</em> 包含原始 OHLCV、验证数值、日历年份，或任何 split B/C 数据。</p>
+
+<span class="code-label">ContextBuilder.editor_view(H_22)  →  prompt fragment</span>
+<pre># Current strategy.yaml
+filters:
+  - {name: above_sma, indicator: sma, window: 50, relation: price_gt}
+sizing: {mode: long_only_fraction, fraction: 0.5}
+
+# Available indicators
+- sma(df, window): "Simple moving average over window bars."
+- rsi(df, period): "Relative strength index, momentum oscillator."
+
+# Recent compressed memory (accepted_rules.md excerpt)
+- Trend-following on SPY underperforms when validation
+  signal returns 'rejected_drawdown_regression'.
+  Likely: position is held into high-vol periods.
+
+# Last 5 trial signals (categorical)
+trial_18: accepted          (parameter_change: SMA window 20 -> 50)
+trial_19: rejected_turnover (add_filter: rsi crossover)
+trial_20: rejected_drawdown_regression (change_sizing: 0.5 -> 0.8)
+trial_21: rejected_no_significant_improvement (parameter_change)
+trial_22: accepted          (remove_filter: redundant momentum)</pre>
+
+<p>编辑器（Opus 调用，结构化 YAML 输出）返回：</p>
+
+<span class="code-label">runs/0023/editor.yaml</span>
+<pre>trial_id: 23
+hypothesis: |
+  Trend-following alone produces drawdown regressions during
+  high-vol periods (trial_20 signal). A volatility-adjusted
+  momentum signal should shrink position when vol expands,
+  preserving the trend exposure but lowering tail risk.
+
+proposed_edit:
+  type: add_indicator
+  files:
+    - path: indicators/vol_adj_momentum.py
+      content: |
+        def vol_adj_momentum(df, lookback=60, vol_lookback=20):
+            """Pure, prefix-stable: uses only past data."""
+            ret = df['AdjC'].pct_change()
+            mom = ret.rolling(lookback).sum()
+            vol = ret.rolling(vol_lookback).std()
+            return (mom / vol).shift(1)
+  yaml_diff:
+    filters[+]:
+      - name: momentum_gate
+        indicator: vol_adj_momentum
+        params: {lookback: 60, vol_lookback: 20}
+        relation: gt
+        threshold: 0.0
+
+expected_train_signal:      mild_improvement
+expected_validation_signal: accept
+fallback_if_rejected:       try lookback=120</pre>
+
+<h3>步骤 3–4 · 解析与候选应用</h3>
+
+<p><code>ProposalParser</code> 用 <code>add_indicator</code> 类型对应的 schema 校验该 YAML。解析通过。<code>CandidateBuilder</code> 创建 git 分支 <code>trial-0023</code>，写入新文件，并应用 yaml diff。候选系统 \(H'_{23}\) 准备进入测试，但此时尚未运行任何回测。</p>
+
+<h3>步骤 5 · 不变量优先运行</h3>
+
+<p><code>InvariantRunner</code> 按固定顺序执行所有检查。静态检查（schema、AST、白名单）瞬间通过。沙箱执行检查：在一个微型合成 dataframe 上跑指标，无异常。重头戏是动态前缀稳定性检查：</p>
+
+<span class="code-label">vol_adj_momentum 的 prefix_stability 检查</span>
+<pre>sample t in {200, 500, 1000, 1500, 2000} (5 random points)
+for each t:
+    full = vol_adj_momentum(D[:2266])     # entire train series
+    pref = vol_adj_momentum(D[:t+1])      # prefix up to t
+    assert full.iloc[t] == pref.iloc[t]   # must be identical
+
+result: 5/5 passed → prefix_stability: pass</pre>
+
+<p>所有不变量通过。候选可进入回测阶段。（若它在前缀稳定性上失败，例如指标除以了全序列的 std()，本次试验将在此被拒，标记为 <code>safety_fail</code>。反思器只会收到失败类别，且不会运行任何回测。）</p>
+
+<h3>步骤 6 · 训练集与验证集回测</h3>
+
+<p><code>BacktestRunner.run(H'_{23}, split="train")</code> 返回完整的 <code>BacktestResult</code>。编排器看到全部；只有公开摘要会在下次试验中传给编辑器。</p>
+
+<table class="spec-table" style="margin: 14px 0;">
+  <thead>
+    <tr><th>划分</th><th>Sharpe</th><th>MaxDD</th><th>Turnover</th><th>交易数</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>训练（split_A）</td><td>0.91</td><td>−0.13</td><td>0.24</td><td>38</td></tr>
+    <tr><td>验证（split_B）</td><td>0.74</td><td>−0.09</td><td>0.21</td><td>9</td></tr>
+    <tr><td>在位者 \(H_{22}\)（验证）</td><td>0.71</td><td>−0.11</td><td>0.18</td><td>7</td></tr>
+  </tbody>
+</table>
+
+<h3>步骤 7–8 · 门控与假设评分</h3>
+
+<p>门控按 §9 的规则运行。交易数高于下限；验证 MaxDD（−0.09）优于在位者（−0.11），故回撤恶化规则不触发；换手率在范围内；复杂度上升 1.0（新增一个指标）。效用 LCB 大致持平（改进真实但微小），但候选在 (Sharpe, drawdown) 上构成帕累托改进——两个指标都向有利方向移动。判定：<strong>接受 · pareto_improvement</strong>。脱敏层把这一结果压缩为单一类别 <code>accepted</code>，作为后续编辑器调用的可见信号。</p>
+
+<p><code>HypothesisScorer</code> 比较：编辑器声明 <code>expected_validation_signal: accept</code>；实际为 <code>accepted</code>。匹配。<code>hypothesis_outcome: confirmed</code>。</p>
+
+<h3>步骤 9 · 反思器写出解释</h3>
+
+<p>反思器接收的输入：候选系统、训练摘要（完整）、脱敏后的验证信号（<code>accepted</code>）、决策类型（<code>pareto_improvement</code>）、假设结果（<code>confirmed</code>）。它 <em>不</em> 接收验证数值。其职责是解释而非评判。</p>
+
+<span class="code-label">runs/0023/reflector.yaml</span>
+<pre>summary: |
+  Vol-adjusted momentum gated entry effectively, reducing trade
+  count in volatile regimes (train: 38 trades, validation accepted
+  on Pareto improvement). The hypothesis was confirmed.
+
+memory_updates:
+  accepted_rules_append: |
+    - vol_adj_momentum(lookback=60, vol_lookback=20) used as
+      gating filter produces Pareto-improving validation outcomes
+      when stacked on trend-following.
+  open_questions_append: |
+    - Would lookback=120 improve robustness without
+      hurting trade count? (per Editor fallback note)</pre>
+
+<p><code>MemoryManager.apply(reflection)</code> 把更新追加到 <code>accepted_rules.md</code> 与 <code>open_questions.md</code>，并把完整试验记录写入 <code>trials.jsonl</code>。</p>
+
+<h3>步骤 10 · 提交与技能档抽取</h3>
+
+<p><code>GitManager.merge_candidate</code> 将 <code>main</code> 快进至 <code>trial-0023</code> 分支，并以 <code>trial-0023-accepted</code> 标签标注该提交。<code>SkillManager.maybe_extract</code> 注意到此前有两次被接受的试验具有类似的触发条件（回撤恶化拒绝随后由仓位调整修复），考虑抽取一个技能档；但因当前为影子策展器，遵循"仅在调度边界抽取"的策略，本次推迟到下一次策展器周期。</p>
+
+<h3>步骤 11 · 策展器检查</h3>
+
+<p>本次第 23 号试验是被接受的第 10 次。<code>CuratorScheduler.should_run(H)</code> 返回 true。策展器被调用。它读取完整事件记忆、语义记忆与现有技能档，产出一份压缩 diff：合并 <code>accepted_rules.md</code> 中两条几乎重复的条目；裁剪 <code>failed_directions.md</code> 中一条被试验 23 推翻的规则；并新增一份技能档 <code>skills/vol_target_after_drawdown_regression.yaml</code>（即 §6.6 中所示例子）。策展器提交到新分支 <code>curator-cycle-1</code>；待对所有被接受试验的不变量重跑后，主分支再快进。</p>
+
+<h3>这一次试验的成本</h3>
+
+<ul>
+  <li>LLM token：编辑器约 12k 输入 + 1.3k 输出；反思器约 4k + 0.7k；策展器约 18k + 2k（本次恰好触发了一次）。合计约 38k token。</li>
+  <li>墙钟耗时：LLM 调用约 45 秒，加两次回测约 3 秒、不变量约 5 秒。端到端 1 分钟以内。</li>
+  <li>按现行 Opus 价格估算：数美分量级。</li>
+</ul>
+
+<p>乘以 50 次试验，一次完整发现运行大约 200 万 token、墙钟 30–60 分钟（不计回测在不同编辑下的方差）。预期美元成本在数十美元量级，而非数百。这正是 §11 四阶段生命周期在经济上可行的关键：<em>发现按 token 计算昂贵，但你不必每天做</em>。</p>
+</section>
+
+<section id="data">
+<div class="section-marker">
+  <span class="section-num">§ 7</span>
+  <h2>数据与三划分协议</h2>
+</div>
+
+<p>数据被刻意设计得朴素。SPY 日频 K 线，自 2010-01-04 至 2024-12-31，通过 <code>yfinance</code> 获取，与 Stooq 交叉核验后存为版本化 parquet。包含 OHLCV、复权收盘价、分红与拆分。共十五年，约 3,780 个交易日。</p>
+
+<p>选 SPY 而非个股：流动性最高、无特异事件、无幸存者偏倚。选日频而非分钟频：在统计功效与微观结构噪声之间取得平衡。选十五年而非三十年：避开市场微观结构层面的结构性制度变化。</p>
+
+<div class="figure">
+<div class="chart-wrap" style="background: var(--paper-warm); padding: 30px 20px 24px;">
+<svg viewBox="0 0 700 220" width="100%" role="img">
+<title>SPY 2010-2024 上的三划分协议</title>
+
+<line x1="40" y1="120" x2="660" y2="120" stroke="#1a1a1c" stroke-width="0.8"/>
+
+<g font-family="Fraunces, serif" font-size="11" fill="#6b6b70">
+  <text x="40" y="170" text-anchor="middle">2010</text>
+  <text x="412" y="170" text-anchor="middle">2019</text>
+  <text x="495" y="170" text-anchor="middle">2021</text>
+  <text x="660" y="170" text-anchor="middle">2024</text>
+</g>
+
+<g>
+  <line x1="40" y1="115" x2="40" y2="125" stroke="#1a1a1c" stroke-width="1"/>
+  <line x1="412" y1="115" x2="412" y2="125" stroke="#1a1a1c" stroke-width="1"/>
+  <line x1="495" y1="115" x2="495" y2="125" stroke="#1a1a1c" stroke-width="1"/>
+  <line x1="660" y1="115" x2="660" y2="125" stroke="#1a1a1c" stroke-width="1"/>
+</g>
+
+<rect x="40" y="80" width="372" height="35" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.2" rx="2"/>
+<text x="226" y="103" text-anchor="middle" font-family="Fraunces, serif" font-size="13" fill="#1a1a1c">split_A · 训练 · 9 年</text>
+
+<rect x="412" y="80" width="83" height="35" fill="#fbfaf6" stroke="#b88a2c" stroke-width="1.2" rx="2"/>
+<text x="453.5" y="103" text-anchor="middle" font-family="Fraunces, serif" font-size="12" fill="#1a1a1c">split_B · 验证</text>
+
+<rect x="495" y="80" width="165" height="35" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1.2" rx="2"/>
+<text x="577.5" y="103" text-anchor="middle" font-family="Fraunces, serif" font-size="13" fill="#1a1a1c">split_C · 密封 · 4 年</text>
+
+<line x1="445" y1="50" x2="445" y2="78" stroke="#8b3a2f" stroke-width="0.8" stroke-dasharray="3 3"/>
+<text x="445" y="44" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="11" fill="#8b3a2f">2020 制度切换</text>
+
+<g font-family="Inter, sans-serif" font-size="10" letter-spacing="0.5" fill="#6b6b70">
+  <text x="40" y="200">约 2,266 根</text>
+  <text x="412" y="200">约 505 根</text>
+  <text x="495" y="200">约 1,006 根</text>
+</g>
+
+</svg>
+</div>
+<div class="figure-caption"><strong>图 3。</strong> 三划分协议。训练集长度足以获得统计功效；验证集刻意包含一次市场制度切换，使门控具有锋利度；密封集长度足以覆盖多种制度。智能体并不知道这些是哪几个日历年份；划分对智能体而言只用别名字母指代，以阻止 LLM 利用其预训练中关于具体市场事件的先验。</div>
+</div>
+
+<p>发现运行一旦启动，本协议不再可改。留出集（hold-out）被密封：仅在运行末尾被打开一次，并以仅写一次的产物形式写入 <code>sealed_test_final.json</code>。外层循环读取验证集；智能体只接收脱敏的分类信号：<code>accepted</code>、<code>rejected_drawdown_regression</code>、<code>rejected_turnover</code>、<code>rejected_complexity</code>、<code>rejected_no_significant_improvement</code>。</p>
+
+<div class="aside">
+<span class="aside-label">反窥探机制及其边界</span>
+<p style="margin-bottom: 10px;">智能体不得看到日历年份或命名的市场事件。划分在提示上下文中始终以别名（<code>split_A</code>、<code>split_B</code>、<code>split_C</code>）出现。一个不变量会扫描智能体输出中的禁用词（年份数字、事件名称）。</p>
+<p style="margin: 0;"><strong>这道防线只针对显式的文本泄漏，无法防范模型潜在的预训练先验。</strong> 底层 LLM 的训练数据中包含关于 SPY 2020 年回撤、2022 年熊市等内容的评论，这些先验我们无法清除。因此，最终裁定的诚实表述是：它评测的是 <em>在可获得公共先验下</em> 的 LLM 辅助代码空间搜索，而不是白板式学习。这一限制在最终报告中显式记录。</p>
+</div>
+</section>
+
+<section id="backtest">
+<div class="section-marker">
+  <span class="section-num">§ 8</span>
+  <h2>回测</h2>
+</div>
+
+<p>回测采用向量化实现，约 150 行 Python。选择向量化既出于速度考虑（每次发现运行需进行数百次回测），也因为动态无前瞻不变量更容易在向量化运算中接入。</p>
+
+<ul>
+  <li><strong>成交模型。</strong> 第 \(t\) 根 K 线收盘时产生的信号，在第 \(t+1\) 根 K 线开盘成交。禁止"收盘对收盘"的成交。</li>
+  <li><strong>成本模型。</strong> 锁定为 <strong>单边有效 5.5 基点</strong>，分解为基础 5.0 bp 加 0.5 bp 滑点代理。形式定义见 §4.5；不变量强制成本非零。</li>
+  <li><strong>滑点代理。</strong> 0.5 bp 已计入上述有效成本之中，不另作调整。</li>
+  <li><strong>仓位算法。</strong> <code>long_only_full</code>、<code>long_only_fraction</code>、<code>volatility_target</code>。本里程碑不做空、不加杠杆。</li>
+  <li><strong>前瞻防护。</strong> 第 \(t\) 根 K 线的信号仅使用至 \(t\) 为止的数据，通过显式的 <code>.shift(1)</code> 向量化实现。动态不变量扰动未来数据，并验证 \(t\) 时点的仓位保持不变。</li>
+</ul>
+
+<p>回测返回一个完整的 <code>BacktestResult</code> 对象：摘要指标、完整日度收益序列（供分块自助法使用）、净值曲线、回撤序列、仓位序列、交易日志。不同消费者看到的视图不同：</p>
+
+<table>
+  <thead>
+    <tr><th>消费者</th><th>训练视图</th><th>验证视图</th><th>密封视图</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>编辑器</td><td>摘要</td><td>仅类别</td><td>无</td></tr>
+    <tr><td>反思器</td><td>摘要</td><td>仅类别</td><td>无</td></tr>
+    <tr><td>策展器</td><td>聚合后的记忆</td><td>无</td><td>无</td></tr>
+    <tr><td>外层循环</td><td>完整</td><td>完整</td><td>仅最终</td></tr>
+    <tr><td>最终报告</td><td>完整</td><td>完整</td><td>完整</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="protocol">
+<div class="section-marker">
+  <span class="section-num">§ 9</span>
+  <h2>不变量与验证门控</h2>
+</div>
+
+<p>不变量套件是把"LLM 在做程序合成"与"LLM 在奖励黑客回测框架"区分开的关键。如果缺失这一套件，一个不受约束的编码型智能体会在几次试验之内就发现前瞻、规避成本、窥探数据或利用索引对齐的漏洞。</p>
+
+<h4>静态不变量：文件与 schema 层</h4>
+<ul>
+  <li><code>config_schema</code> · strategy.yaml 通过 schema 校验</li>
+  <li><code>no_python_edit</code> · 智能体不得修改 <code>backtest.py</code>、<code>policy_interpreter.py</code> 等基础设施</li>
+  <li><code>no_forbidden_file_access</code> · 智能体只能读取白名单文件</li>
+  <li><code>no_data_snooping</code> · 扫描智能体输出中的年份数字与事件名称</li>
+</ul>
+
+<h4>静态不变量：AST 层（针对指标编写）</h4>
+<ul>
+  <li><code>no_negative_indexing</code> · 禁止形如 <code>df.iloc[i+k]</code>（k 为正）的写法</li>
+  <li><code>no_future_shift</code> · 禁止 <code>.shift(-N)</code></li>
+  <li><code>no_forward_fill_future</code> · 禁止任何会引入未来数据的填充</li>
+  <li><code>whitelisted_imports_only</code> · 仅允许 <code>numpy</code>、<code>pandas</code>、math</li>
+  <li><code>pure_function</code> · 不得有全局状态、副作用、I/O</li>
+</ul>
+
+<h4>动态不变量：运行时</h4>
+<ul>
+  <li><code>prefix_stability</code> · §4.5 中给出的形式陈述；工程化方式为：对随机抽样的若干 \(t\) 扰动 \(D_{>t}\)，重新求值候选指标，断言 \(f(D)[t]\) 不变。这是最严格的无前瞻检查，能够覆盖静态 <code>shift</code> 检查，并额外捕获全序列归一化、含未来信息的分位数计算及其他微妙泄漏。</li>
+  <li><code>position_invariance</code> · 把同样的扰动测试应用于策略 <em>仓位</em>，而非仅指标输出，以防 DSL 组合层引入新的泄漏。</li>
+  <li><code>cost_model_required</code> · 确认回测在非零换手率下产生与之成比例的非零成本</li>
+  <li><code>max_position</code> · 确认无隐性杠杆</li>
+  <li><code>sandbox_execution</code> · 指标函数在受限命名空间中运行，并设有超时</li>
+</ul>
+
+<p>智能体编写的指标函数必须满足下述契约，并在其文档字符串中记录：</p>
+
+<span class="code-label">指标函数契约</span>
+<pre>def my_indicator(df: pd.DataFrame, **params) -> pd.Series:
+    """
+    Pure, deterministic, prefix-stable.
+
+    No file IO, network, env vars, random state, global mutable state.
+    Output index must equal df.index.
+    Output[t] must depend only on df.loc[:t].
+
+    Prefix-stability requirement (enforced by dynamic invariant):
+        f(df.iloc[:T])[t] == f(df.iloc[:t+1])[t]   for all valid t.
+    """</pre>
+
+<p>验证门控在不变量通过、训练与验证回测完成之后应用，采用多目标判定。<strong>单次试验门控与最终 H1 裁定有意采用不同的检验。</strong> 验证集仅含约 500 个交易日；若对每一次试验都要求 95% 置信区间下界严格大于 0 的配对自助检验，将导致发现循环陷入饥饿，并把接受偏向那些显著改变换手率或波动的编辑；这类编辑更容易制造统计显著差异，却不必然对应真实 alpha。最终裁定在密封测试上仅作一次，使用 §10.5 规定的严格自助检验。</p>
+
+<span class="code-label">单次试验验证门控伪代码</span>
+<pre>def accept_or_reject(current, candidate, train, validation):
+    if train.num_trades &lt; MIN_TRADES:
+        return Reject("too_few_trades")
+    if validation.max_drawdown &lt; current.max_drawdown * 1.15:
+        return Reject("drawdown_regression")
+    if validation.turnover &gt; MAX_TURNOVER:
+        return Reject("turnover_too_high")
+    if complexity(candidate) - complexity(current) &gt; MAX_DELTA:
+        return Reject("complexity_increase")
+
+    # 带不确定性惩罚的多目标效用
+    # （并不要求 CI &gt; 0）
+    u_cand = utility_lcb(candidate.validation_returns, alpha=0.20)
+    u_curr = utility_lcb(current.validation_returns,   alpha=0.20)
+
+    if u_cand &gt; u_curr + EPS:
+        return Accept("utility_improvement")
+
+    # 即便无效用增益，帕累托改进者亦予接受
+    if pareto_dominates(candidate, current,
+                        keys=("validation_sharpe", "max_drawdown",
+                              "turnover", "complexity")):
+        return Accept("pareto_improvement")
+
+    if train.sharpe - validation.sharpe &gt; MAX_TRAIN_VAL_GAP:
+        return Reject("overfit_gap")
+
+    return Reject("no_meaningful_improvement")</pre>
+
+<p>有两处设计选择值得点明。第一，单次门控使用 \(\alpha = 0.20\) 的单侧效用下界，相较最终裁定所用的 95% 置信区间更为宽松，从而允许具有信息量的探索，同时仍对高方差候选施加惩罚。第二，帕累托改进的候选（在回撤、换手率或复杂度上有改善，而在夏普上不变差）将被接受：这能阻止循环固守单一在位策略，并奖励纯夏普选择会漏掉的风险结构改进。</p>
+
+<p>智能体仍然只接收类别化结果，不接收任何具体数值，因此外层循环验证与智能体可见反馈之间的密封性，不受此门控结构的影响。</p>
+</section>
+
+<section id="attack">
+<div class="section-marker">
+  <span class="section-num">§ 9.5</span>
+  <h2>五种攻击与对应的拦截</h2>
+</div>
+
+<p>抽象的不变量清单难以评估其价值。本节走过一个足够强的编码型智能体可能尝试的五种 <em>具体攻击</em>，每一种对应的不变量或检查，以及编辑器看到的拒绝信号。它们都不是假想——其变体已在多份关于 LLM 编码型智能体滥用评测框架的公开报告中出现。本节意在让读者直观看到：不变量套件不是可有可无的装饰，它正是允许 H1 裁定具有任何含义的全部前提。</p>
+
+<h3>攻击 1 · 最常见的：把目标前移用作特征</h3>
+
+<p>最简单也最尴尬的攻击：把目标变量向前 shift，再当作特征使用。</p>
+
+<span class="code-label">indicators/clever_signal.py —— 坏指标</span>
+<pre>def clever_signal(df):
+    """A 'predictive' signal."""
+    future_return = df['AdjC'].pct_change().shift(-1)
+    return (future_return > 0).astype(float)</pre>
+
+<p><strong>被拦截的位置：</strong> <code>no_future_shift</code>（静态 AST 检查）。字面量 <code>.shift(-1)</code> 是禁用模式，检查在任何回测之前触发。</p>
+
+<p><strong>编辑器看到：</strong> <code>rejected_invariant_failure</code>（类别：<code>safety_fail</code>）。反思器摘要记录："ast_static check forbade <code>.shift(-N)</code> in indicator function"。该次试验被记录，但任何指标数值从未产生。</p>
+
+<h3>攻击 2 · 微妙变体：全序列归一化</h3>
+
+<p>已经内化了静态规则的智能体可能尝试用归一化技巧规避检查。下例能通过 AST 检查，因为没有出现 <code>.shift(-N)</code>。</p>
+
+<span class="code-label">indicators/zscore_momentum.py —— 看似无害</span>
+<pre>def zscore_momentum(df, lookback=60):
+    raw = df['AdjC'].pct_change().rolling(lookback).sum()
+    # Normalise across the full series for "stability"
+    return (raw - raw.mean()) / raw.std()</pre>
+
+<p>该 bug 在 AST 层不可见：<code>raw.mean()</code> 与 <code>raw.std()</code> 是对 <em>整段</em> 序列计算的，因此时刻 \(t\) 的取值悄悄依赖于 \(t\) 之后的数据。在回测中，此信号会显得校准得离奇地好。</p>
+
+<p><strong>被拦截的位置：</strong> <code>prefix_stability</code>（动态检查）。运行器分别在完整训练序列与截至 \(t\) 的前缀序列上计算指标，对若干抽样的 \(t\) 进行比对。结果在数值上存在微小但非零的差异，断言失败。</p>
+
+<p><strong>编辑器看到：</strong> <code>rejected_invariant_failure</code>；反思器摘要："prefix_stability check found indicator value at t=1000 differs between full-series and prefix evaluation by 0.043; whole-series statistics are not allowed"。编辑器从记忆中习得："不要使用未居中或未按窗口缩放的全序列统计"。</p>
+
+<h3>攻击 3 · 用异常处理隐藏亏损</h3>
+
+<p>面临指标压力的智能体可能尝试在 <code>try/except</code> 块内吞掉亏损交易，期望门控只统计幸存下来的交易。</p>
+
+<span class="code-label">对仓位逻辑的提议改动 —— 坏</span>
+<pre>def position(signal, ret):
+    try:
+        # Only count this bar if return is positive
+        assert ret > 0
+        return signal
+    except AssertionError:
+        return 0</pre>
+
+<p><strong>被拦截的位置：</strong> <code>no_python_edit</code>（智能体根本不允许编辑 <code>policy_interpreter.py</code>，仓位逻辑在那里）<em>且</em> 若它把这段写进某个指标内，<code>whitelisted_imports_only</code> 也会失败（指标返回一条序列，而非按 K 线决策，结构本身不合法）。即便某个创造性的变体绕过了两者，<code>cost_model_required</code> 也会拦截：丢弃交易而不记录对应成交与成本的策略，其交易数与成本将不再与换手率成比例。</p>
+
+<p><strong>编辑器看到：</strong> <code>rejected_invariant_failure</code>，附被禁模块的具体名称。该次试验以 <code>safety_fail</code> 类别记录，并计入最终报告第三层的 safety_fail 计数。</p>
+
+<h3>攻击 4 · 绕开文件系统偷读原始 OHLCV</h3>
+
+<p>编辑器的上下文本来应是脱敏的，但一个 Python 指标可能尝试在执行期间直接读取数据文件以绕过脱敏。</p>
+
+<span class="code-label">indicators/cheater.py —— 坏</span>
+<pre>import pandas as pd
+def cheater(df):
+    real = pd.read_parquet('data/spy.parquet')
+    return real['AdjC'].pct_change().shift(-1)</pre>
+
+<p><strong>被拦截的位置：</strong> <code>whitelisted_imports_only</code> 允许 <code>pandas</code> 模块，但 <code>sandbox_execution</code> 在禁止文件系统访问的命名空间中运行指标；<code>pd.read_parquet</code> 抛出 <code>PermissionError</code>。即便读取意外成功，<code>.shift(-1)</code> 仍会触发 AST 检查。</p>
+
+<p><strong>编辑器看到：</strong> <code>rejected_invariant_failure</code>；反思器摘要："sandbox_execution: filesystem access denied"。编辑器的记忆累积起明确的"不要尝试 I/O"规则。</p>
+
+<h3>攻击 5 · 用命名探测日历信息</h3>
+
+<p>编辑器看不到日历年份，但它可能在假设文本中提出引导性问题，期望反思器（确实能看到一些指标摘要）补全空白。</p>
+
+<span class="code-label">runs/00NN/editor.yaml —— 探测式假设</span>
+<pre>hypothesis: |
+  Was the most recent drawdown caused by the 2020 COVID
+  crash? If so we need a vol-target sizing layer.
+proposed_edit:
+  type: change_sizing_mode
+  ...</pre>
+
+<p><strong>被拦截的位置：</strong> <code>no_data_snooping</code> 扫描编辑器输出，匹配四位年份数字（1900–2099）与一份精选的命名市场事件列表。任意匹配将在候选系统构建之前直接拒绝。反思器从不看到此提案文本。</p>
+
+<p><strong>编辑器看到：</strong> <code>rejected_invariant_failure</code>；反思器摘要："no_data_snooping: forbidden token '2020' in editor.yaml"。报告第三层的 <code>snoop_triggers</code> 计数递增，且公开报告。</p>
+
+<div class="aside warn">
+<span class="aside-label">本节是什么，不是什么</span>
+本节并非安全审计。一个足够坚定的对手原则上可以发明当前不变量套件未预见到的攻击（如把未来数据编码进指标的 docstring、利用前缀稳定性检查容忍的浮点小技巧等）。不变量套件的设计目标是赢下常见情形，而不是对无限对手做到密不透风。§10 中的 <em>无约束 Python 消融</em> 就是对"关闭套件后情况会糟糕到什么程度？"的实证回答，也是项目能为 H2 提供的最有力证据。
+</div>
+</section>
+
+<section id="evaluation">
+<div class="section-marker">
+  <span class="section-num">§ 10</span>
+  <h2>评测与基线</h2>
+</div>
+
+<p>H1/H2/H3 的裁定通过与基线和消融实验的对比给出。</p>
+
+<table>
+  <thead>
+    <tr><th>基线</th><th>用途</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>SPY 买入持有</td><td>市场参照，提供制度背景</td></tr>
+    <tr><td>SMA(20, 100) 双均线</td><td>经典启发式基线</td></tr>
+    <tr><td>DSL 上的随机搜索</td><td>无信息搜索基线</td></tr>
+    <tr><td>DSL 上的网格搜索</td><td>暴力参数搜索</td></tr>
+    <tr><td>DSL 上的贝叶斯优化</td><td>有信息参数搜索基线</td></tr>
+    <tr><td>LLM 单次提案</td><td>检验"迭代是否带来增益"</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <thead>
+    <tr><th>消融</th><th>所回答的问题</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>仅编辑 DSL 的 LLM（无指标合成）</td><td>程序合成是否在参数调整之外带来贡献？</td></tr>
+    <tr><td>无记忆（每次试验清空 trials.jsonl）</td><td>持久记忆是否带来贡献？</td></tr>
+    <tr><td>无策展器</td><td>压缩是否带来贡献？</td></tr>
+    <tr><td>把原始验证夏普暴露给智能体</td><td>脱敏在多大程度上阻止了泄漏？</td></tr>
+    <tr><td>无不变量套件（不受约束的 Python）</td><td>智能体多快开始奖励黑客？</td></tr>
+  </tbody>
+</table>
+
+<p>第一项消融至关重要：它隔离出程序合成层是否带来增量价值。如果完整 LBG-Trader 未能击败仅 DSL 的 LLM 基线，那么 LBG 论断按其自身标准失败。</p>
+
+<div class="two-col">
+  <div class="col-card">
+    <h4>第一层 · H1 裁定</h4>
+    <ul style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7;">
+      <li>密封夏普 + 分块自助 95% 置信区间</li>
+      <li>密封夏普相对最强基线的差距</li>
+      <li>密封最大回撤</li>
+      <li>验证集到密封集的退化</li>
+    </ul>
+  </div>
+  <div class="col-card alt">
+    <h4>第二层 · LBG 对比随机搜索</h4>
+    <ul style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7;">
+      <li>接受率随时间的趋势（早期对比晚期）</li>
+      <li>假设校准度趋势</li>
+      <li>模式复用率</li>
+      <li>编辑类型分布的漂移</li>
+    </ul>
+  </div>
+  <div class="col-card">
+    <h4>第三层 · H2 方法论</h4>
+    <ul style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7;">
+      <li>各类别的不变量失败率</li>
+      <li>违规文件访问尝试次数</li>
+      <li>窥探触发次数</li>
+      <li>过拟合差距轨迹</li>
+    </ul>
+  </div>
+  <div class="col-card alt">
+    <h4>第四层 · 成本诚实</h4>
+    <ul style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7;">
+      <li>按角色统计的 token 总量</li>
+      <li>墙钟耗时</li>
+      <li>每百万 token 的密封夏普</li>
+      <li>每美元的密封夏普</li>
+    </ul>
+  </div>
+</div>
+
+<p>第二层是最容易被忽视、却最为关键的一层。一个系统完全可能凭借幸运的迭代搜索在第一层击败基线。第二层的度量则检验智能体在运行过程中是否 <em>真的在学习</em>。第四层是对 Weng 博文中最关键批评的直接回应：<em>如果不计入智能体计算成本，样本效率毫无意义</em>。</p>
+
+<h3>具体对比：同一起点下的 DSL-only 与完整 LBG</h3>
+
+<p>为了把消融做得具体，下面给出一个示意性的并列：两套系统从同一启发式系统起点、在同一段数据上的前十次试验各做了什么。数值是示意性的（真实对比在最终报告中给出），关键在于每套系统进展的 <em>形态</em>。每一行对应一次试验。</p>
+
+<table class="spec-table" style="margin: 18px 0;">
+  <thead>
+    <tr><th>#</th><th>仅 DSL LLM · 动作</th><th>判定</th><th>完整 LBG · 动作</th><th>判定</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>parameter_change · SMA 窗口 20→50</td><td class="yes">接受</td><td>parameter_change · SMA 窗口 20→50</td><td class="yes">接受</td></tr>
+    <tr><td>2</td><td>parameter_change · 仓位比例 0.5→0.8</td><td class="no">回撤恶化拒绝</td><td>parameter_change · 仓位比例 0.5→0.8</td><td class="no">回撤恶化拒绝</td></tr>
+    <tr><td>3</td><td>add_filter · RSI &lt; 30 入场</td><td class="no">换手率拒绝</td><td>add_indicator · realised_vol(20)</td><td class="yes">接受</td></tr>
+    <tr><td>4</td><td>parameter_change · sma 窗口 50→100</td><td class="no">无显著改进拒绝</td><td>change_sizing_mode · → vol_target(0.12)</td><td class="yes">接受</td></tr>
+    <tr><td>5</td><td>parameter_change · sma 窗口 50→30</td><td class="no">回撤恶化拒绝</td><td>add_indicator · vol_adj_momentum(60, 20)</td><td class="yes">接受（帕累托）</td></tr>
+    <tr><td>6</td><td>add_filter · MACD 金叉</td><td class="partial">接受（小幅改进）</td><td>add_filter · vol_adj_momentum &gt; 0</td><td class="yes">接受</td></tr>
+    <tr><td>7</td><td>parameter_change · fraction 0.5→0.6</td><td class="no">无显著改进拒绝</td><td>change_exit_rule · 10% 跟踪止损</td><td class="partial">接受（小幅改进）</td></tr>
+    <tr><td>8</td><td>parameter_change · fraction 0.5→0.4</td><td class="partial">接受（回撤改善）</td><td>add_indicator · regime_filter(50, 200)</td><td class="no">复杂度拒绝</td></tr>
+    <tr><td>9</td><td>add_filter · 价格 vs 200-SMA</td><td class="no">无显著改进拒绝</td><td>simplify · 删除冗余 SMA 过滤</td><td class="yes">接受</td></tr>
+    <tr><td>10</td><td>remove_filter · 删除 RSI 出场（第 6 次添加）</td><td class="no">回撤恶化拒绝</td><td>parameter_change · vol_target 0.12→0.10</td><td class="yes">接受</td></tr>
+  </tbody>
+</table>
+
+<p>这段假想运行中值得注意的几条模式：</p>
+
+<ul>
+  <li><strong>接受率不同。</strong> 这一截面中，仅 DSL 系统 10 次试验只接受 2 次；完整 LBG 接受 8 次。最终报告中的合规对比是终态夏普，而非接受率，但发现循环陷入饥饿是动作空间过窄的领先指标。</li>
+  <li><strong>接受的种类不同。</strong> 仅 DSL 系统的接受是微调（更小的仓位比例）；完整 LBG 的接受包含能力增加（一层新的波动率感知仓位、一个新的过滤信号）。后者改变了特征集合；前者做不到。</li>
+  <li><strong>两者都会犯错。</strong> 完整 LBG 第 8 次因复杂度被拒——智能体在制度识别器上过度膨胀。这是预期内的；门控的复杂度惩罚正是为压制此类失败模式而设。该拒绝写入记忆，可在后续试验中抑制类似动作。</li>
+  <li><strong>仅 DSL 也能产出一些东西。</strong> 第 1、6、8 次接受确实带来 <em>某种</em> 相对起点的改进。H1 要问的不是"仅 DSL 能否带来改进？"——能。H1 要问的是"程序合成层是否带来 <em>更多</em> 改进？"密封测试给出答案。</li>
+</ul>
+
+<div class="aside">
+<span class="aside-label">为何必须由密封测试裁定</span>
+若以验证集表现为判据来评判 DSL-only 与完整 LBG，H1 论断便成循环：两套系统都明确在搜索"能通过验证门控的东西"，互相在验证上击败对方只是度量搜索效率，不是泛化。密封测试是两套系统都未被允许适应的唯一窗口。§10.5 在密封窗口上的配对差值自助检验，正是把这个示例从轶事提升为证据的关键步骤。
+</div>
+</section>
+
+<section id="evalmath">
+<div class="section-marker">
+  <span class="section-num">§ 10.5</span>
+  <h2>评测数学</h2>
+</div>
+
+<p>§10 给出的指标清单是菜单，本节则是食谱。§10.5 中所有内容都设计为可被 <em>预注册</em>：在密封测试打开之前写下、提交到 git、并予以冻结。如果没有预注册，多重比较偏差将吞没框架所能产生的任何裁定。</p>
+
+<h3>第零层：在一切之前的健全性检查</h3>
+
+<p>在任何 LLM 驱动的试验运行之前，回测引擎必须先通过五项健全性检查。它们是工程计划第 1 周的退出条件：</p>
+
+<ul>
+  <li>买入持有指标与独立实现的参考值在容差范围内一致。指示性区间：SPY 2010–2018 年化夏普视成本假设处于 0.7–0.9 区间，本提案不预先承诺确切数值，但承诺与独立实现一致。</li>
+  <li>随机搜索在扣除成本后的中位夏普接近零。</li>
+  <li>SMA 双均线在两次独立运行中按位等价（bit-equivalence）。</li>
+  <li>动态前瞻不变量能够捕获一个合成的作弊指标。</li>
+  <li>成本模型不变量能够捕获一个合成的零成本回测。</li>
+</ul>
+
+<p>任一第零层检查失败，发现运行不得启动。</p>
+
+<h3>第一层：密封裁定</h3>
+
+<p>H1 的主要检验是关于 LBG-Trader 与最强预注册基线之间密封夏普 <em>差值</em> 的分块自助置信区间：</p>
+
+<div class="math">
+\[
+\Delta S \;=\; \text{Sharpe}(H_\text{final},\, D_\text{sealed}) \;-\; \text{Sharpe}(B^{*},\, D_\text{sealed})
+\]
+<span class="where">\(B^{*}\) 是在 <code>analysis_plan.yaml</code> 中预注册的最强基线。本里程碑下为 DSL 上的贝叶斯优化。"最强"由验证集决定，且必须在密封测试 <em>打开之前</em> 选定；选定结果不得在看到密封结果后修改。</span>
+</div>
+
+<div class="math">
+\[
+\begin{aligned}
+\textbf{H1 强结论：} \quad & \operatorname{lower bound}\bigl(\,\text{CI}_{95}(\Delta S)\,\bigr) \;>\; 0 \\[6pt]
+\textbf{H1 弱结论：} \quad & \text{Sharpe}(H_\text{final}) \;>\; \text{Sharpe}(B^{*}) \\
+& \text{且 } \operatorname{MaxDD}(H_\text{final}) \text{ 不劣于 } \operatorname{MaxDD}(B^{*}) \\
+& \text{且换手率、成本处于预注册范围内}
+\end{aligned}
+\]
+<span class="where">置信区间通过移动块自助法（moving block bootstrap）计算，块长 \(\text{block\_len} = 10\)，重抽次数 \(n_\text{bootstrap} = 1000\)，应用于 LBG-Trader 与 \(B^{*}\) 在密封窗口上配对的日度收益序列。强结论决定头条裁定；弱结论作为补充材料一同报告。</span>
+</div>
+
+<p>这一检验比"LBG 的置信区间下界超过 \(B^{*}\) 的点估计"更严格。差别在于：直接比较差值分布可避免一个常见陷阱：两个不重叠的置信区间被声称为显著，但实际差值并不显著。</p>
+
+<p>选择块长为 10 的依据在于：日度收益存在短期序列自相关，独立同分布自助会低估方差，块长大约取相关程度的两到三倍较为稳健，10 个交易日（约两周）覆盖典型的短期相关窗口。</p>
+
+<h3>第二层：过程指标的形式化</h3>
+
+<p>第二层回答 <em>框架是否真的在学习？</em> 这一问题，与最终策略是否优秀无关。三个量化检验：</p>
+
+<div class="math">
+\[
+\begin{aligned}
+\text{acc}_\text{first} &= \frac{\#\,\text{前半段被接受的试验}}{N/2} \\[6pt]
+\text{acc}_\text{late} &= \frac{\#\,\text{后半段被接受的试验}}{N/2} \\[6pt]
+\Delta_\text{acc} &= \text{acc}_\text{late} \;-\; \text{acc}_\text{first}
+\end{aligned}
+\]
+<span class="where">\(\Delta_\text{acc}\) 为正与"学习正在发生"一致，但并非充要条件：策略变强后，验证门控本身也会结构性地变得更难通过。该量与其它指标一同报告，不作为硬性门槛。</span>
+</div>
+
+<div class="math">
+对每一次试验 \(k\)，编辑器预测 \(\hat{y}_k \in \{\text{accept},\ \text{reject\_drawdown},\ \text{reject\_turnover},\ \text{reject\_complexity},\ \text{reject\_no\_significant\_improvement}\}\)，编排器记录实际结果 \(y_k\)。
+
+\[
+\text{校准准确度} \;=\; \frac{1}{N}\sum_{k=1}^{N}\, \mathbf{1}\bigl[\hat{y}_k = y_k\bigr]
+\]
+
+若编辑器输出关于结果的概率分布 \(p_{k,c}\)，则计算多类 Brier 分数：
+
+\[
+\text{Brier} \;=\; \frac{1}{N}\sum_{k=1}^{N}\, \sum_c \bigl( p_{k,c} \;-\; \mathbf{1}[y_k = c] \bigr)^{2}
+\]
+<span class="where">Brier 分数随试验数下降，是编辑器正在学会预测哪些编辑能通过门控的直接证据。这种过程改进恰好是把 LBG 与随机搜索区分开的关键。</span>
+</div>
+
+<div class="math">
+\[
+\begin{aligned}
+\text{复用率} &\;=\; \frac{\#\,\text{首次策展器周期之后引用某技能档的试验}}{\#\,\text{首次策展器周期之后的全部试验}} \\[8pt]
+\text{技能档命中率}(s) &\;=\; \frac{\#\,\text{使用技能档 } s \text{ 且被接受的试验}}{\#\,\text{使用技能档 } s \text{ 的试验}}
+\end{aligned}
+\]
+<span class="where">如果复用率随运行进程上升，且至少存在一个技能档 \(s\) 的命中率超过全局接受率，则技能档存储具有存在价值。从未超过基础接受率的技能档将被策展器废弃。</span>
+</div>
+
+<h3>第三层：方法论安全</h3>
+
+<p>不变量失败并非同质。编排器对失败进行分类，最终报告予以分类展示：</p>
+
+<table class="spec-table">
+  <thead>
+    <tr><th>类别</th><th>含义</th><th>重要性</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>hard_fail</code></td><td>无法运行（语法错误、沙箱崩溃）</td><td>表明智能体产生了结构错误的提案。</td></tr>
+    <tr><td><code>safety_fail</code></td><td>前瞻、数据窥探、规避成本、违规文件访问</td><td>奖励黑客尝试的直接证据。最重要。</td></tr>
+    <tr><td><code>quality_fail</code></td><td>交易过少、换手率过高、复杂度爆炸</td><td>表明智能体在探索，但未满足门控规范。</td></tr>
+  </tbody>
+</table>
+
+<p>如果运行中 <code>safety_fail</code> 计数非零，这就是 H2 的正向证据：不变量套件正是唯一阻止这些尝试污染裁定的机制。报告会逐项列出每一次 safety_fail，包括试验编号、尝试的攻击路径、以及哪一条不变量将其捕获。</p>
+
+<h3>第四层：成本诚实，逐项列出</h3>
+
+<div class="math">
+\[
+\begin{aligned}
+\text{tokens}_\text{total} &\;=\; \text{tokens}_\text{editor} + \text{tokens}_\text{reflector} + \text{tokens}_\text{curator} \\[6pt]
+\text{dollars}_\text{total} &\;=\; \sum_{r \in \{\text{ed, ref, cur}\}}\, \text{price}(\text{model}_r,\, \text{tokens}_r) \\[8pt]
+\text{每百万 token 接受数} &\;=\; \frac{\#\,\text{被接受的试验}}{\text{tokens}_\text{total}\,/\,10^{6}} \\[6pt]
+\text{每百万 token 夏普} &\;=\; \frac{\text{Sharpe}(H_\text{final},\, D_\text{sealed})}{\text{tokens}_\text{total}\,/\,10^{6}} \\[6pt]
+\text{每美元夏普} &\;=\; \frac{\text{Sharpe}(H_\text{final},\, D_\text{sealed})}{\text{dollars}_\text{total}}
+\end{aligned}
+\]
+</div>
+
+<p>这些数字与夏普并列出现在头部对比表中。若审稿人希望在等同算力前提下将 LBG-Trader 与网格搜索或贝叶斯优化作比较，无需重算即可看到这两组数据。</p>
+
+<h3>第五层：选择偏倚与预注册</h3>
+
+<p>对裁定最隐蔽的威胁不是前瞻，而是多重比较。框架运行多种配置（完整 LBG、仅 DSL、无记忆、无策展器，以及基线集合），若朴素地报告"最优配置达到显著"，结果会系统性夸大效应。</p>
+
+<p>缓解措施：在任何密封测试打开之前，将一份 <code>analysis_plan.yaml</code> 提交到 git，内容包括：</p>
+
+<span class="code-label">analysis_plan.yaml</span>
+<pre>primary_comparison:
+  test: block_bootstrap_difference
+  candidate: full_lbg_trader
+  reference: best_validation_pre_sealed_baseline
+  metric: sealed_sharpe
+  ci: 0.95
+  success_rule: lower_bound_gt_zero
+  block_len: 10
+  n_bootstrap: 1000
+
+secondary_comparisons:
+  - full_lbg_trader vs llm_dsl_only
+  - full_lbg_trader vs no_memory_ablation
+  - full_lbg_trader vs no_curator_ablation
+  - full_lbg_trader vs unconstrained_python_ablation
+
+reported_metrics:
+  - sealed_sharpe
+  - sealed_max_drawdown
+  - validation_to_sealed_degradation
+  - acceptance_rate_trend
+  - hypothesis_calibration
+  - reuse_rate
+  - safety_fail_count
+  - tokens_total
+
+multiple_testing_correction:
+  family: secondary_comparisons
+  method: holm_bonferroni
+  family_wise_error_rate: 0.05</pre>
+
+<p>主比较是单一检验，其 <em>p</em> 值（等价地，置信区间下界）即 H1 裁定。次级比较使用 Holm-Bonferroni 法控制族系误差率（FWER）于 0.05。任何未在密封测试打开之前出现在 <code>analysis_plan.yaml</code> 中的比较，将被报告为"事后探索性比较"，且明确不可用于支持 H1。</p>
+
+<p>关于 Holm-Bonferroni 法的简要说明：它按照 <em>p</em> 值从小到大顺序，将第 \(i\) 个比较的临界值设为 \(\alpha / (m - i + 1)\)（\(m\) 为比较数）。相较于 Bonferroni 法的均匀划分，该方法在保持族系误差率控制的同时具有更高的检验功效，是医学和心理学论文中的标准做法。</p>
+
+<div class="aside">
+<span class="aside-label">本节为何最关键</span>
+本提案其余部分（不变量套件、脱敏反馈、策展器、双引擎切分）所防范的都是具体的奖励黑客与过拟合机制。<code>analysis_plan.yaml</code> 防范的是 ML 研究论文最常见的失败模式：在看到数据之后才决定测量哪个量。没有预注册，即使一项被完美执行的实验，其裁定也不应被任何诚实的审稿人接受。
+</div>
+</section>
+
+<section id="hlfit">
+<div class="section-marker">
+  <span class="section-num">§ 10.6</span>
+  <h2>LBG-Trader 如何兑现 HL 的承诺</h2>
+</div>
+
+<p>第二部分至此已完整规范了方法论。本节回身把整套方法论与 Weng 博文所结晶的 <em>启发式学习</em>（Heuristic Learning, HL）框架做一次审计——HL 是学习对象为软件而非权重的学习循环。该博文列出了 HL 应具备的五项性质。在前文已逐一交代各项机制的基础上，我们现在可以把每一项性质视作可被检验的承诺，并指向兑现它的具体章节。如果未来有审稿人发问"贵项目是真的实现了 HL，还是只是在挪用术语？"，§10.6 就是审计线索；下文的每一条引用都向后回看，指向读者已经读过的规范。</p>
+
+<h3>Weng 风格的维度表，增列一栏</h3>
+
+<p>Weng 博文给出一个双列对比（Deep RL vs HL）。下表第三列是 LBG-Trader 的具体兑现。重点不是论证 HL 的普适性（博文已经做了），而是展示 HL 中的每一个抽象槽位在本项目中由哪个具名文件或函数填上。</p>
+
+<table class="spec-table" style="margin: 18px 0;">
+  <thead>
+    <tr>
+      <th style="width: 14%;">维度</th>
+      <th style="width: 24%;">Deep RL</th>
+      <th style="width: 28%;">HL（Weng，通用）</th>
+      <th style="width: 34%;">LBG-Trader（本里程碑）</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><em>Policy</em>（策略）</td>
+      <td>神经网络参数 \(\theta\)</td>
+      <td>代码：规则、状态机、控制器、MPC、宏动作</td>
+      <td><code>strategy.yaml</code>（声明式 DSL）+ <code>indicators/*.py</code>（智能体编写的信号）+ <code>policy_interpreter.py</code>（固定的透明引擎）</td>
+    </tr>
+    <tr>
+      <td><em>State</em>（状态）</td>
+      <td>隐式观测张量</td>
+      <td>显式变量、检测器、缓存等可表示的东西</td>
+      <td>指标产出的特征表；指标函数内部的滚动缓存；制度检测器（一个指标即可作为检测器）</td>
+    </tr>
+    <tr>
+      <td><em>Action</em>（动作）</td>
+      <td>神经网络一次 forward</td>
+      <td>代码执行</td>
+      <td><code>policy_interpreter.run(strategy.yaml, features_t) → p_t ∈ [0, 1]</code>，确定性、亚毫秒级、无 LLM</td>
+    </tr>
+    <tr>
+      <td><em>Feedback</em>（反馈）</td>
+      <td>固定标量奖励</td>
+      <td>编码型智能体能消化的任何东西：测试、环境反馈、日志、回放、视频、人类反馈</td>
+      <td>类别化门控信号（<code>accepted</code> / <code>rejected_drawdown_regression</code> / …）加公开训练摘要。<em>刻意不传递原始验证数值</em>，以防 H1 被泄漏破坏（§7）</td>
+    </tr>
+    <tr>
+      <td><em>Update</em>（更新）</td>
+      <td>对 \(\theta\) 做梯度更新</td>
+      <td>编码型智能体直接修改源代码</td>
+      <td>编辑器每次试验提议 8 种离散编辑类型之一；编排器先运行不变量、再运行门控；GitManager 提交被接受的编辑</td>
+    </tr>
+    <tr>
+      <td><em>Memory</em>（历史记录）</td>
+      <td>无（on-policy）或 replay buffer（off-policy）</td>
+      <td>试验日志、摘要、失败原因、回放、版本 diff</td>
+      <td>四层（§6.6）：事件（<code>trials.jsonl</code>）、语义（<code>accepted_rules.md</code>）、技能档（<code>skills/*.yaml</code>）、产物（<code>artifacts/accepted/trial_NNNN/</code>）；外加 git 谱系</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>五项 HL 性质，各自映射到具体机制</h3>
+
+<p>Weng 列出了 HL <em>应</em> 具备的五项性质。下面给出 LBG-Trader 对每一项的兑现机制，以及本文中该机制的具体出处。意图是让隐含承诺变得可被审计。</p>
+
+<div class="two-col">
+  <div class="col-card">
+    <h4>1 · 可解释性</h4>
+    <p style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7; margin: 0 0 10px;"><strong>HL 论断。</strong> 代码策略可翻译为人话；神经网络难以解释。</p>
+    <p style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7; margin: 0 0 10px;"><strong>LBG-Trader 机制。</strong> 每个被接受的策略由 (<code>strategy.yaml</code>, <code>indicators/*.py</code>) 配对构成。YAML 是声明式且小巧的；每个指标都是带强制 docstring 的纯 Python 函数；策略解释器固定且可读。最终报告（§17）为每个被接受产物附"一段话讲清策略"的渲染。</p>
+    <p style="font-family: var(--sans); font-size: 13px; color: var(--ink-muted); margin: 0;"><em>验证位置：</em> §4.5（启发式系统形式化）、§6.6（技能档附证据）、§17（最终报告版式）。</p>
+  </div>
+  <div class="col-card alt">
+    <h4>2 · 样本效率</h4>
+    <p style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7; margin: 0 0 10px;"><strong>HL 论断。</strong> 一次有效代码更新即可跳到新策略，无需慢慢爬梯度。</p>
+    <p style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7; margin: 0 0 10px;"><strong>LBG-Trader 机制。</strong> 每次被接受的试验都是代码空间中的结构性跳跃。发现预算为每次运行 50 次试验，足够是因为每次编辑可改变特征集合，而不仅仅是参数——这是 BO / 网格基线做不到的。评测第四层（§10.5）显式报告"每百万 token 夏普"与夏普并列，使效率论断在等同算力下可与梯度类基线对比。</p>
+    <p style="font-family: var(--sans); font-size: 13px; color: var(--ink-muted); margin: 0;"><em>验证位置：</em> §5（双时间尺度）、§10.5 第四层（成本诚实）。</p>
+  </div>
+  <div class="col-card">
+    <h4>3 · 可回归 / 可验证</h4>
+    <p style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7; margin: 0 0 10px;"><strong>HL 论断。</strong> 旧能力可变成测试、回放或 golden case，在未来变更中存活。</p>
+    <p style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7; margin: 0 0 10px;"><strong>LBG-Trader 机制。</strong> 每次被接受的试验都在 <code>artifacts/accepted/trial_NNNN/</code> 下冻结一个快照。不变量套件在每次候选上重跑，因此任何破坏旧指标前缀稳定性的新编辑都会在被接受之前先失败。失败方向记录在 <code>failed_directions.md</code> 中，用于裁剪后续编辑器提议。策展器每周期对照最新试验集重新验证技能档（§6.6）。</p>
+    <p style="font-family: var(--sans); font-size: 13px; color: var(--ink-muted); margin: 0;"><em>验证位置：</em> §6.5（GitManager + SkillManager）、§9（每候选都跑不变量）、§10 第三层（过程指标）。</p>
+  </div>
+  <div class="col-card alt">
+    <h4>4 · 可约束过拟合</h4>
+    <p style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7; margin: 0 0 10px;"><strong>HL 论断。</strong> 代码启发式也会过拟合，但简化、回归、多 seed 检查能形成一种工程正则化。</p>
+    <p style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7; margin: 0 0 10px;"><strong>LBG-Trader 机制。</strong> 我们叠加四道防线：(a) 密封评测（§7），最强一道，运行末尾一次性打开；(b) 多目标门控中的复杂度惩罚（§9），拒绝过大的编辑；(c) 显式可用的 <code>simplify</code> 编辑类型；(d) 在新密封窗口上的重新发现（§13），策略层面的"多 seed"等价物。</p>
+    <p style="font-family: var(--sans); font-size: 13px; color: var(--ink-muted); margin: 0;"><em>验证位置：</em> §7、§9、§10.5 第五层（预注册）、§13（重新发现节奏）。</p>
+  </div>
+  <div class="col-card">
+    <h4>5 · 避免灾难性遗忘</h4>
+    <p style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7; margin: 0 0 10px;"><strong>HL 论断。</strong> 旧能力不必由模型自己记住，可以被写进 rule set 和测试里。</p>
+    <p style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7; margin: 0 0 10px;"><strong>LBG-Trader 机制。</strong> git 历史永久保留：每次试验一次提交，每个策展器周期一个分支，不做 rebase。<code>accepted_rules.md</code> 在每次压缩中保留（策展器合并而非无记录删除）。技能档存储携带显式证据指针。任何历史策略产物都可按名称检出并重跑；LLM 无需记住任何东西，框架为它记住。</p>
+    <p style="font-family: var(--sans); font-size: 13px; color: var(--ink-muted); margin: 0;"><em>验证位置：</em> §6.6（四层记忆）、§10（git 纪律）、§13（重新发现间的谱系）。</p>
+  </div>
+  <div class="col-card alt" style="grid-column: 1 / -1;">
+    <h4>额外性质 · Weng 博文暗示但未命名</h4>
+    <p style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7; margin: 0 0 10px;"><strong>"有一类原来因为维护成本太高而不值得写的启发式，现在突然可能值得长期拥有了。"</strong></p>
+    <p style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7; margin: 0;"><strong>LBG-Trader 机制。</strong> 技能档（§6.6）的整套概念正是为此而设。技能档不是一次性优化，而是带证据、被框架在每个策展器周期重新验证的可维护配方。因子卡片导出（§6.6）把同一思想推广到信号层，使项目的产出成为一份已评测启发式的图书馆，而非单一策略的点估计。若 H1 成立，这一性质是把框架定位为 <em>研究产品</em>（而非一次性实验）的最终依据。</p>
+  </div>
+</div>
+
+<h3>本映射不承诺什么</h3>
+
+<p>两点提醒。第一，满足 HL 性质清单本身并不意味着策略一定泛化——后者由密封测试裁定，H1 / H2 / H3 给出最终结论。HL 性质是必要的基础设施，不是裁定本身。第二，交易引入了 Weng 在 Atari 套件上的实验未触及的失败模式（对抗性回测面、分布漂移、LLM 中潜在的日历先验）。不变量套件（§9）与脱敏反馈纪律（§7）正是为防止 HL 所承诺的性质被这些交易特有的压力悄悄瓦解而存在。如果没有这些防线，上述每条性质技术上仍然成立，但最终策略仍会是错的。</p>
+</section>
+
+<div class="part-marker">
+  <span class="roman">III.</span>
+  <span class="part-title">生命周期：从密封评测到部署</span>
+</div>
+
+<section id="stages">
+<div class="section-marker">
+  <span class="section-num">§ 11</span>
+  <h2>四个阶段</h2>
+</div>
+
+<p>这一部分是连接科学评测与工程部署的桥梁。每个阶段都有清晰的边界、各自的交付物、各自的通过/不通过决策。阶段之间的迁移由人审议把控，绝不自动晋级。</p>
+
+<div class="stage-row">
+  <div class="stage-num">
+    1
+    <span class="stage-label">发现</span>
+  </div>
+  <div class="stage-content">
+    <h4>密封评测的 LBG 运行</h4>
+    <p>发现引擎在选定标的与日期范围上运行一次 LBG 循环。输出：冻结后的 <code>strategy.yaml</code> + <code>indicators/*.py</code> 产物、一次密封测试裁定、一份最终报告。这是科学核心，针对本次标的、本段时期、本套协议回答 H1/H2/H3。</p>
+    <p class="stage-meta">时长：数小时至一天 · 成本：数十美元的 token · 交付物：策略产物</p>
+  </div>
+</div>
+
+<div class="stage-row">
+  <div class="stage-num">
+    2
+    <span class="stage-label">前向验证</span>
+  </div>
+  <div class="stage-content">
+    <h4>在严格晚于密封窗口的数据上的样本外回测</h4>
+    <p>冻结后的策略针对整个发现流程从未触碰的数据运行：<strong>严格晚于密封窗口末日的数据</strong>。对本里程碑（密封为 2021–2024）而言，第二阶段始于 2025-01-01，使用策略冻结后累积的真实历史。该数据在产物被密封之后才获取，任何发现运行都无法获得。</p>
+    <p>交付物是一份回测-前向差距报告，以及进入第三阶段与否的决策信号。如果策略的前向表现明显劣于其密封预期，则在此处出局，不再晋级。</p>
+    <p class="stage-meta">时长：数分钟 · 成本：可忽略 · 交付物：通过/不通过决策</p>
+  </div>
+</div>
+
+<div class="stage-row">
+  <div class="stage-num">
+    3
+    <span class="stage-label">模拟交易</span>
+  </div>
+  <div class="stage-content">
+    <h4>实时数据、模拟成交</h4>
+    <p>执行引擎在实时市场数据上运行冻结后的策略，使用模拟成交。循环中没有 LLM，只有 <code>policy_interpreter.py</code> 在执行确定性规则。交付物是一个实时仪表盘、一份每日决策日志，以及一个持续更新的回测-模拟差距监控。这是"模拟实践"：系统按实盘方式运行，具备全部操作机制，但不投入真实资金。</p>
+    <p class="stage-meta">时长：数月 · 成本：仅数据源 · 交付物：实盘绩效记录</p>
+  </div>
+</div>
+
+<div class="stage-row">
+  <div class="stage-num">
+    4
+    <span class="stage-label">实盘资金</span>
+  </div>
+  <div class="stage-content">
+    <h4>真实资金、券商对接</h4>
+    <p>本提案不覆盖此阶段，但已预留设计空间：执行引擎对接券商，使用少量真实资金交易。风控监控、断路器、对账、审计，均属量化运营的标准实践。该阶段为可选，且以第三阶段表现为通过条件。</p>
+    <p class="stage-meta">时长：持续 · 成本：券商费用 · 交付物：真实收益</p>
+  </div>
+</div>
+
+<p>四个阶段共同遵守两条原则。</p>
+
+<p>第一，<strong>每个阶段的交付物只供下一阶段消费，不跨阶段消费</strong>。第一阶段产出冻结产物；第二阶段消费该产物并产出通过/不通过信号；第三阶段（仅在第二阶段通过时）消费该产物并产出实盘绩效记录；第四阶段（仅在第三阶段表现持续时）消费实盘绩效记录。不得跳级。</p>
+
+<p>第二，<strong>只有第一阶段调用 LLM</strong>。第二、三、四阶段都是纯粹的确定性 Python，仅运行冻结产物。这正是 §5 双时间尺度切分的工程意义：实盘运行无任何 LLM 依赖、无任何按 K 线计费的 token 成本、无任何 LLM 可用性中断风险传导到交易。</p>
+
+<h3>各阶段的"典型一天"</h3>
+
+<p>上方阶段表是结构性的，下方这张是运行性的：每种"日子"实际发生什么、由谁负责、哪些文件会改动。这是一个运营者会贴在运行手册墙上的内容。</p>
+
+<table class="spec-table" style="margin: 14px 0;">
+  <thead>
+    <tr><th style="width: 18%;">阶段 · 范围</th><th>"典型一天"</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>第一阶段</strong><br><em>发现</em></td>
+      <td>
+        <p style="margin: 0 0 6px;">发现"一天"指的是一次完整运行，耗时若干小时，而非 24 小时。具体流程：</p>
+        <ul style="margin: 0 0 4px 18px; font-size: 13px;">
+          <li>运营者提交 <code>analysis_plan.yaml</code> 并以 <code>discovery-NNN-start</code> 标签标注起点启发式系统。</li>
+          <li><code>lbg-trader discover --budget 50 --seed S</code> 无人值守运行。</li>
+          <li>每次试验约 1 分钟（编辑器 + 不变量 + 2 次回测 + 反思器）。策展器大致每接受 10 次触发一次。</li>
+          <li>运营者观察实时试验仪表盘，但不与之交互。</li>
+          <li>预算用完时，编排器恰好打开一次密封测试，写入 <code>artifacts/sealed/discovery-NNN/sealed_test_final.json</code>。</li>
+          <li>生成 <code>artifacts/reports/discovery-NNN.html</code>。运营者阅读 H1/H2/H3 裁定。</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>第二阶段</strong><br><em>前向验证</em></td>
+      <td>
+        <p style="margin: 0 0 6px;">一次性的短任务，在每次发现产出冻结产物之后运行一次：</p>
+        <ul style="margin: 0 0 4px 18px; font-size: 13px;">
+          <li>运营者获取严格晚于密封窗口末日的 OHLCV（本项目为 &gt; 2024-12-31）。</li>
+          <li><code>lbg-trader validate --artifact discovery-NNN --start 2025-01-01</code>。</li>
+          <li>执行引擎在该窗口运行 <code>policy_interpreter.py</code>，从不调用 LLM。</li>
+          <li>输出 <code>artifacts/forward/NNN_gap_report.html</code>，对比前向 Sharpe / MaxDD 与密封预期，并附二值的通过/不通过字段。</li>
+          <li>运营者读取该差距，决定进入第三阶段或归档产物。</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>第三阶段</strong><br><em>模拟交易</em></td>
+      <td>
+        <p style="margin: 0 0 6px;">这是唯一具有真实日度节奏的阶段。一个典型工作日：</p>
+        <ul style="margin: 0 0 4px 18px; font-size: 13px;">
+          <li><strong>09:00</strong> —— 盘前数据刷新；前一日的复权 K 线终结；<code>features.py</code> 重算特征表。</li>
+          <li><strong>09:05</strong> —— <code>policy_interpreter.py</code> 消费特征表，输出当日目标仓位。记录到 <code>paper/decisions.jsonl</code>。</li>
+          <li><strong>09:30</strong> —— 开盘。成交模拟器以开盘价记录模拟成交，应用锁定的 5.5 bp 成本，更新模拟组合。</li>
+          <li><strong>16:00</strong> —— 收盘。计算日终损益；追加 <code>paper/equity.jsonl</code>；仪表盘刷新。</li>
+          <li><strong>16:30</strong> —— 回测-模拟差距监控重算。若差距超出阈值 30 天以上，触发重新发现（Slack 告警 + 写入 <code>paper/triggers.jsonl</code>）。</li>
+          <li>以上全部不涉及 LLM。每根 K 线的计算耗时远低于一秒。</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>第四阶段</strong><br><em>实盘资金</em></td>
+      <td>
+        <p style="margin: 0 0 6px;">与第三阶段日度节奏相同，叠加券商对接与人工风控审议：</p>
+        <ul style="margin: 0 0 4px 18px; font-size: 13px;">
+          <li>09:05 的决策以订单意图发送至券商抽象层；仅在硬风控检查（仓位上限、回撤断路器）通过后才下发订单。</li>
+          <li>成交回报由券商返回；与确定性策略对账，任何差异都暂停交易直至审议完成。</li>
+          <li>日终：除损益外另写一份合规日志（对手方、成交、剩余现金）。资金流与券商对账单核对。</li>
+          <li>风险经理每周复审异常；确定性内核相对第三阶段保持不变。</li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<p>这里平淡得令人意外的一点是：第三、四阶段每日的代码路径实际做的事情极少——读取当日 K 线、计算少量指标、输出一个 \([0,1]\) 内的数、记录日志。智能完全在上游，被冻结在 <code>strategy.yaml</code> 与 <code>indicators/</code> 中。这正是"运行期间拒绝调用 LLM"所兑现的可见收益。</p>
+</section>
+
+<section id="engines">
+<div class="section-marker">
+  <span class="section-num">§ 12</span>
+  <h2>两个引擎</h2>
+</div>
+
+<p>从架构上看，四阶段生命周期可被归约为两个引擎。这是本项目最核心的工程切分。</p>
+
+<div class="figure">
+<div class="chart-wrap" style="background: var(--paper-warm); padding: 32px 24px;">
+<svg viewBox="0 0 700 460" width="100%" role="img">
+<title>发现引擎与执行引擎仅共享启发式系统产物</title>
+
+<defs>
+  <marker id="arr4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#1a1a1c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+
+<rect x="40" y="30" width="280" height="180" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.5" rx="4"/>
+<text x="180" y="60" text-anchor="middle" font-family="Fraunces, serif" font-size="18" font-weight="500" fill="#1a1a1c">发现引擎</text>
+<text x="180" y="78" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="12" fill="#8b3a2f">仅用于第一阶段</text>
+
+<g font-family="JetBrains Mono, monospace" font-size="11" fill="#6b6b70">
+  <text x="60" y="108">LBG 循环</text>
+  <text x="60" y="126">编辑器 + 反思器 + 策展器</text>
+  <text x="60" y="144">不变量套件</text>
+  <text x="60" y="162">密封评测</text>
+</g>
+
+<text x="60" y="190" font-family="Fraunces, serif" font-style="italic" font-size="12" fill="#8b3a2f">慢 · 昂贵 · 重度 LLM</text>
+<text x="60" y="204" font-family="Fraunces, serif" font-style="italic" font-size="12" fill="#8b3a2f">每次发现运行数小时</text>
+
+<rect x="380" y="30" width="280" height="180" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1.5" rx="4"/>
+<text x="520" y="60" text-anchor="middle" font-family="Fraunces, serif" font-size="18" font-weight="500" fill="#1a1a1c">执行引擎</text>
+<text x="520" y="78" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="12" fill="#2d6a5c">第二/三/四阶段</text>
+
+<g font-family="JetBrains Mono, monospace" font-size="11" fill="#6b6b70">
+  <text x="400" y="108">policy_interpreter.py</text>
+  <text x="400" y="126">前向回测</text>
+  <text x="400" y="144">模拟交易每日循环</text>
+  <text x="400" y="162">券商对接（第四阶段）</text>
+</g>
+
+<text x="400" y="190" font-family="Fraunces, serif" font-style="italic" font-size="12" fill="#2d6a5c">快 · 廉价 · 无 LLM</text>
+<text x="400" y="204" font-family="Fraunces, serif" font-style="italic" font-size="12" fill="#2d6a5c">每日运行，长期持续</text>
+
+<rect x="180" y="260" width="340" height="100" fill="#fbfaf6" stroke="#1a1a1c" stroke-width="2" rx="4"/>
+<text x="350" y="288" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">启发式系统产物</text>
+<text x="350" y="306" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="11" fill="#6b6b70">可移植，版本化，重新发现之间保持冻结</text>
+
+<g font-family="JetBrains Mono, monospace" font-size="11" fill="#1a1a1c">
+  <text x="350" y="330" text-anchor="middle">strategy.yaml · indicators/*.py · policy_interpreter.py</text>
+  <text x="350" y="346" text-anchor="middle">+ memory/*（执行引擎仅可读）</text>
+</g>
+
+<line x1="180" y1="210" x2="290" y2="256" stroke="#8b3a2f" stroke-width="1.5" marker-end="url(#arr4)"/>
+<text x="200" y="240" font-family="Fraunces, serif" font-style="italic" font-size="11" fill="#8b3a2f">写入</text>
+
+<line x1="450" y1="256" x2="520" y2="210" stroke="#2d6a5c" stroke-width="1.5" marker-end="url(#arr4)"/>
+<text x="500" y="240" font-family="Fraunces, serif" font-style="italic" font-size="11" fill="#2d6a5c">读取</text>
+
+<text x="350" y="410" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="13" fill="#6b6b70">发现引擎写入产物，执行引擎读取产物，两者从不共享运行时状态。</text>
+<text x="350" y="430" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="13" fill="#6b6b70">LLM 服务中断不能停止交易，券商中断不能阻碍研究。</text>
+
+</svg>
+</div>
+<div class="figure-caption"><strong>图 4。</strong> 两个引擎，共享一个产物。发现引擎运行 LBG 循环以产出冻结策略产物；执行引擎读取冻结产物以执行前向回测、模拟交易或实盘交易。两者从不共享运行时状态。这一切分使科学可信度与运营可靠性得以并存。</div>
+</div>
+
+<p>这一切分带来若干值得明示的工程后果：</p>
+
+<ul>
+  <li><strong>产物可移植。</strong> 已发现的策略可在不同机器之间迁移、可在 git 中版本化、可做 A/B 比较、可归档、可恢复。它就是一组文件。</li>
+  <li><strong>执行无 LLM 依赖。</strong> 市场交易时段 Anthropic 服务中断不会停止交易。模拟与实盘只依赖于市场数据源，以及（第四阶段下的）券商连接。</li>
+  <li><strong>发现无市场数据源依赖。</strong> 发现运行作用于历史 parquet 数据，不关心券商是否可用。</li>
+  <li><strong>故障域隔离。</strong> LBG 循环中的 bug 不会污染实盘组合；执行引擎中的 bug 不会使密封评测失效。</li>
+</ul>
+
+<p>这是把 ML 标准模式（训练管线与推理服务管线分离）应用到 LBG 的结果。</p>
+</section>
+
+<section id="rediscovery">
+<div class="section-marker">
+  <span class="section-num">§ 13</span>
+  <h2>周期性重新发现</h2>
+</div>
+
+<p>冻结后的策略终将失效。市场会变；波动结构会切换；新机制开始相关，旧机制逐步衰减。问题不是 <em>要不要</em> 刷新，而是 <em>如何</em> 刷新，同时保留每次刷新的科学可信度。</p>
+
+<p>朴素方式是让智能体从实盘数据中持续学习，这会立刻摧毁密封评测：一旦智能体看到任何数据，该数据从此对它而言不再具有"留出"性质。有纪律的方式是 <strong>周期性地在全新密封窗口上重新发现</strong>。</p>
+
+<div class="figure">
+<div class="chart-wrap" style="background: var(--paper-warm); padding: 28px 20px 20px;">
+<svg viewBox="0 0 700 320" width="100%" role="img">
+<title>周期性重新发现每次都使用新的密封窗口</title>
+
+<g font-family="Fraunces, serif" font-size="11" fill="#6b6b70">
+  <text x="40" y="34">重新发现 1（2026-Q1）</text>
+</g>
+<rect x="40" y="40" width="320" height="20" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1" rx="2"/>
+<rect x="360" y="40" width="80" height="20" fill="#fbfaf6" stroke="#b88a2c" stroke-width="1" rx="2"/>
+<rect x="440" y="40" width="160" height="20" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1" rx="2"/>
+<text x="200" y="54" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#1a1a1c">训练</text>
+<text x="400" y="54" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#1a1a1c">验证</text>
+<text x="520" y="54" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#1a1a1c">密封</text>
+
+<g font-family="Fraunces, serif" font-size="11" fill="#6b6b70">
+  <text x="40" y="94">重新发现 2（2026-Q4）：密封窗口向前推移</text>
+</g>
+<rect x="40" y="100" width="360" height="20" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1" rx="2"/>
+<rect x="400" y="100" width="80" height="20" fill="#fbfaf6" stroke="#b88a2c" stroke-width="1" rx="2"/>
+<rect x="480" y="100" width="160" height="20" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1" rx="2"/>
+<text x="220" y="114" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#1a1a1c">训练（扩展）</text>
+<text x="440" y="114" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#1a1a1c">验证</text>
+<text x="560" y="114" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#1a1a1c">密封（新）</text>
+
+<g font-family="Fraunces, serif" font-size="11" fill="#6b6b70">
+  <text x="40" y="154">重新发现 3（2027-Q3）</text>
+</g>
+<rect x="40" y="160" width="400" height="20" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1" rx="2"/>
+<rect x="440" y="160" width="80" height="20" fill="#fbfaf6" stroke="#b88a2c" stroke-width="1" rx="2"/>
+<rect x="520" y="160" width="140" height="20" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1" rx="2"/>
+<text x="240" y="174" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#1a1a1c">训练（扩展）</text>
+<text x="480" y="174" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#1a1a1c">验证</text>
+<text x="590" y="174" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#1a1a1c">密封（新）</text>
+
+<line x1="40" y1="220" x2="660" y2="220" stroke="#1a1a1c" stroke-width="0.6"/>
+<g font-family="Fraunces, serif" font-style="italic" font-size="11" fill="#6b6b70">
+  <text x="40" y="240">过去</text>
+  <text x="660" y="240" text-anchor="end">未来</text>
+</g>
+
+<text x="350" y="280" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="13" fill="#1a1a1c">每一次重新发现的密封窗口都是任何先前发现运行未见过的全新数据。</text>
+<text x="350" y="300" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="12" fill="#6b6b70">密封预算随时间补充，应当等待新数据，而非复用旧数据。</text>
+
+</svg>
+</div>
+<div class="figure-caption"><strong>图 5。</strong> 周期性重新发现通过让密封窗口随时间向前推进，保留密封评测的可信度。每一次重新发现使用一段在上一次发现期间不可见的全新数据。代价是耐心：新的密封预算以真实时间流逝的速率累积。</div>
+</div>
+
+<h3>重新发现的触发条件</h3>
+
+<p>触发条件本身就是一项设计选择。健康的选项包括：</p>
+
+<ul>
+  <li><strong>日历触发。</strong> 每季度、每半年、每年。可预测，易于推理，预算稳定。</li>
+  <li><strong>表现触发。</strong> 回测与实盘的差距超过阈值（例如实盘夏普低于密封预期 0.3 以上且持续 30 天以上）。由第三阶段监控触发。</li>
+  <li><strong>风险触发。</strong> 实盘回撤超过阈值，策略下线，直至重新发现完成。</li>
+  <li><strong>数据可用性触发。</strong> 当新数据已累积到足以支撑一个有意义的新密封窗口时触发。</li>
+</ul>
+
+<p>实际中，触发器会叠加：制度切换通常会让表现触发器先于日历触发器报警。健康的默认是"日历触发 + 表现提前触发"。</p>
+
+<h3>两次重新发现之间：策略保持冻结</h3>
+
+<p>两次重新发现之间，策略保持冻结。执行引擎只是在当前激活的 <code>strategy.yaml</code> 与 <code>indicators/</code> 上运行 <code>policy_interpreter.py</code>。无编辑、无 LLM。这正是日常运行得以廉价、可靠、可复现的原因。</p>
+
+<p>这也意味着对每一个标的池而言，始终恰好存在一个激活的策略产物，且谱系清晰。若 Q1 策略为 <code>2026-Q1_spy_a</code>，Q4 重新发现产出 <code>2026-Q4_spy_a</code>，则后者干净地替代前者，前者归档以便历史对比与审计。</p>
+</section>
+
+<section id="universe">
+<div class="section-marker">
+  <span class="section-num">§ 14</span>
+  <h2>标的池过滤器，而非标的选择</h2>
+</div>
+
+<p>一个诱人的特性是让智能体 <em>选择交易哪个标的</em>。须抵抗这一诱惑。让智能体从大池中挑选标的，会引入灾难性的多重比较选择偏倚：如果智能体悄悄在五十只候选标的上运行发现并只报告最佳者，所报告的密封夏普几乎肯定来自运气，而非技能。</p>
+
+<p>有纪律的替代方案是：<strong>智能体学习一个面向标的池可应用的策略，并由确定性过滤器决定交易哪些标的</strong>。发现运行锚定在单一标的（或一个小标的池）上，智能体的策略只能通过声明式准则、而非直接命名标的来表达其可交易范围：</p>
+
+<span class="code-label">strategy.yaml 中的 universe_filter</span>
+<pre>universe_filter:
+  min_market_cap_usd: 10_000_000_000
+  min_avg_daily_volume: 1_000_000
+  min_price: 10
+  exclude_sectors: [financials]
+  exclude_etf_categories: [leveraged, inverse]</pre>
+
+<p>部署阶段，该过滤器作用于更广的市场，产出策略可运行的标的清单。智能体并未挑选这些标的，而是声明了它的策略所适用的条件。</p>
+
+<p>这一约束与专业量化研究中因子的设计原则一致：因子是一个面向标的池可应用的函数，而非针对特定标的的预言。我们沿用这种纪律。</p>
+
+<div class="aside">
+<span class="aside-label">关于多标的</span>
+本提案描述的最小可行版本（MVP）在单一标的（SPY）上训练。真正的多标的跨截面学习属于较大的范围扩展，被视为未来方向，而非当前里程碑。上文 universe_filter 的抽象为日后扩展到多标的留出空间，使得扩展是增量式的，而非破坏性的。
+</div>
+</section>
+
+<section id="online">
+<div class="section-marker">
+  <span class="section-num">§ 15</span>
+  <h2>在线 HL：一个不同的研究问题</h2>
+</div>
+
+<p>提案评审中提出过一个自然的问题：<em>为什么不让智能体在线、实时地从实盘交易结果中持续学习？</em> 策略永不冻结、永远演化。这在概念上颇具吸引力：它会把 LBG-Trader 变成一个完全的持续学习者，更接近在线强化学习。</p>
+
+<p>诚实的回答是：这是一个不同的研究问题，而非本项目的延伸。原因有以下几条。</p>
+
+<div class="aside warn">
+<span class="aside-label">在线 HL 的难点</span>
+<p style="margin-bottom: 10px;"><strong>它直接瓦解密封评测。</strong> 一旦智能体看到实盘数据，该数据再不可作为留出。"是否泛化？"这一概念将丧失意义。可用的最强评测降级为滚动前向表现，其噪声大、推断功效弱。</p>
+<p style="margin-bottom: 10px;"><strong>智能体会追逐噪声。</strong> 每次更新都基于近期样本；近期样本噪声大。若无密封测试做真值锚定，智能体将系统性、长期地做出局部看上去有效、实际并非真实信号的修改。</p>
+<p style="margin-bottom: 10px;"><strong>缺乏干净的停止准则。</strong> Token 成本无限累积，记忆无限增长，系统永不"完成"。</p>
+<p style="margin-bottom: 0;"><strong>这是文献中的开放问题。</strong> Weng 自己的实验都是批量学习（把任务跑到收敛）而非在线。在线 HL 处于研究前沿，方法论尚未定型。</p>
+</div>
+
+<p>带周期性重新发现的四阶段生命周期，几乎实现了在线 HL 所承诺的一切（策略随市场演化），同时保留了在线 HL 所放弃的大部分（每次刷新都有可信的密封评测）。这正是量化行业实际采用的"有纪律的中间路径"。</p>
+
+<p>我们将在线 HL 明确记录为未来方向。若本提案第一至三阶段获得成功，且周期性重新发现的节奏在某些市场上被证明过慢，后续项目可以探索在线 HL 并重新设计评测框架，以更弱的统计推断换取更紧的循环。那是一份不同的文档。</p>
+</section>
+
+<section id="human">
+<div class="section-marker">
+  <span class="section-num">§ 16</span>
+  <h2>人的位置：按阶段</h2>
+</div>
+
+<p>框架在不同阶段赋予人不同的角色。贯穿所有阶段的一条原则是：<strong>人不做逐笔交易决定，亦不在 LLM 循环中途介入</strong>。人只在阶段交界处作用，不在阶段内部作用。</p>
+
+<div class="role-table">
+
+<div class="role-row">
+  <div class="role-when">第一阶段之前</div>
+  <div>
+    <div class="role-title">方法学家</div>
+    <p class="role-desc">设计协议：选定标的、划分、DSL schema、编辑类型、不变量、门控阈值、基线、模型选择、停止准则。这些一旦冻结，便对整次运行锁定。这是整个项目中最具决定意义的人为贡献。</p>
+  </div>
+</div>
+
+<div class="role-row">
+  <div class="role-when">第一阶段进行中</div>
+  <div>
+    <div class="role-title">有纪律的非参与者</div>
+    <p class="role-desc">观察试验监视器，不作干预。可在出现严重 bug 时中止；不得根据所见调整提示、阈值或记忆。运行进行中人唯一被允许做的事，是彻底停止运行，绝不允许修改运行。这种纪律正是密封裁定可信度的来源。</p>
+  </div>
+</div>
+
+<div class="role-row">
+  <div class="role-when">第一阶段之后</div>
+  <div>
+    <div class="role-title">科学家</div>
+    <p class="role-desc">阅读最终报告，给出 H1/H2/H3 裁定，撰写发现。决定是否进入第二阶段（前向验证），或修订协议、在不同标的、不同划分或不同配置上发起新一轮发现。</p>
+  </div>
+</div>
+
+<div class="role-row">
+  <div class="role-when">第二到第三阶段过渡</div>
+  <div>
+    <div class="role-title">审议者</div>
+    <p class="role-desc">阅读前向验证差距报告，决定是否进入模拟交易。在此阶段失败的策略被归档，而非被打补丁；对一个已通过密封测试的策略在其前向数据上打补丁，会把信息倒灌回策略，构成泄漏。</p>
+  </div>
+</div>
+
+<div class="role-row">
+  <div class="role-when">第三阶段进行中</div>
+  <div>
+    <div class="role-title">运营者与组合管理者</div>
+    <p class="role-desc">监控实时的模拟交易仪表盘，关注回测-模拟差距，决定何时停止退化中的策略（性能恶化）、何时触发提前重新发现（制度切换）、何时在多个活跃策略之间调整资本分配。不干预个别交易。</p>
+  </div>
+</div>
+
+<div class="role-row">
+  <div class="role-when">第三到第四阶段过渡</div>
+  <div>
+    <div class="role-title">风险经理</div>
+    <p class="role-desc">不在本提案覆盖范围内，但出于完整性予以记录：制定硬性风险上限，配置断路器，处理券商对接与对账，管理合规要求，掌控紧急停止按钮。该角色的标准由外部约束决定（券商、司法辖区、资金来源），与本提案无关。</p>
+  </div>
+</div>
+
+</div>
+
+<p>各阶段的共同模式是：人作用于阶段交界与基础设施，系统作用于阶段内部。在实际工程中，这一模式容易被破坏的方式（人偷偷在运行过程中调整东西）已被协议显式防御：任何此类调整将使裁定失效。</p>
+</section>
+
+<div class="part-marker">
+  <span class="roman">IV.</span>
+  <span class="part-title">计划、风险、已锁定的决策</span>
+</div>
+
+<section id="report">
+<div class="section-marker">
+  <span class="section-num">§ 17</span>
+  <h2>最终报告的形态</h2>
+</div>
+
+<p>第一阶段的交付物是一份静态 HTML 最终报告。在展示任何数字之前，先给出 H1/H2/H3 裁定的头条结论。下面给出一个 H1 正面结局的报告草图。</p>
+
+<div class="schematic-label">图 6–8 为报告版式的示意性插图，并非真实结果。报告生成器在渲染时会为每张图加上 <code>synthetic</code>（合成）或 <code>actual</code>（真实）标签。</div>
+
+<div class="figure">
+<div class="chart-wrap">
+  <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; font-family: var(--sans); font-size: 11px; color: var(--ink-muted);">
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #2d6a5c;"></span>LBG-Trader</span>
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #b88a2c; border-top: 1px dashed #b88a2c; background: transparent;"></span>网格搜索</span>
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #8b3a2f;"></span>仅 DSL 的 LLM</span>
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #6b6b70;"></span>买入持有</span>
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #a4a4a8;"></span>SMA 双均线</span>
+  </div>
+  <div style="position: relative; height: 240px;">
+    <canvas id="equityChart" role="img" aria-label="各系统在密封测试上的净值曲线"></canvas>
+  </div>
+</div>
+<div class="figure-caption"><strong>图 6。</strong> 合成的密封测试净值曲线。在 H1 正面结局下，LBG-Trader 通过更低的回撤在风险调整指标上拉开差距，即便买入持有在总收益上不逊色甚至超过。</div>
+</div>
+
+<div class="figure">
+<div class="chart-wrap">
+  <div style="font-family: var(--sans); font-size: 12px; color: var(--ink-muted); margin-bottom: 8px;">密封夏普（含移动块自助 95% 置信区间）</div>
+  <div style="position: relative; height: 220px;">
+    <canvas id="sharpeChart" role="img" aria-label="各系统的密封夏普及置信区间"></canvas>
+  </div>
+</div>
+<div class="figure-caption"><strong>图 7。</strong> 各系统的密封夏普及自助置信区间。H1 裁定取决于 §10.5 规定的 <em>配对差值</em> 检验（LBG-Trader 与预注册最强基线之间差值的自助检验）而非对各系统置信区间作视觉比较。各系统单独的置信区间是补充性背景，不是裁定本身。</div>
+</div>
+
+<div class="figure">
+<div class="chart-wrap">
+  <div style="font-family: var(--sans); font-size: 12px; color: var(--ink-muted); margin-bottom: 8px;">已接受试验上的训练夏普与过拟合差距</div>
+  <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; font-family: var(--sans); font-size: 11px; color: var(--ink-muted);">
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #1a1a1c;"></span>训练夏普</span>
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #b88a2c;"></span>验证代理值</span>
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 2px; background: #8b3a2f; border-top: 1px dashed #8b3a2f; background: transparent;"></span>过拟合差距</span>
+  </div>
+  <div style="position: relative; height: 200px;">
+    <canvas id="overfitChart" role="img" aria-label="已接受试验上的过拟合差距"></canvas>
+  </div>
+</div>
+<div class="figure-caption"><strong>图 8。</strong> 过拟合差距诊断。训练夏普随智能体改进而上升，推断出的验证强度紧随其后，红色虚线表示的差距保持狭小。差距持续扩大将表明智能体在门控之下仍在过拟合。</div>
+</div>
+</section>
+
+<section id="plan">
+<div class="section-marker">
+  <span class="section-num">§ 18</span>
+  <h2>工程计划</h2>
+</div>
+
+<p>本计划详述第一阶段（发现），以及与后续阶段共享的基础设施。第二、三阶段的部署工作在 §11 中描述，仅以高层节奏给出时间安排；它们位于第一阶段裁定的下游。</p>
+
+<div class="milestone">
+  <div class="milestone-week">第 1 周 · 共享基础设施</div>
+  <h4>数据、回测引擎、划分、经典基线</h4>
+  <p>通过 yfinance 获取 SPY 2010–2024 数据，与 Stooq 交叉核验，存为版本化 parquet。编写 <code>features.py</code>，固定特征集合。实现约 150 行的向量化回测，包含成本模型与前瞻不变量。实现 <code>policy_interpreter.py</code>（被两个引擎共用）。实现买入持有、SMA 双均线、随机搜索、网格搜索、贝叶斯优化等基线。退出条件：买入持有指标与独立实现的参考值在容差范围内一致（指示性区间：年化夏普视成本假设处于 0.7–0.9）；扣除成本后的随机搜索中位夏普接近零；§10.5 中的第零层健全性检查全部通过。</p>
+</div>
+
+<div class="milestone">
+  <div class="milestone-week">第 2 周 · 仅编辑 DSL 的 LLM 循环（消融基线）</div>
+  <h4>带脱敏验证的编辑器/反思器循环</h4>
+  <p>实现 DSL schema，编写编辑器与反思器提示，实现结构化提案解析、机械化的假设结果判定、仅追加的 <code>trials.jsonl</code>。以仅 DSL 的编辑运行 N=50 次试验。这是消融基线。退出条件：完整试验日志生成，密封测试推迟。</p>
+</div>
+
+<div class="milestone">
+  <div class="milestone-week">第 3 周 · 程序合成层</div>
+  <h4>指标编写、AST 不变量、沙箱</h4>
+  <p>新增 <code>add_indicator</code> 编辑类型，实现基于 AST 的静态不变量套件（无未来 shift、无负索引、白名单 import、纯函数），实现带超时与内存上限的沙箱执行，实现动态前瞻测试。正是这一层把项目从 LLM-BO 升格为 LBG。退出条件：一个违反前瞻不变量的指标函数被正确捕获。</p>
+</div>
+
+<div class="milestone">
+  <div class="milestone-week">第 4 周 · 策展器与完整发现运行</div>
+  <h4>影子策展器、完整 N=50 的 LBG-Trader 运行、最终报告</h4>
+  <p>实现策展器提示与记忆压缩操作。完整运行 LBG-Trader N=50 次试验。仅一次打开密封测试。生成最终报告 HTML。与第 2 周消融基线作对比。退出条件：H1/H2/H3 裁定给出。</p>
+</div>
+
+<div class="milestone">
+  <div class="milestone-week">第 5 周及之后 · 第二阶段部署</div>
+  <h4>前向验证基础设施</h4>
+  <p>构建执行引擎，实现 <code>lbg-trader validate</code> CLI，对密封之后的数据运行冻结策略，生成回测-前向差距报告，决定是否进入第三阶段。</p>
+</div>
+
+<div class="milestone">
+  <div class="milestone-week">第三阶段里程碑</div>
+  <h4>模拟交易部署</h4>
+  <p>实现实时数据采集、每日决策循环、模拟组合状态、实盘仪表盘。构建重新发现的调度。至少完整运行一次重新发现周期，对整条生命周期作端到端验证。</p>
+</div>
+</section>
+
+<section id="risks">
+<div class="section-marker">
+  <span class="section-num">§ 19</span>
+  <h2>风险</h2>
+</div>
+
+<p>按"该风险对结论意味着什么"排序，而非按发生概率排序。</p>
+
+<h3>回测过拟合</h3>
+<p>核心科学风险。如果智能体通过了验证却在密封测试上失败，本项目所证明的只是密封协议下过拟合机制的强度。缓解措施：DSL 约束、多目标门控、脱敏验证、密封写一次、分块自助置信区间。最后一道防线是诚实地把失败报告为 H1 负面结局。</p>
+
+<h3>奖励黑客</h3>
+<p>核心工程风险。被赋予 Python 执行能力的编码型智能体，会发现前瞻、利用成本模型的边界条件、操纵索引对齐，或在异常处理中隐藏失败交易。缓解措施：不变量套件、AST 静态分析、沙箱执行、动态前瞻测试。无约束 Python 的消融实验专门用以测量当不变量关闭时这种情况会恶化到什么程度。</p>
+
+<h3>部署阶段的分布漂移</h3>
+<p>通过第一阶段密封测试的策略，可能在第二或第三阶段前向运行时失败，因为市场已经变了。这不是 LBG 的失败，而是市场的属性。缓解措施：把第二阶段前向验证作为硬门控；第三阶段持续监控回测-模拟差距；表现触发的重新发现。</p>
+
+<h3>LBG 论断的过度声张</h3>
+<p>最强烈的诱惑是将"H1 正面"解读为"LBG 有效"。可被辩护的论断要窄得多："LBG 在本 DSL、本标的池、本时期、本协议下有效"。缓解措施：把仅 DSL 的消融放进头部对比表；把 token 成本与夏普并列报告；在密封测试打开之前承诺每种结局的含义。</p>
+
+<h3>启发式系统的膨胀</h3>
+<p>若无策展器，accepted_rules 与 indicators 会累积为一团泥球。缓解措施：每次试验报告复杂度指标；从第一天起启用影子策展器；主动策展器须以验证复查为通过条件。</p>
+
+<h3>对底层 LLM 的依赖</h3>
+<p>框架在外层循环上部分地依赖一个神经网络，其表现取决于所用模型。在更弱或不同的模型上无法复现，是发现而非致命缺陷，但必须显式记录。缓解措施：报告模型版本与 token 成本；考虑在更弱模型上做一次消融运行。</p>
+
+<h3>部署风险（第三至四阶段）</h3>
+<p>即使第二阶段通过，回测-实盘差距仍可能超出可接受范围。券商对接引入了本提案未覆盖的运营复杂度。缓解措施：实盘前必须模拟交易；基于性能的断路器；部署阶段风险面在另一份运营设计中专门记录。</p>
+</section>
+
+<section id="lock">
+<div class="section-marker">
+  <span class="section-num">§ 20</span>
+  <h2>锁定清单</h2>
+</div>
+
+<p>下列决策对本里程碑冻结。在运行过程中修改其中任何一条，都会使密封测试失效，并需要重置里程碑。</p>
+
+<div class="lock-list">
+<h4>已冻结的决策</h4>
+<ol>
+  <li>仓库命名为 <code>lbg-trader</code>；论文标题为 <em>Sealed-HS: Persistent Heuristic Learning under Sealed Evaluation</em></li>
+  <li>第一阶段发现使用单一标的 SPY，日频，2010-01-04 至 2024-12-31</li>
+  <li>三划分：训练 2010–2018，验证 2019–2020，密封 2021–2024；在智能体上下文中以 <code>split_A/B/C</code> 别名出现</li>
+  <li>智能体动作空间：Python 纯函数指标编写 + DSL 编辑；八种离散编辑类型</li>
+  <li>三类 LLM 角色：编辑器 / 反思器 / 策展器；本里程碑中策展器为影子模式</li>
+  <li>对 LLM 的验证反馈仅为类别，绝不为数值或曲线</li>
+  <li>假设结果由编排器机械化判定，不由反思器判定</li>
+  <li>所有回测之前先运行不变量：schema、AST 静态、前缀稳定性动态、成本模型、沙箱、无数据窥探</li>
+  <li><strong>单次试验</strong> 验证门控使用 \(\alpha = 0.20\) 的多目标效用下界加帕累托改进；<em>不</em> 要求每次试验都满足 CI &gt; 0</li>
+  <li><strong>最终 H1 裁定</strong> 使用 <em>配对差值</em> 的移动块自助检验（块长 10，重抽 1000），对照预注册的最强基线；95% 置信区间下界 &gt; 0 为强结论标准</li>
+  <li>单边有效成本锁定为 5.5 bp（基础 5.0 + 滑点代理 0.5）；对所有系统（含基线）统一应用</li>
+  <li>持久化通过 git：每次试验一次提交，每次策展器周期一个分支</li>
+  <li>智能体计算量按角色与按 token 效率报告，进入基线对比表</li>
+  <li>密封测试恰好打开一次；<code>sealed_test_final.json</code> 仅写一次</li>
+  <li>阶段 0.5 基线（随机、网格、BO）在任何 LLM 驱动运行之前完成</li>
+  <li>仅 DSL 的 LLM 循环是消融，而非阶段；与完整系统并行运行</li>
+  <li>策略在两次重新发现之间保持冻结；第二/三/四阶段绝不编辑</li>
+  <li>重新发现使用全新密封窗口；旧密封窗口绝不复用</li>
+  <li>对 SPY 里程碑，框架将标的池 <em>固定</em> 为 SPY；智能体不选择标的。§14 中的 <code>universe_filter</code> 机制仅作用于未来的多资产里程碑</li>
+  <li>第二阶段前向验证使用严格晚于 2024-12-31 的数据；该数据在第一阶段密封之后获取，发现运行绝不可获得</li>
+  <li>在线 HL 不在本里程碑范围；作为未来方向记录于 §15</li>
+  <li><code>analysis_plan.yaml</code> 必须在任何密封测试打开之前提交至 git；主比较与次级比较在此处预注册</li>
+  <li>次级比较使用 Holm-Bonferroni 法控制族系误差率于 0.05</li>
+  <li>技能档产物遵循 §6.6 schema；策展器输出为带类型对象，非自由形式文本</li>
+  <li>指标函数须满足前缀稳定性（§4.5）；动态不变量通过扰动测试强制执行</li>
+  <li>每一次新增或修改指标且被接受的试验，须导出因子卡片（§6.6）</li>
+  <li>日历标签（年份、命名事件）仅出现在面向人的最终报告与编排器内部日志中，绝不出现在智能体提示模板或任何 <code>ContextBuilder</code> 可读的文件中</li>
+</ol>
+</div>
+
+<div class="ornament">· · · · ·</div>
+
+<p style="font-family: var(--serif); font-style: italic; font-size: 18px; color: var(--ink-soft); text-align: center; max-width: 540px; margin: 32px auto 0;">
+无论裁定结果为 H1、H2 还是 H3，本项工作都算成功。协议所要防范的失败模式不是"策略亏钱"，而是"我们无法判断自己究竟测量到了什么"。
+</p>
+</section>
+
+<footer>
+  <span>lbg-trader · proposal v2026.05.22 r3 · 规范冻结</span>
+  <span>第一至四部分 · 25 节 · 8 张图 · 14 个数学块 · 27 条已锁定决策</span>
+</footer>
+
+</div>
+
+<script>
+const palette = {
+  ink: '#1a1a1c',
+  inkSoft: '#2c2c30',
+  inkMuted: '#6b6b70',
+  inkFaint: '#a4a4a8',
+  accent: '#8b3a2f',
+  accentSoft: '#b76b5e',
+  teal: '#2d6a5c',
+  gold: '#b88a2c',
+  paperWarm: '#f5f1e8',
+};
+
+const months = ['2021','2021-Q2','2021-Q3','2021-Q4','2022','2022-Q2','2022-Q3','2022-Q4','2023','2023-Q2','2023-Q3','2023-Q4','2024','2024-Q2','2024-Q3','2024-Q4'];
+const lbg = [1.00,1.04,1.07,1.10,1.13,1.10,1.07,1.11,1.16,1.20,1.25,1.28,1.32,1.36,1.40,1.43];
+const grid = [1.00,1.03,1.06,1.08,1.10,1.04,1.00,1.03,1.07,1.11,1.15,1.18,1.22,1.25,1.28,1.31];
+const dslOnly = [1.00,1.03,1.05,1.07,1.08,1.02,0.98,1.01,1.05,1.09,1.13,1.16,1.19,1.22,1.25,1.26];
+const bh = [1.00,1.06,1.11,1.15,1.19,1.08,0.96,1.04,1.13,1.20,1.27,1.31,1.36,1.40,1.43,1.45];
+const sma = [1.00,1.02,1.04,1.05,1.07,1.02,0.97,1.00,1.04,1.07,1.10,1.12,1.14,1.16,1.17,1.18];
+
+new Chart(document.getElementById('equityChart'), {
+  type: 'line',
+  data: {
+    labels: months,
+    datasets: [
+      { label: 'LBG-Trader', data: lbg, borderColor: palette.teal, borderWidth: 2.2, pointRadius: 0, tension: 0.3 },
+      { label: '网格搜索', data: grid, borderColor: palette.gold, borderWidth: 1.5, borderDash: [4,3], pointRadius: 0, tension: 0.3 },
+      { label: '仅 DSL 的 LLM', data: dslOnly, borderColor: palette.accent, borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
+      { label: '买入持有', data: bh, borderColor: palette.inkMuted, borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
+      { label: 'SMA 双均线', data: sma, borderColor: palette.inkFaint, borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { font: { family: 'Inter', size: 10 }, maxRotation: 45, autoSkip: true, maxTicksLimit: 8, color: palette.inkMuted }, grid: { display: false } },
+      y: { ticks: { font: { family: 'Inter', size: 10 }, callback: v => v.toFixed(2), color: palette.inkMuted }, grid: { color: 'rgba(107,107,112,0.12)' } }
+    }
+  }
+});
+
+new Chart(document.getElementById('sharpeChart'), {
+  type: 'bar',
+  data: {
+    labels: ['LBG-Trader', '网格搜索', 'DSL 上 BO', '仅 DSL LLM', 'SMA 双均线', '随机搜索', '买入持有', '单次提案'],
+    datasets: [
+      {
+        label: '夏普',
+        data: [0.71, 0.58, 0.55, 0.53, 0.52, 0.49, 0.45, 0.41],
+        backgroundColor: [palette.teal, palette.gold, palette.gold, palette.accent, palette.inkFaint, '#7a7a7e', palette.inkMuted, '#9a9a9e'],
+        borderRadius: 2,
+      },
+      {
+        type: 'line',
+        label: 'CI 下界',
+        data: [0.48, 0.36, 0.33, 0.30, 0.31, 0.26, 0.22, 0.19],
+        showLine: false,
+        pointStyle: 'line',
+        pointRadius: 6,
+        pointBorderColor: palette.ink,
+        pointBorderWidth: 1.5,
+      },
+      {
+        type: 'line',
+        label: 'CI 上界',
+        data: [0.94, 0.78, 0.76, 0.74, 0.74, 0.72, 0.66, 0.62],
+        showLine: false,
+        pointStyle: 'line',
+        pointRadius: 6,
+        pointBorderColor: palette.ink,
+        pointBorderWidth: 1.5,
+      },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { font: { family: 'Inter', size: 10 }, maxRotation: 30, color: palette.inkMuted }, grid: { display: false } },
+      y: { beginAtZero: true, ticks: { font: { family: 'Inter', size: 10 }, callback: v => v.toFixed(2), color: palette.inkMuted }, grid: { color: 'rgba(107,107,112,0.12)' } }
+    }
+  }
+});
+
+const accTrials = [1,2,3,4,5,6,7,8,9,10,11,12];
+const trainSh = [0.62, 0.71, 0.78, 0.85, 0.89, 0.95, 1.02, 1.09, 1.15, 1.22, 1.30, 1.38];
+const valProxy = [0.55, 0.62, 0.70, 0.74, 0.80, 0.87, 0.92, 0.95, 1.00, 1.04, 1.10, 1.16];
+const gap = trainSh.map((t,i) => +(t - valProxy[i]).toFixed(2));
+
+new Chart(document.getElementById('overfitChart'), {
+  type: 'line',
+  data: {
+    labels: accTrials,
+    datasets: [
+      { label: '训练夏普', data: trainSh, borderColor: palette.ink, borderWidth: 2, pointRadius: 2.5, tension: 0.2, pointBackgroundColor: palette.ink },
+      { label: '验证代理值', data: valProxy, borderColor: palette.gold, borderWidth: 2, pointRadius: 2.5, tension: 0.2, pointBackgroundColor: palette.gold },
+      { label: '过拟合差距', data: gap, borderColor: palette.accent, borderWidth: 1.5, borderDash: [4,3], pointRadius: 2, tension: 0.2, pointBackgroundColor: palette.accent },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { font: { family: 'Inter', size: 10 }, color: palette.inkMuted }, grid: { display: false }, title: { display: true, text: '已接受试验序号', font: { family: 'Inter', size: 10 }, color: palette.inkMuted } },
+      y: { ticks: { font: { family: 'Inter', size: 10 }, callback: v => v.toFixed(2), color: palette.inkMuted }, grid: { color: 'rgba(107,107,112,0.12)' } }
+    }
+  }
+});
+
+const tocLinks = document.querySelectorAll('.toc a');
+const sections = document.querySelectorAll('section');
+if (tocLinks.length && 'IntersectionObserver' in window) {
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        tocLinks.forEach(l => l.classList.remove('active'));
+        const id = e.target.id;
+        const link = document.querySelector(`.toc a[href="#${id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  sections.forEach(s => observer.observe(s));
+}
+</script>
+
+</body>
+</html>
