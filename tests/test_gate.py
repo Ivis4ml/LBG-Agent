@@ -190,10 +190,13 @@ def test_utility_lcb_below_point_estimate():
 
 
 def test_utility_lcb_unknown_alpha_requires_explicit_z():
+    """α values outside the pre-computed table still need explicit z_quantile.
+    α=0.05/0.10/0.20/0.30/0.40 are pre-computed; anything else must be
+    supplied via the z_quantile argument."""
     rng = np.random.default_rng(0)
     r = pd.Series(rng.normal(0.001, 0.01, 200))
-    with pytest.raises(ValueError, match="explicit"):
-        utility_lcb_sharpe(r, alpha=0.05)
+    with pytest.raises(ValueError, match="not in pre-computed table"):
+        utility_lcb_sharpe(r, alpha=0.07)
 
 
 # -------- gate decision: helpers --------

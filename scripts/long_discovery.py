@@ -69,7 +69,11 @@ def main(argv: list[str] | None = None) -> int:
         subprocess.run(["git", "config", "user.name", "discovery"], cwd=out, check=True)
         subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=out, check=True)
         (out / "README.md").write_text("long discovery run\n")
-        subprocess.run(["git", "add", "README.md", "strategy.yaml"], cwd=out, check=True)
+        subprocess.run(
+            ["git", "add", "README.md", "strategy.yaml", "indicators/"],
+            cwd=out,
+            check=True,
+        )
         subprocess.run(
             ["git", "commit", "-q", "-m", "baseline"],
             cwd=out,

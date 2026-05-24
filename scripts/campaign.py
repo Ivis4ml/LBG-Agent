@@ -74,7 +74,17 @@ def _stage_run_dir(out: Path) -> Path:
         subprocess.run(["git", "config", "user.name", "campaign"], cwd=out, check=True)
         subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=out, check=True)
         (out / "README.md").write_text("campaign baseline\n")
-        subprocess.run(["git", "add", "README.md", "strategy.yaml"], cwd=out, check=True)
+        # Include indicators/ in the baseline commit so revert_to_trial_N can
+        # walk back to any earlier point without sma.py becoming an orphan
+        # the git-driven restorer would delete. Bug found in v2 campaign:
+        # the Editor proposed revert_to_trial_N → revert restored only the
+        # committed .py files → sma.py (never committed) got pruned →
+        # sealing crashed with "indicator module not found".
+        subprocess.run(
+            ["git", "add", "README.md", "strategy.yaml", "indicators/"],
+            cwd=out,
+            check=True,
+        )
         subprocess.run(
             ["git", "commit", "-q", "-m", "campaign baseline"],
             cwd=out,
