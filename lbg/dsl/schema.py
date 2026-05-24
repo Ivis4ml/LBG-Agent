@@ -130,3 +130,28 @@ class Strategy(BaseModel):
         if len(set(names)) != len(names):
             raise ValueError(f"duplicate indicator names: {names}")
         return v
+
+    def referenced_indicator_names(self) -> set[str]:
+        """Names referenced by entry, exit, or any filter. Indicators that
+        compute a series but feed nothing in the policy are unwired."""
+        names: set[str] = {
+            self.entry.fast,
+            self.entry.slow,
+            self.exit.fast,
+            self.exit.slow,
+        }
+        for f in self.filters:
+            names.add(f.indicator)
+        return names
+
+    def unwired_indicators(self) -> list[str]:
+        """Indicator names declared but never read by entry/exit/filters.
+
+        Adding an indicator without consuming it makes the candidate strategy
+        bit-identical to the incumbent on every bar -- a noop. STAGE1_REPORT
+        § 7 observed Editor wasting ~5/8 of one provider's trials on exactly
+        this pattern, so CandidateBuilder rejects the candidate before any
+        backtest happens.
+        """
+        referenced = self.referenced_indicator_names()
+        return [i.name for i in self.indicators if i.name not in referenced]

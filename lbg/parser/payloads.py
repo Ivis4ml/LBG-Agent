@@ -17,9 +17,12 @@ from lbg.dsl.schema import CrossRule, Filter, IndicatorSpec, Sizing
 class AddIndicatorPayload(BaseModel):
     """`proposed_edit.change` for `add_indicator`.
 
-    Writes `indicators/<fn>.py` with `source`, and appends an `IndicatorSpec`
-    to the strategy. The new indicator is not auto-wired into entry/exit;
-    a follow-up `parameter_change` or `change_exit_rule` does that.
+    Writes `indicators/<fn>.py` with `source` and appends an `IndicatorSpec`
+    to the strategy. The optional `attach` field bundles a filter that
+    references the new indicator so the candidate is wired in a single
+    trial. Without `attach`, the new indicator is dead code -- the candidate
+    is bit-identical to the incumbent on every bar -- and CandidateBuilder
+    rejects the trial.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -28,6 +31,14 @@ class AddIndicatorPayload(BaseModel):
     fn: str = Field(min_length=1, description="indicators/<fn>.py basename")
     source: str = Field(min_length=1, description="Python source code")
     params: dict[str, Any] = Field(default_factory=dict)
+    attach: Filter | None = Field(
+        default=None,
+        description=(
+            "Optional filter that references the new indicator name so the "
+            "candidate is wired atomically. Without this, CandidateBuilder "
+            "rejects the trial as an unwired-indicator noop."
+        ),
+    )
 
 
 class ParameterChangePayload(BaseModel):

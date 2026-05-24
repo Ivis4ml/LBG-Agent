@@ -259,6 +259,8 @@ def test_add_indicator_writes_file_and_appends_to_strategy(working_tree):
                 "fn": "rsi",
                 "source": rsi_source,
                 "params": {"period": 14},
+                # Step 3: add_indicator must atomically wire the new indicator.
+                "attach": {"rule": "indicator_above", "indicator": "rsi_14", "threshold": 30.0},
             },
         },
         "expected_train_signal": "neutral",
@@ -381,19 +383,29 @@ def test_simplify_indicator_blocked_by_min_count(working_tree):
     # Easier path: drop the only-third indicator scenario.
     parent = load_strategy(working_tree / "strategy.yaml")
     builder = CandidateBuilder(working_tree)
-    # add a third indicator (unreferenced by entry/exit).
+    # Add a third indicator atomically wired via attach (otherwise step 3's
+    # unwired-indicator check rejects the candidate).
     add_payload = AddIndicatorPayload(
         name="extra",
         fn="extra_fn",
         source="import pandas as pd\ndef extra_fn(df):\n    return df['close']\n",
         params={},
+        attach={"rule": "indicator_above", "indicator": "extra", "threshold": 0.0},
     )
     builder.apply(parent, _proposal(EditType.ADD_INDICATOR, add_payload.model_dump()), add_payload)
     parent_3 = load_strategy(working_tree / "strategy.yaml")
-    # Simplify the extra one -- this should succeed because entry/exit don't
-    # reference it and we'd still have 2 left.
+    # Drop the attached filter first so the indicator becomes prunable.
+    from lbg.parser import RemoveFilterPayload
+
+    remove_payload = RemoveFilterPayload(index=0)
+    builder.apply(
+        parent_3,
+        _proposal(EditType.REMOVE_FILTER, remove_payload.model_dump()),
+        remove_payload,
+    )
+    parent_4 = load_strategy(working_tree / "strategy.yaml")
     payload_ok = SimplifyPayload(component="indicator", target="extra")
-    builder.apply(parent_3, _proposal(EditType.SIMPLIFY, payload_ok.model_dump()), payload_ok)
+    builder.apply(parent_4, _proposal(EditType.SIMPLIFY, payload_ok.model_dump()), payload_ok)
     reloaded = load_strategy(working_tree / "strategy.yaml")
     assert {i.name for i in reloaded.indicators} == {"sma_fast", "sma_slow"}
     # The extra_fn.py file must also be gone since no spec references it.

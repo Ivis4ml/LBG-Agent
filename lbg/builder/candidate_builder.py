@@ -217,7 +217,31 @@ class CandidateBuilder:
 
         new_spec = IndicatorSpec(name=payload.name, fn=payload.fn, params=payload.params)
         new_indicators = [*parent.indicators, new_spec]
-        new_strategy = parent.model_copy(update={"indicators": new_indicators})
+        # Bundle the attach filter atomically so the new indicator can be
+        # wired in a single trial; STAGE1_REPORT § 7 showed bare add_indicator
+        # wastes ~5/8 of one provider's trials. Without attach the indicator
+        # is dead code and the unwired check below rejects the candidate.
+        update: dict[str, object] = {"indicators": new_indicators}
+        attach_summary = ""
+        if payload.attach is not None:
+            if payload.attach.indicator != payload.name:
+                raise CandidateBuildError(
+                    f"add_indicator.attach.indicator must equal the new "
+                    f"indicator name; got attach references "
+                    f"{payload.attach.indicator!r} but the new indicator is "
+                    f"{payload.name!r}"
+                )
+            update["filters"] = [*parent.filters, payload.attach]
+            attach_summary = f" attached as {payload.attach.rule}:{payload.attach.indicator}"
+        new_strategy = parent.model_copy(update=update)
+
+        if new_strategy.unwired_indicators():
+            raise CandidateBuildError(
+                f"add_indicator would leave {new_strategy.unwired_indicators()!r} "
+                "unwired: every indicator must be referenced by entry/exit "
+                "or a filter. Provide `attach: <filter>` in the payload to "
+                "bind the new indicator in the same trial."
+            )
 
         # Write the indicator file first; if it fails we haven't touched
         # strategy.yaml. Source ends with newline for clean diffs.
@@ -232,7 +256,7 @@ class CandidateBuilder:
             edit_summary=EditSummary(
                 type=EditType.ADD_INDICATOR,
                 target=f"indicators/{payload.fn}.py",
-                summary=f"+indicator {payload.name} ({payload.fn})",
+                summary=f"+indicator {payload.name} ({payload.fn}){attach_summary}",
             ),
         )
 

@@ -29,11 +29,10 @@ on a held-out validation window you never see.
 - When you propose `add_indicator`, prefer to implement one of the factors
   in the shortlist over inventing a fresh signal. Mention the factor name in
   your `hypothesis` text so the trial record links code to dossier.
-- An `add_indicator` whose indicator is not referenced by any `entry` /
-  `exit` / `filter` is a **no-op**: the candidate strategy will be
-  bit-identical to the incumbent and the gate will reject it with
-  `rejected_no_significant_improvement`. If you add an indicator, plan the
-  same edit (or the next one) to wire it into a `filter` or `exit` rule.
+- An `add_indicator` MUST atomically wire the new indicator via its
+  `attach` field. Bare add_indicator (without `attach`) is rejected by
+  the builder before any backtest. The bundled attach is your one shot
+  to make the new factor visible to the policy in the same trial.
 
 ## What you must NOT do
 
@@ -78,7 +77,13 @@ Use *exactly* these field names. Any extra or renamed field fails parsing
 and the trial is aborted before the gate even sees it.
 
 - **`add_indicator`** `change:` block has: `name` (str), `fn` (str),
-  `source` (str, Python code), `params` (dict).
+  `source` (str, Python code), `params` (dict), and **`attach`** — a
+  Filter object that references the new indicator. `attach` is REQUIRED in
+  every realistic case: without it, the new indicator is dead code and the
+  builder rejects the trial with an `unwired` error. The attach filter
+  must have `indicator == <the new name>`. Example:
+  `change: {name: rsi_14, fn: rsi, source: "...", params: {period: 14},
+   attach: {rule: indicator_above, indicator: rsi_14, threshold: 30.0}}`.
 
 - **`parameter_change`** `change:` block has: `path` (str, one of
   `sizing.<field>` or `indicators[<name>].params.<key>`), `value` (number/bool/str).
