@@ -81,3 +81,10 @@ class AgentComputeRecord(BaseModel):
     input_tokens: int = Field(ge=0)
     output_tokens: int = Field(ge=0)
     wall_clock_sec: float = Field(ge=0)
+    # Number of LLM call attempts inside this trial role-invocation. 1 means
+    # the first attempt succeeded; >1 means micro-retries were needed (RoleRunner
+    # auto-retries on redaction / missing-YAML / schema-parse failures).
+    retry_attempts: int = Field(default=1, ge=1)
+    # Categorical reasons that triggered each retry. Length == retry_attempts-1.
+    # Values are stable strings: "redaction", "missing_yaml", "parse_error".
+    retry_reasons: list[str] = Field(default_factory=list)

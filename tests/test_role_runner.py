@@ -153,7 +153,8 @@ def test_outgoing_prompt_with_year_aborts_before_llm_call(tmp_path):
 
 
 def test_incoming_response_with_year_is_rejected(tmp_path):
-    """If the LLM hallucinates a year into its reply, the runner rejects."""
+    """If the LLM hallucinates a year into its reply on every retry, the
+    runner wraps the leak in a RoleRunnerError after MAX_EDITOR_ATTEMPTS."""
     bad_response = """\
 ```yaml
 trial_id: 1
@@ -173,7 +174,7 @@ fallback_if_rejected: |
     client = _FakeClient(bad_response)
     runner = RoleRunner(client=client)
     ctx = _build_context(tmp_path)
-    with pytest.raises(RedactionError):
+    with pytest.raises(RoleRunnerError, match="leaked forbidden token"):
         runner.editor(ctx, trial_id=1)
 
 
@@ -181,6 +182,8 @@ fallback_if_rejected: |
 
 
 def test_unparseable_yaml_raises_role_runner_error(tmp_path):
+    """When every retry returns unparseable YAML, the runner gives up with
+    a RoleRunnerError that mentions the attempts count."""
     client = _FakeClient("```yaml\nnot: a: valid: proposal\n```\n")
     runner = RoleRunner(client=client)
     ctx = _build_context(tmp_path)

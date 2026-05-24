@@ -27,7 +27,7 @@ from lbg.memory.records import (
     ReflectorOutputPayload,
 )
 from lbg.orchestrator.context_builder import EditorContext, FactorHint, PastTrialSummary
-from lbg.orchestrator.redaction import assert_redacted
+from lbg.orchestrator.redaction import RedactionError, assert_redacted
 from lbg.parser import ProposalParseError, parse_proposal
 from lbg.schemas import (
     EditProposal,
@@ -42,7 +42,39 @@ EDITOR_SYSTEM_PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "edito
 REFLECTOR_SYSTEM_PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "reflector_system.md"
 DEFAULT_MAX_TOKENS = 4096
 
+# Editor micro-retry: STAGE1_REPORT § 7 showed that ~12 of 20 MIMO trials
+# died on missing-YAML-block parser aborts. Letting the LLM correct itself
+# in-call (multi-turn) is far cheaper than burning trial slots. Cap at K=2
+# extra attempts -- empirically the second attempt almost always fixes a
+# format issue; further retries waste tokens.
+MAX_EDITOR_ATTEMPTS = 3
+
 _YAML_BLOCK_RE = re.compile(r"```(?:yaml)?\s*\n(?P<body>.*?)```", re.DOTALL)
+
+
+_RETRY_CORRECTION = {
+    "redaction": (
+        "Your previous response contained a forbidden token: a 4-digit year "
+        "in the modern range, an ISO date of the form YYYY-MM-DD, or a "
+        "named historical event such as a pandemic or financial crisis. "
+        "The protocol forbids any calendar or event reference in your "
+        "output. Re-issue exactly the same proposal but stripped of those "
+        "tokens. Index-only references like `window=20` are fine; calendar "
+        "references like 'the recent crash' or naming a specific year are not."
+    ),
+    "missing_yaml": (
+        "Your previous response did not contain a fenced YAML code block. "
+        "The parser cannot extract a proposal without ```yaml ... ``` "
+        "markers. Re-issue your proposal wrapped in a single fenced YAML "
+        "block, with no prose before or after the fence."
+    ),
+    "parse_error": (
+        "Your previous YAML block did not match the proposal schema. "
+        "Re-issue the proposal using only the field names listed in the "
+        "'Allowed sub-fields per edit type' table in your system prompt. "
+        "Extra or renamed keys are rejected. The parser reported: {detail}"
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -166,38 +198,90 @@ class RoleRunner:
         assert_redacted(user_prompt)
 
         client = self._client()
-        started = time.monotonic()
-        response = client.messages.create(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}],
-        )
-        elapsed = time.monotonic() - started
 
-        raw_text = _extract_text(response)
+        # Multi-turn message history. On a successful first call this is
+        # exactly the single user-message slot we had before. On a retry we
+        # append the failed assistant turn plus a corrective user turn so the
+        # model sees both what it produced and what went wrong with it.
+        messages: list[dict[str, str]] = [{"role": "user", "content": user_prompt}]
 
-        # Defense layer 2: incoming response cannot contain forbidden tokens.
-        assert_redacted(raw_text)
+        total_in_tokens = 0
+        total_out_tokens = 0
+        total_elapsed = 0.0
+        retry_reasons: list[str] = []
+        last_error: Exception | None = None
 
-        yaml_block = _extract_yaml_block(raw_text)
-        try:
-            proposal, payload = parse_proposal(yaml_block)
-        except ProposalParseError as e:
-            raise RoleRunnerError(
-                f"Editor output did not parse: {e}\n--- raw response ---\n{raw_text}"
-            ) from e
+        for attempt in range(1, MAX_EDITOR_ATTEMPTS + 1):
+            started = time.monotonic()
+            response = client.messages.create(
+                model=self.model,
+                max_tokens=self.max_tokens,
+                system=system_prompt,
+                messages=messages,
+            )
+            total_elapsed += time.monotonic() - started
+            total_in_tokens += getattr(response.usage, "input_tokens", 0)
+            total_out_tokens += getattr(response.usage, "output_tokens", 0)
 
-        compute = AgentComputeRecord(
-            trial_id=trial_id,
-            role="editor",
-            model=self.model,
-            input_tokens=getattr(response.usage, "input_tokens", 0),
-            output_tokens=getattr(response.usage, "output_tokens", 0),
-            wall_clock_sec=elapsed,
-        )
-        return EditorRunResult(
-            proposal=proposal, payload=payload, raw_text=raw_text, compute=compute
+            raw_text = _extract_text(response)
+
+            # Try to validate the response. Catch each failure mode and queue
+            # a structured correction for the next attempt -- never quote the
+            # raw response in the correction (it might contain the very leak
+            # we're trying to scrub).
+            try:
+                assert_redacted(raw_text)
+            except RedactionError as e:
+                last_error = e
+                if attempt < MAX_EDITOR_ATTEMPTS:
+                    messages = _append_correction(messages, raw_text, reason="redaction")
+                    retry_reasons.append("redaction")
+                    continue
+                raise RoleRunnerError(
+                    f"Editor output leaked forbidden token after {attempt} attempts: {e}"
+                ) from e
+
+            try:
+                yaml_block = _extract_yaml_block(raw_text)
+            except RoleRunnerError as e:
+                last_error = e
+                if attempt < MAX_EDITOR_ATTEMPTS:
+                    messages = _append_correction(messages, raw_text, reason="missing_yaml")
+                    retry_reasons.append("missing_yaml")
+                    continue
+                raise
+
+            try:
+                proposal, payload = parse_proposal(yaml_block)
+            except ProposalParseError as e:
+                last_error = e
+                if attempt < MAX_EDITOR_ATTEMPTS:
+                    messages = _append_correction(
+                        messages, raw_text, reason="parse_error", detail=str(e)
+                    )
+                    retry_reasons.append("parse_error")
+                    continue
+                raise RoleRunnerError(
+                    f"Editor output did not parse after {attempt} attempts: {e}"
+                ) from e
+
+            compute = AgentComputeRecord(
+                trial_id=trial_id,
+                role="editor",
+                model=self.model,
+                input_tokens=total_in_tokens,
+                output_tokens=total_out_tokens,
+                wall_clock_sec=total_elapsed,
+                retry_attempts=attempt,
+                retry_reasons=retry_reasons,
+            )
+            return EditorRunResult(
+                proposal=proposal, payload=payload, raw_text=raw_text, compute=compute
+            )
+
+        # Loop exits only via `return` or `raise`. This is defensive.
+        raise RoleRunnerError(  # pragma: no cover
+            f"Editor exhausted {MAX_EDITOR_ATTEMPTS} attempts: {last_error}"
         )
 
     def reflector(
@@ -276,6 +360,36 @@ class RoleRunner:
             wall_clock_sec=elapsed,
         )
         return ReflectorRunResult(record=record, raw_text=raw_text, compute=compute)
+
+
+def _append_correction(
+    messages: list[dict[str, str]],
+    raw_text: str,
+    *,
+    reason: str,
+    detail: str = "",
+) -> list[dict[str, str]]:
+    """Build the next attempt's message history with a structured correction.
+
+    For `redaction` failures the leaked assistant turn is dropped on the
+    floor: replaying it would re-introduce the forbidden token into the
+    model's own context window. Instead we prepend the correction to the
+    original user prompt and reissue as a single-turn message.
+
+    For `missing_yaml` / `parse_error` the assistant turn is safe to
+    replay (it just had wrong shape, not a redaction violation), so we
+    follow the usual multi-turn correction pattern: keep the failed turn
+    visible, append a new user turn that explains the fix.
+    """
+    template = _RETRY_CORRECTION[reason]
+    correction = template.format(detail=detail) if "{detail}" in template else template
+    if reason == "redaction":
+        original = messages[0]["content"]
+        return [{"role": "user", "content": correction + "\n\n---\n\n" + original}]
+    return messages + [
+        {"role": "assistant", "content": raw_text},
+        {"role": "user", "content": correction},
+    ]
 
 
 def _extract_text(response) -> str:
