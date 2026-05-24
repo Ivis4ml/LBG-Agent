@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LBG-Trader 第一阶段实施报告</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&family=Noto+Serif+SC:wght@300;400;500;600&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']],
+         processEscapes: true, processEnvironments: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+             ignoreHtmlClass: 'no-mathjax' }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" id="MathJax-script" async></script>
+<style>
+  :root {
+    --ink: #1a1a1c;
+    --ink-soft: #2c2c30;
+    --ink-muted: #6b6b70;
+    --ink-faint: #a4a4a8;
+    --paper: #fbfaf6;
+    --paper-warm: #f5f1e8;
+    --rule: #d8d4c8;
+    --rule-soft: #e8e4d8;
+    --accent: #8b3a2f;
+    --accent-soft: #b76b5e;
+    --teal: #2d6a5c;
+    --gold: #b88a2c;
+    --serif: 'Fraunces', 'Noto Serif SC', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+    --sans: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.78;
+    font-feature-settings: "kern", "liga", "onum";
+  }
+
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; opacity: 0.03; z-index: 100;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .container { max-width: 820px; margin: 0 auto; padding: 80px 32px 120px; }
+
+  .title-block {
+    border-top: 2px solid var(--ink);
+    border-bottom: 1px solid var(--rule);
+    padding: 32px 0 24px;
+    margin-bottom: 64px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: end;
+  }
+
+  .title-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 18px;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 52px;
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+    margin-bottom: 16px;
+  }
+  h1 em { font-style: italic; color: var(--accent); font-weight: 300; }
+
+  .subtitle {
+    font-family: var(--serif);
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    font-weight: 400;
+    max-width: 580px;
+  }
+
+  .title-right {
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+  }
+  .title-right .v { color: var(--accent); font-weight: 500; }
+
+  section { margin-bottom: 76px; }
+
+  .section-marker {
+    display: flex; align-items: baseline; gap: 20px;
+    margin-bottom: 28px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
+  .section-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    font-weight: 500;
+  }
+
+  h2 {
+    font-family: var(--serif); font-weight: 400; font-size: 30px;
+    line-height: 1.2; letter-spacing: -0.005em; color: var(--ink);
+  }
+
+  h3 {
+    font-family: var(--serif); font-weight: 500; font-size: 21px;
+    line-height: 1.4; margin: 40px 0 14px; color: var(--ink);
+  }
+
+  h4 {
+    font-family: var(--sans); font-weight: 500; font-size: 13px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-muted); margin: 28px 0 10px;
+  }
+
+  p { margin-bottom: 18px; text-wrap: pretty; }
+
+  .lede {
+    font-size: 20px; line-height: 1.65; color: var(--ink-soft);
+    font-weight: 400; margin-bottom: 32px;
+    padding: 4px 0 4px 20px; border-left: 2px solid var(--accent);
+  }
+  .lede em { font-style: italic; color: var(--accent); }
+
+  code {
+    font-family: var(--mono); font-size: 13.5px;
+    background: var(--paper-warm); padding: 1px 6px;
+    border-radius: 2px; color: var(--ink-soft);
+  }
+
+  em { font-style: italic; color: var(--accent); }
+  strong { font-weight: 500; color: var(--ink); }
+
+  .pullquote {
+    font-family: var(--serif); font-style: italic; font-weight: 300;
+    font-size: 24px; line-height: 1.5; color: var(--ink);
+    margin: 44px 0 44px -20px;
+    padding: 0 0 0 20px;
+    border-left: 3px solid var(--accent);
+    max-width: 660px;
+  }
+
+  .aside {
+    background: var(--paper-warm); border-left: 3px solid var(--gold);
+    padding: 20px 24px; margin: 28px 0;
+    font-size: 15px; line-height: 1.75; color: var(--ink-soft);
+  }
+  .aside-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--gold);
+    margin-bottom: 8px; display: block;
+  }
+  .aside.warn { border-left-color: var(--accent); }
+  .aside.warn .aside-label { color: var(--accent); }
+  .aside.note { border-left-color: var(--teal); }
+  .aside.note .aside-label { color: var(--teal); }
+
+  pre {
+    background: var(--ink); color: #e8e4d8;
+    padding: 20px 24px; border-radius: 4px; overflow-x: auto;
+    font-family: var(--mono); font-size: 13px; line-height: 1.7; margin: 24px 0;
+  }
+  pre code { background: none; padding: 0; color: inherit; font-size: 13px; }
+  pre .k { color: #d6a26a; }
+  pre .c { color: #8a8a8a; font-style: italic; }
+  pre .s { color: #b8c97c; }
+  pre .n { color: #e8e4d8; }
+  pre .m { color: #cdaa66; }
+
+  .code-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink-faint);
+    margin-bottom: -16px; margin-top: 24px; display: block;
+  }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 24px 0;
+    font-family: var(--sans); font-size: 14px;
+  }
+  thead th {
+    text-align: left; font-weight: 500; color: var(--ink-muted);
+    border-bottom: 1.5px solid var(--ink);
+    padding: 10px 12px 10px 0;
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  tbody td {
+    padding: 12px 12px 12px 0; border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top; line-height: 1.65;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td code { font-size: 12.5px; }
+  td.num { font-family: var(--mono); text-align: right; font-size: 12.5px; }
+  td.yes { color: var(--teal); font-weight: 500; }
+  td.no  { color: var(--accent); font-weight: 500; }
+
+  ol, ul { margin: 16px 0 24px 28px; }
+  li { margin-bottom: 10px; line-height: 1.78; padding-left: 4px; }
+  ul li::marker { color: var(--accent); }
+  ol li::marker { font-family: var(--mono); font-size: 13px; color: var(--ink-muted); font-weight: 500; }
+
+  .figure { margin: 40px 0; }
+  .figure-caption {
+    font-family: var(--sans); font-size: 13px; line-height: 1.6;
+    color: var(--ink-muted); margin-top: 12px;
+    padding: 4px 0 4px 12px; border-left: 2px solid var(--rule);
+  }
+  .figure-caption strong { color: var(--ink); font-weight: 500; }
+
+  .chart-wrap {
+    background: var(--paper-warm); border: 1px solid var(--rule);
+    border-radius: 4px; padding: 20px; position: relative;
+  }
+  .chart-wrap canvas { max-width: 100%; }
+
+  .two-col {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin: 28px 0;
+  }
+  .col-card {
+    background: var(--paper-warm); border: 1px solid var(--rule);
+    border-radius: 4px; padding: 24px 26px;
+  }
+  .col-card h4 { margin-top: 0; color: var(--accent); }
+  .col-card.alt { background: var(--paper); border-color: var(--ink-soft); }
+  .col-card.alt h4 { color: var(--teal); }
+  .col-card li { font-size: 14px; line-height: 1.7; }
+
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 12px; margin: 28px 0;
+  }
+  .kpi {
+    background: var(--paper-warm); border-top: 3px solid var(--accent);
+    padding: 16px 18px; border-radius: 0 0 4px 4px;
+  }
+  .kpi.teal { border-top-color: var(--teal); }
+  .kpi.gold { border-top-color: var(--gold); }
+  .kpi-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink-muted); margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-family: var(--serif); font-size: 28px; font-weight: 400;
+    line-height: 1; letter-spacing: -0.015em; color: var(--ink);
+  }
+  .kpi-value.small { font-size: 22px; }
+  .kpi-sub {
+    font-family: var(--sans); font-size: 11.5px; color: var(--ink-muted); margin-top: 8px;
+    line-height: 1.4;
+  }
+
+  .ladder { margin: 32px 0; }
+  .rung {
+    display: grid; grid-template-columns: 88px 1fr; gap: 24px;
+    padding: 16px 0; border-bottom: 1px solid var(--rule-soft);
+    align-items: start;
+  }
+  .rung:last-child { border-bottom: none; }
+  .rung-tag {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--accent); letter-spacing: 0.08em;
+    padding-top: 4px; font-weight: 500;
+  }
+  .rung-body { font-size: 15px; line-height: 1.7; color: var(--ink-soft); }
+  .rung-body strong { color: var(--ink); }
+
+  .math {
+    margin: 24px 0; font-size: 16px; line-height: 1.4;
+    padding: 0 0 0 20px; border-left: 2px solid var(--rule);
+  }
+  .math .where {
+    display: block; font-family: var(--sans); font-size: 13px;
+    color: var(--ink-muted); margin-top: 10px; line-height: 1.65;
+  }
+
+  .footer {
+    margin-top: 80px; padding-top: 28px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono); font-size: 11px; color: var(--ink-muted);
+    letter-spacing: 0.04em; line-height: 1.85;
+  }
+  .footer .accent { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<div class="container">
+
+<!-- ============================== 标题 ============================== -->
+<header class="title-block">
+  <div>
+    <div class="title-meta">实施报告 · 第一阶段回顾</div>
+    <h1>我们<em>造了</em>什么，<br>它<em>发现了</em>什么</h1>
+    <p class="subtitle">从空仓库到具备 sealed-evaluation 协议的 Discovery 循环，共十二步：保证结果诚实的算法，以及框架如实给出的负向 H1 结论。</p>
+  </div>
+  <div class="title-right">
+    <div>SPY · 2010 – 2024</div>
+    <div>Stage 1 · Discovery</div>
+    <div><span class="v">v0.1.0</span> · commit c3ecba5</div>
+    <div>2026 · 05 · 23</div>
+  </div>
+</header>
+
+<!-- ============================== § 0 概要 ============================== -->
+<section id="headline">
+<div class="section-marker">
+  <span class="section-num">§ 0</span>
+  <h2>一句话概要</h2>
+</div>
+
+<p class="lede">第一阶段已经完整实施，并且<em>诚实</em>。13 个 Orchestrator 子模块全部端到端跑通，Anthropic Opus 4.7 与 MIMO v2.5 Pro 两个 provider 各自驱动完整的 Discovery 循环，封存窗口仅在每次运行的最末刻打开一次。结论：在 SPY 的 SMA(20/50) 交叉策略起点上，<em>H1 被拒绝</em>。本策略在封存窗口上 Sharpe 比 buy-and-hold 低 0.75。框架按 PROPOSAL.html §0 的事先警告，干净地把这个结果报告了出来。</p>
+
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-label">子模块</div>
+    <div class="kpi-value">13</div>
+    <div class="kpi-sub">Orchestrator 全部完成</div>
+  </div>
+  <div class="kpi teal">
+    <div class="kpi-label">测试</div>
+    <div class="kpi-value">330</div>
+    <div class="kpi-sub">全部通过 · 5 个 live LLM 调用</div>
+  </div>
+  <div class="kpi gold">
+    <div class="kpi-label">edit type</div>
+    <div class="kpi-value">8 / 8</div>
+    <div class="kpi-sub">PROPOSAL §6.2 全部支持</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">H1 verdict</div>
+    <div class="kpi-value small">−0.75</div>
+    <div class="kpi-sub">ΔSharpe vs buy-and-hold</div>
+  </div>
+</div>
+
+<div class="aside warn">
+<span class="aside-label">为什么这是好结果</span>
+如果一个 12 步的 Discovery 框架在 20 trial 之内、在 SMA baseline 上给出虚假阳性的 H1，那才是真正的失败。当前的负向结果证明了三件事：gate 的判别在工作；redaction 的隔离在工作；sealed-evaluation 协议在工作。框架并未替策略掩饰它在 sealed 窗口上的真实表现。
+</div>
+</section>
+
+<!-- ============================== § 1 架构 ============================== -->
+<section id="architecture">
+<div class="section-marker">
+  <span class="section-num">§ 1</span>
+  <h2>架构全貌</h2>
+</div>
+
+<p>Orchestrator 是一个确定性的 Python 控制平面。它调度每一次 LLM 调用、应用每一个 edit、跑每一个不变式、写每一个 artifact。<em>Orchestrator 内部不包含任何 LLM 调用</em>，它的确定性是整个实验可信度的基础。三个 LLM 角色坐在叶子节点，其它一切都是普通 Python。</p>
+
+<div class="figure">
+<div class="chart-wrap" style="background: var(--paper-warm); padding: 28px 24px;">
+<svg viewBox="0 0 700 480" width="100%" role="img">
+  <title>第一阶段模块布局：13 个 Orchestrator 子模块环绕 3 个 LLM 角色</title>
+
+  <!-- 外框 -->
+  <rect x="20" y="20" width="660" height="440" fill="#fbfaf6" stroke="#1a1a1c" stroke-width="1.5" rx="3"/>
+  <text x="35" y="40" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="0.08em" fill="#8b3a2f">ORCHESTRATOR · 确定性 · 无 LLM 调用</text>
+
+  <!-- 中心 LLM 角色 -->
+  <rect x="280" y="180" width="140" height="120" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.5" rx="3"/>
+  <text x="350" y="200" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" letter-spacing="0.06em" fill="#8b3a2f">LLM ROLES</text>
+  <text x="350" y="224" text-anchor="middle" font-family="Fraunces, serif" font-size="14" fill="#1a1a1c">Editor</text>
+  <text x="350" y="246" text-anchor="middle" font-family="Fraunces, serif" font-size="14" fill="#1a1a1c">Reflector</text>
+  <text x="350" y="268" text-anchor="middle" font-family="Fraunces, serif" font-size="14" fill="#1a1a1c">Curator</text>
+  <text x="350" y="288" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#6b6b70">opus 4.7 / mimo 2.5</text>
+
+  <!-- 左列子模块 -->
+  <g font-family="Fraunces, serif" font-size="11.5" fill="#1a1a1c">
+    <rect x="40" y="60" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="115" y="83" text-anchor="middle">ContextBuilder</text>
+
+    <rect x="40" y="106" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="115" y="129" text-anchor="middle">RoleRunner</text>
+
+    <rect x="40" y="152" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="115" y="175" text-anchor="middle">ProposalParser</text>
+
+    <rect x="40" y="198" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="115" y="221" text-anchor="middle">CandidateBuilder</text>
+
+    <rect x="40" y="244" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="115" y="267" text-anchor="middle">SandboxExecutor</text>
+
+    <rect x="40" y="290" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="115" y="313" text-anchor="middle">InvariantRunner</text>
+
+    <rect x="40" y="336" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="115" y="359" text-anchor="middle">BacktestRunner</text>
+
+    <!-- 右列 -->
+    <rect x="510" y="60" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="585" y="83" text-anchor="middle">ValidationGate</text>
+
+    <rect x="510" y="106" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="585" y="129" text-anchor="middle">HypothesisScorer</text>
+
+    <rect x="510" y="152" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="585" y="175" text-anchor="middle">MemoryManager</text>
+
+    <rect x="510" y="198" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="585" y="221" text-anchor="middle">SkillManager</text>
+
+    <rect x="510" y="244" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="585" y="267" text-anchor="middle">GitManager</text>
+
+    <rect x="510" y="290" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="585" y="313" text-anchor="middle">SealedVault</text>
+
+    <rect x="510" y="336" width="150" height="36" fill="#f5f1e8" stroke="#d8d4c8" rx="2"/>
+    <text x="585" y="359" text-anchor="middle">ReportBuilder</text>
+  </g>
+
+  <!-- 箭头 -->
+  <g stroke="#8b3a2f" stroke-width="0.8" fill="none" opacity="0.55">
+    <path d="M 190 78 L 280 200" stroke-dasharray="2 2"/>
+    <path d="M 190 124 L 280 215"/>
+    <path d="M 280 240 L 190 313"/>
+    <path d="M 420 200 L 510 78" stroke-dasharray="2 2"/>
+    <path d="M 420 215 L 510 124"/>
+    <path d="M 420 245 L 510 170"/>
+    <path d="M 420 260 L 510 220" stroke-dasharray="2 2"/>
+    <path d="M 420 285 L 510 312"/>
+  </g>
+
+  <!-- redaction 屏障 -->
+  <line x1="240" y1="180" x2="240" y2="300" stroke="#b88a2c" stroke-width="2" stroke-dasharray="4 3"/>
+  <line x1="460" y1="180" x2="460" y2="300" stroke="#b88a2c" stroke-width="2" stroke-dasharray="4 3"/>
+  <text x="225" y="172" font-family="JetBrains Mono, monospace" font-size="8" fill="#b88a2c" letter-spacing="0.08em">REDACTION</text>
+  <text x="445" y="172" font-family="JetBrains Mono, monospace" font-size="8" fill="#b88a2c" letter-spacing="0.08em">REDACTION</text>
+
+  <!-- 底部下游 -->
+  <rect x="40" y="405" width="620" height="40" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1.2" rx="2"/>
+  <text x="50" y="421" font-family="JetBrains Mono, monospace" font-size="9" letter-spacing="0.08em" fill="#2d6a5c">下游 · 无 LLM</text>
+  <text x="220" y="430" font-family="Fraunces, serif" font-size="12.5" fill="#1a1a1c">Stage 2 · forward validation</text>
+  <text x="450" y="430" font-family="Fraunces, serif" font-size="12.5" fill="#1a1a1c">Stage 3 · paper trading</text>
+</svg>
+</div>
+<div class="figure-caption"><strong>图 1。</strong> 13 个确定性子模块环绕中央 3 个 LLM 角色。两侧的黄色虚线是结构层 redaction 屏障：agent 永远拿不到原始 OHLCV、日历年份或验证数字。Stage 2 与 Stage 3 复用同一套 backtest 引擎，全程无 LLM 介入。</div>
+</div>
+
+<h3>13 个子模块各司其职</h3>
+
+<table>
+  <thead>
+    <tr><th style="width:28%">模块</th><th>职责</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>ContextBuilder</code></td><td>组装 Editor / Reflector / Curator 的视图。加载最近的 trial 摘要（只含类别化 val 信号）、四份语义记忆文档，以及 <code>SkillManager</code> 提供的 active skill。</td></tr>
+    <tr><td><code>RoleRunner</code></td><td>对 provider 不敏感的 LLM 封装。读取 <code>LBG_PROVIDER</code>，通过 Anthropic SDK 与官方端点或 MIMO 的兼容端点通信。每次调用都有双向 redaction 检查。</td></tr>
+    <tr><td><code>ProposalParser</code></td><td>对 Editor YAML 进行两层 Pydantic 校验。外层校验 <code>EditProposal</code>，内层按 <code>EditType</code> 派发到 8 个 payload 模型中的一个。所有模型都设置了 <code>extra=forbid</code>。</td></tr>
+    <tr><td><code>CandidateBuilder</code></td><td>把解析后的 edit 应用到 <code>strategy.yaml</code> 与 <code>indicators/</code>。八种 edit type 全部实现，包括 <code>simplify</code> 与 <code>revert_to_trial_N</code>（后者通过 <code>git show</code> 读取历史文件）。</td></tr>
+    <tr><td><code>SandboxExecutor</code></td><td>在受限命名空间内 <code>exec</code> 由 agent 编写的 indicator 代码。剥离 builtins，仅放行 <code>numpy</code>、<code>pandas</code>、<code>math</code>，并以 <code>signal.SIGALRM</code> 强制超时。</td></tr>
+    <tr><td><code>InvariantRunner</code></td><td>5 个 AST 静态检查与一个动态 <code>prefix_stability</code>。任何失败都会写入 <code>memory/invariant_failures.jsonl</code> 并记录行号，候选不会进入回测阶段。</td></tr>
+    <tr><td><code>BacktestRunner</code></td><td>向量化的 SPY 日频回测，约 150 行代码。使用 open-to-open 收益，每边成本 5 bps + 0.5 bp，按 252 个交易日年化 Sharpe，对下游 bootstrap 暴露完整的日收益序列。</td></tr>
+    <tr><td><code>ValidationGate</code></td><td>按 PROPOSAL §9 的顺序多目标判别：too_few_trades → drawdown_regression → turnover → complexity → utility_lcb → Pareto → overfit_gap → no_meaningful_improvement。对外只暴露 5 类类别化信号。</td></tr>
+    <tr><td><code>HypothesisScorer</code></td><td>机械地把 <code>train.sharpe_delta</code> 分桶到五个类别，与 Editor 事先声明的预期比对，给出 confirmed / partially_confirmed / disconfirmed。<em>Reflector 不能改写这个结果。</em></td></tr>
+    <tr><td><code>MemoryManager</code></td><td>对四条 jsonl 流（trials、reflections、invariant_failures、agent_compute）做 append-only 写入，对四份语义记忆 md 文档做 bullet 追加。<code>write_md</code> 仅供 Curator 调用。</td></tr>
+    <tr><td><code>SkillManager</code></td><td>按 §6.2 schema 读写 <code>skills/&lt;skill_id&gt;.yaml</code>（含 trigger、recipe、evidence、failure_modes、complexity_cost）。active skill 被装载进 <code>EditorContext.skills</code>。</td></tr>
+    <tr><td><code>GitManager</code></td><td>每个 trial 一个 commit，subject 格式 <code>trial NNNN: &lt;summary&gt;</code>；每个 Curator cycle 一个分支 <code>curator/cycle-NNN</code>。<code>read_file_at_ref</code> 与 <code>list_tree_at_ref</code> 用于历史回滚。</td></tr>
+    <tr><td><code>SealedVault</code></td><td>装 <code>sealed_test_final.json</code> 的一次性容器。写入后 <code>chmod 0o444</code>，第二次写入抛 <code>SealedVaultError</code>。</td></tr>
+    <tr><td><code>ReportBuilder</code></td><td>从所有记录的 artifact 渲染一个静态 HTML：trial 表格、信号直方图、语义记忆全文、sealed verdict、token 用量统计。</td></tr>
+  </tbody>
+</table>
+
+<h3>三个 LLM 角色，两个 provider</h3>
+
+<p>三个 LLM 驱动的角色共享同一个 <code>RoleRunner</code>，背后有一张 provider 注册表：</p>
+
+<span class="code-label">lbg/orchestrator/role_runner.py · PROVIDERS</span>
+<pre><span class="n">PROVIDERS = {
+  "anthropic": ProviderConfig(
+    api_key_env="ANTHROPIC_API_KEY",
+    base_url=None,                          </span><span class="c"># SDK 默认指向 api.anthropic.com</span><span class="n">
+    default_model="claude-opus-4-7"),
+  "mimo": ProviderConfig(
+    api_key_env="MIMO_API_KEY",
+    base_url="https://api.xiaomimimo.com/anthropic",
+    default_model="mimo-v2.5-pro"),
+}</span></pre>
+
+<p>Anthropic SDK 是唯一的客户端库。MIMO 通过它兼容 Anthropic 协议的 REST 端点接入，只需提供不同的 <code>base_url</code>。切换 provider 只要一个开关：<code>RoleRunner(provider="mimo")</code> 或环境变量 <code>LBG_PROVIDER=mimo</code>。Orchestrator 的其它部分完全不知道答复来自哪个模型。</p>
+
+<div class="aside note">
+<span class="aside-label">为什么需要 provider 抽象层</span>
+H1 verdict、per-trial gate、不变式套件，这三项都与提案来自哪个 LLM 无关。两个 provider 跑出<em>逐位一致的 sealed 指标</em>这件事本身，证明了 Orchestrator 的确定性主张在 provider 切换后依然成立。详见 § 7 的跨 provider sanity check。
+</div>
+</section>
+
+<!-- ============================== § 2 Discovery loop ============================== -->
+<section id="loop">
+<div class="section-marker">
+  <span class="section-num">§ 2</span>
+  <h2>Discovery 循环的运转</h2>
+</div>
+
+<p>一个 trial 等于一个 budget 步。每一步要么完整走完提案、构建、判别、反思、提交，要么干净地中止然后前进。整个循环短到能完整写出来：</p>
+
+<span class="code-label">算法 1 · 一个 trial</span>
+<pre><span class="k">for</span><span class="n"> i </span><span class="k">in</span><span class="n"> range(budget):
+  trial_id = start_id + i                              </span><span class="c"># 顺序编号，中止也前进</span><span class="n">
+  ctx       = ContextBuilder.editor_view(incumbent)
+  proposal  = RoleRunner.editor(ctx, trial_id)         </span><span class="c"># LLM 调用 #1</span><span class="n">
+  candidate = CandidateBuilder.apply(incumbent, proposal)
+
+  </span><span class="k">if</span><span class="n"> InvariantRunner.fail(candidate, df_train):       </span><span class="c"># AST + prefix_stability + sandbox</span><span class="n">
+    MemoryManager.append_invariant_failure(...); </span><span class="k">continue</span><span class="n">
+
+  train  = BacktestRunner.run(candidate, df_train)
+  val    = BacktestRunner.run(candidate, df_val)
+
+  gate   = ValidationGate.decide(incumbent_outcome, candidate_outcome)
+  signal = ValidationGate.redact(gate)                 </span><span class="c"># 5 种类别化信号之一</span><span class="n">
+  outcome = HypothesisScorer.compare(proposal, signal, train.sharpe_delta)
+
+  refl   = RoleRunner.reflector(ctx, proposal,         </span><span class="c"># LLM 调用 #2</span><span class="n">
+                                outcome, signal, train.metrics)
+
+  MemoryManager.append_trial(record)                   </span><span class="c"># trials.jsonl</span><span class="n">
+  MemoryManager.append_reflection(refl.record)         </span><span class="c"># reflections.jsonl</span><span class="n">
+  MemoryManager.append_to_md(refl.record.updates)      </span><span class="c"># 4 份语义记忆 md</span><span class="n">
+  GitManager.commit_trial(trial_id, edit_summary)
+
+  </span><span class="k">if</span><span class="n"> gate.accepted:
+    incumbent, incumbent_outcome = candidate, candidate_outcome
+  </span><span class="k">else</span><span class="n">:
+    restore_working_tree(incumbent)
+
+  </span><span class="k">if</span><span class="n"> Curator.should_run(accepted_count):                </span><span class="c"># 每 10 个 accepted 触发</span><span class="n">
+    Curator.run(cycle=...)                             </span><span class="c"># LLM 调用 #3，shadow 模式</span><span class="n">
+
+</span><span class="c"># 循环结束</span><span class="n">
+sealed_metrics = BacktestRunner.run(incumbent, df_sealed)
+h1_verdict     = compute_h1_verdict(sealed.returns, df_sealed)
+SealedVault.open_and_write({..., h1_verdict})         </span><span class="c"># 一次性写入</span><span class="n">
+ReportBuilder.build()                                  </span><span class="c"># 最终 HTML</span><span class="n"></span></pre>
+
+<p>每个 trial 两次 LLM 调用（Editor + Reflector）。每 10 个 accepted trial 触发第三次（Curator）。在一次 20 trial、0 accepted 的运行中，整个循环消耗 40 次 LLM 调用。</p>
+
+<h3>Trial 状态机</h3>
+
+<div class="figure">
+<div class="chart-wrap" style="padding: 24px 18px;">
+<svg viewBox="0 0 720 290" width="100%" role="img">
+  <title>Trial 输出状态机</title>
+
+  <circle cx="60" cy="140" r="20" fill="#1a1a1c"/>
+  <text x="60" y="180" text-anchor="middle" font-family="Fraunces, serif" font-size="11" fill="#6b6b70">start</text>
+
+  <rect x="100" y="115" width="100" height="50" fill="#fbfaf6" stroke="#8b3a2f" rx="3"/>
+  <text x="150" y="140" text-anchor="middle" font-family="Fraunces, serif" font-size="13">Editor</text>
+  <text x="150" y="156" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#6b6b70">LLM #1</text>
+
+  <rect x="240" y="20" width="120" height="42" fill="#fbfaf6" stroke="#a4a4a8" stroke-dasharray="3 2" rx="3"/>
+  <text x="300" y="40" text-anchor="middle" font-family="Fraunces, serif" font-size="12">aborted</text>
+  <text x="300" y="55" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#6b6b70">parse / redact</text>
+
+  <rect x="240" y="115" width="120" height="50" fill="#fbfaf6" stroke="#8b3a2f" rx="3"/>
+  <text x="300" y="138" text-anchor="middle" font-family="Fraunces, serif" font-size="12">Build + Invariants</text>
+  <text x="300" y="154" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#6b6b70">AST + prefix_stab</text>
+
+  <rect x="240" y="220" width="120" height="42" fill="#fbfaf6" stroke="#a4a4a8" stroke-dasharray="3 2" rx="3"/>
+  <text x="300" y="240" text-anchor="middle" font-family="Fraunces, serif" font-size="12">invariant_failure</text>
+  <text x="300" y="255" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#6b6b70">不进回测</text>
+
+  <rect x="400" y="115" width="120" height="50" fill="#fbfaf6" stroke="#2d6a5c" rx="3"/>
+  <text x="460" y="138" text-anchor="middle" font-family="Fraunces, serif" font-size="13">ValidationGate</text>
+  <text x="460" y="154" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#6b6b70">多目标</text>
+
+  <rect x="560" y="80" width="140" height="42" fill="#fbfaf6" stroke="#2d6a5c" rx="3"/>
+  <text x="630" y="100" text-anchor="middle" font-family="Fraunces, serif" font-size="12">accepted</text>
+  <text x="630" y="115" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#2d6a5c">incumbent ← candidate</text>
+
+  <rect x="560" y="170" width="140" height="42" fill="#fbfaf6" stroke="#8b3a2f" rx="3"/>
+  <text x="630" y="190" text-anchor="middle" font-family="Fraunces, serif" font-size="12">rejected</text>
+  <text x="630" y="205" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8b3a2f">restore working tree</text>
+
+  <g stroke="#1a1a1c" stroke-width="1" fill="none" marker-end="url(#arrow)">
+    <path d="M 80 140 L 100 140"/>
+    <path d="M 200 140 L 240 140"/>
+    <path d="M 200 130 Q 220 90 240 50"/>
+    <path d="M 360 140 L 400 140"/>
+    <path d="M 300 165 L 300 220"/>
+    <path d="M 520 130 Q 540 110 560 101"/>
+    <path d="M 520 150 Q 540 170 560 191"/>
+  </g>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L8,5 L0,10 z" fill="#1a1a1c"/>
+    </marker>
+  </defs>
+
+  <text x="460" y="92" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="8" letter-spacing="0.08em" fill="#6b6b70">5 类类别化信号</text>
+</svg>
+</div>
+<div class="figure-caption"><strong>图 2。</strong> Editor 调用产出 proposal。任何 parser 或 redaction 失败把这条路径送进 <em>aborted</em>，不写 trial 记录。构建成功后再跑 AST + sandbox + <code>prefix_stability</code>，任何一层失败送进 <em>invariant_failure</em>。只有通过两层关卡的候选才会进入 gate，gate 给出的判别就是 Reflector 看到的内容。</div>
+</div>
+</section>
+
+<!-- ============================== § 3 不变式分层防御 ============================== -->
+<section id="invariants">
+<div class="section-marker">
+  <span class="section-num">§ 3</span>
+  <h2>应对 agent 代码的分层防御</h2>
+</div>
+
+<p>一个能编写 Python 并影响 backtest 的 LLM，从第一天起就是指标的对手，无论它是不是有意为之。不变式套件就是阻止它通过 reward hacking 写出虚假 Sharpe 的那道屏障。</p>
+
+<div class="figure">
+<div class="chart-wrap" style="padding: 24px 22px;">
+<svg viewBox="0 0 700 400" width="100%" role="img">
+  <title>分层不变式</title>
+
+  <!-- Layer 1: y=30, h=62, lines at 52/72/88 -->
+  <g>
+    <rect x="40" y="30" width="620" height="62" fill="#fbfaf6" stroke="#1a1a1c" stroke-width="1.2" rx="2"/>
+    <text x="58" y="52" font-family="Fraunces, serif" font-size="14" fill="#1a1a1c">1 · ProposalParser</text>
+    <text x="58" y="72" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#1a1a1c">Pydantic 双层校验 · extra=forbid</text>
+    <text x="58" y="88" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">拒绝畸形 YAML、未知 edit type、偷夹的额外字段。任何文件都尚未被触动。</text>
+  </g>
+
+  <!-- Layer 2: y=100, h=80, lines at 122/142/158/175 (4 lines) -->
+  <g>
+    <rect x="40" y="100" width="620" height="80" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.2" rx="2"/>
+    <text x="58" y="122" font-family="Fraunces, serif" font-size="14" fill="#1a1a1c">2 · AST 静态检查（5 项）</text>
+    <text x="58" y="142" font-family="JetBrains Mono, monospace" font-size="10" fill="#8b3a2f">no_future_shift · no_negative_indexing · no_forward_fill_future</text>
+    <text x="58" y="158" font-family="JetBrains Mono, monospace" font-size="10" fill="#8b3a2f">whitelisted_imports_only · pure_function</text>
+    <text x="58" y="175" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">捕获 indicator 代码里的 shift(-1)、bfill、import os、print/open/eval 等模式。</text>
+  </g>
+
+  <!-- Layer 3: y=188, h=62, lines at 210/230/246 -->
+  <g>
+    <rect x="40" y="188" width="620" height="62" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.2" rx="2"/>
+    <text x="58" y="210" font-family="Fraunces, serif" font-size="14" fill="#1a1a1c">3 · SandboxExecutor</text>
+    <text x="58" y="230" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#8b3a2f">受限 builtins · SIGALRM 超时 · 自定义 __import__</text>
+    <text x="58" y="246" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">42 个安全 builtin 与白名单 import。函数体内的 import os 仍会抛错。</text>
+  </g>
+
+  <!-- Layer 4: y=258, h=62, lines at 280/300/316 -->
+  <g>
+    <rect x="40" y="258" width="620" height="62" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.2" rx="2"/>
+    <text x="58" y="280" font-family="Fraunces, serif" font-size="14" fill="#1a1a1c">4 · prefix_stability <tspan font-family="JetBrains Mono, monospace" font-size="10.5" fill="#6b6b70">（动态）</tspan></text>
+    <text x="58" y="300" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#8b3a2f">∀ t : f(D)[t] == f(D[:t+1])[t]</text>
+    <text x="58" y="316" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">扰动 D_&gt;t，捕获全序列归一化、全局百分位以及其它隐式 lookahead。</text>
+  </g>
+
+  <!-- Layer 5: y=328, h=62, lines at 350/370/386 -->
+  <g>
+    <rect x="40" y="328" width="620" height="62" fill="#fbfaf6" stroke="#b88a2c" stroke-width="1.2" rx="2"/>
+    <text x="58" y="350" font-family="Fraunces, serif" font-size="14" fill="#1a1a1c">5 · gate 侧运行时检查</text>
+    <text x="58" y="370" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#b88a2c">cost_model_required · max_position · sandbox_execution</text>
+    <text x="58" y="386" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">非零换手的零成本回测会被拒。不允许隐式杠杆。</text>
+  </g>
+</svg>
+</div>
+<div class="figure-caption"><strong>图 3。</strong> LLM 生成的 indicator 与回测之间的 5 层屏障。AST 静态检查捕获 agent <em>写下来</em>的内容；sandbox 捕获通过了静态分析但在运行时违规的行为；<code>prefix_stability</code> 捕获 AST 永远看不到的语义层泄漏。Anthropic 20 trial 的运行里，12 / 20 个 trial 在到达 gate 之前就被这五层中的某一层拦下。</div>
+</div>
+
+<h3>最关键的一项检查</h3>
+
+<p>五层中，<code>prefix_stability</code> 是为其它四层存在赋予意义的那一项。PROPOSAL §4.5 的形式化表述：</p>
+
+<div class="math">
+\[
+f\!\left(D_{1:T}\right)\!\bigl[t\bigr] \;=\; f\!\left(D_{1:t}\right)\!\bigl[t\bigr] \qquad \forall\, t \in \{1, \ldots, T\}
+\]
+<span class="where">对任意 indicator <em>f</em>，它在时刻 <em>t</em> 用全序列计算的值，必须等于它仅用截止到 <em>t</em> 的前缀计算的值。这比 AST 扫描 <code>shift(-1)</code> 严格得多：能捕获归一化、百分位等任何让 <em>D<sub>&gt;t</sub></em> 信息进入 <em>f(D)[t]</em> 的路径。</span>
+</div>
+
+<p>实施方式：随机采样 30 个 <em>t</em>，用 <code>U(0.5, 1.5)</code> 随机缩放替换 <code>df.iloc[t+1:]</code>（OHL 同步缩放以保持 high≥close≥low 的内在约束），重算 indicator，将头部 <code>[0..t]</code> 与未扰动基准比对。任何超过 <code>atol=1e-12</code> 的偏差视为泄漏。两个在实际运行中捕获到的 leaky LLM-authored indicator：</p>
+
+<table>
+  <thead>
+    <tr><th>Indicator</th><th>泄漏原因</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>whole_series_zscore</code></td>
+      <td><code>(s - s.mean()) / s.std()</code>。<em>t</em>=500 处的 mean 与 std 取决于所有未来行。AST 看不见这种泄漏（无 <code>shift</code>、无 <code>iloc</code>、无 fill）。<code>prefix_stability</code> 在第一次扰动就抓住：扰动 <em>D<sub>&gt;500</sub></em> 时，<em>t</em>≤500 的每一个值都跟着变。</td>
+    </tr>
+    <tr>
+      <td><code>normalize_to_global_max</code></td>
+      <td><code>close / close.max()</code>。结构问题一致，更直观。扰动后第一个差异位置：<code>0</code>。</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>两者都是 LLM Editor 在试运行中无诱导地生成的，都在任何回测之前就被拒。这就是这一层在工作。</p>
+
+<div class="aside warn">
+<span class="aside-label">一个诚实的局限</span>
+<code>prefix_stability</code> 采样无法证明不存在 lookahead，只能证伪。在 <code>n_samples=30</code> 时，若泄漏恰好只出现在 3000 个 <em>t</em> 中的某一个，约 99% 的运行会漏过。生产运行采样更激进，并由 Curator 记录每一次假阴性作为加大采样的证据。目前默认值对我们 DSL 内的日频 indicator 足够，但不能替代形式化证明。
+</div>
+</section>
+
+<!-- ============================== § 4 验证 gate ============================== -->
+<section id="gate">
+<div class="section-marker">
+  <span class="section-num">§ 4</span>
+  <h2>验证 gate</h2>
+</div>
+
+<p>per-trial gate 是整个系统中最容易在不知不觉中与 H1 verdict 标准产生偏差的部分。它<em>不是</em> H1 verdict。它有意设计得更宽松，避免 Discovery 循环被饿死，但又足够严格，让验证窗口上的偶然 accept 不会污染搜索。</p>
+
+<span class="code-label">lbg/gate/decision.py · decide()</span>
+<pre><span class="k">def</span><span class="n"> decide(incumbent, candidate, cfg):
+  </span><span class="k">if</span><span class="n"> candidate.train.num_trades &lt; cfg.min_trades:        </span><span class="k">return</span><span class="n"> Reject("too_few_trades")
+  </span><span class="k">if</span><span class="n"> candidate.val.max_drawdown &lt; incumbent.val.max_drawdown * 1.15:
+                                                          </span><span class="k">return</span><span class="n"> Reject("drawdown_regression")
+  </span><span class="k">if</span><span class="n"> candidate.val.turnover &gt; cfg.max_turnover:           </span><span class="k">return</span><span class="n"> Reject("turnover_too_high")
+  </span><span class="k">if</span><span class="n"> candidate.complexity - incumbent.complexity &gt; cfg.max_delta:
+                                                          </span><span class="k">return</span><span class="n"> Reject("complexity_increase")
+
+  u_cand = utility_lcb_sharpe(candidate.val.returns, α=0.20)
+  u_inc  = utility_lcb_sharpe(incumbent.val.returns,  α=0.20)
+  </span><span class="k">if</span><span class="n"> u_cand &gt; u_inc + cfg.eps:                            </span><span class="k">return</span><span class="n"> Accept("utility_improvement")
+
+  </span><span class="k">if</span><span class="n"> pareto_dominates(candidate, incumbent, cfg.eps):     </span><span class="k">return</span><span class="n"> Accept("pareto_improvement")
+
+  </span><span class="k">if</span><span class="n"> candidate.train.sharpe - candidate.val.sharpe &gt; cfg.max_gap:
+                                                          </span><span class="k">return</span><span class="n"> Reject("overfit_gap")
+  </span><span class="k">return</span><span class="n"> Reject("no_meaningful_improvement")</span></pre>
+
+<h3>为什么是单侧 utility LCB at α = 0.20</h3>
+
+<p>Lo (2002) 在 iid 日收益假设下给出的 Sharpe 估计量渐近标准误：</p>
+
+<div class="math">
+\[
+\widehat{\mathrm{SE}}(\hat S) \;\approx\; \sqrt{\frac{1 + \tfrac{1}{2}\hat S^{2}}{n}} \cdot \sqrt{252}
+\]
+<span class="where"><em>n</em> 是验证窗口长度（split_B 约 505 个交易日）。<em>Ŝ</em> 是年化点估计。单侧下界用 α=0.20 对应 <code>z<sub>0.80</sub> ≈ 0.842</code>。比 95% CI 宽，这是有意的：避免在 500 bar 的窗口上把每一个诚实的小改进都拒掉。</span>
+</div>
+
+<p>gate 比较的是<em>候选 LCB</em>与<em>现任 LCB</em>，而非点估计。候选 LCB 必须比现任 LCB 至少高出 <code>EPS = 0.005</code>。当两个候选的实现收益完全相同时，LCB 也相同，gate 就 fall through 到 Pareto 检查：仍可能因为<em>复杂度</em>、<em>回撤</em>或<em>换手</em>的改进被接受。</p>
+
+<h3>LLM 看到的 5 类类别化信号</h3>
+
+<p>gate 内部进行细致数值推理，但对 LLM 暴露的只有 5 种字符串之一：</p>
+
+<table>
+  <thead>
+    <tr><th>对外信号</th><th>内部理由映射</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="yes"><code>accepted</code></td><td><code>accept_utility_improvement</code>、<code>accept_pareto_improvement</code></td></tr>
+    <tr><td class="no"><code>rejected_drawdown_regression</code></td><td>val MDD 超过现任 × 1.15</td></tr>
+    <tr><td class="no"><code>rejected_turnover</code></td><td>val 换手超出上限（默认 10 / 年）</td></tr>
+    <tr><td class="no"><code>rejected_complexity</code></td><td>Δcomplexity 超过 MAX_DELTA（默认 3.0）</td></tr>
+    <tr><td class="no"><code>rejected_no_significant_improvement</code></td><td><code>too_few_trades</code>、<code>overfit_gap</code>、<code>no_meaningful_improvement</code> 共用此桶</td></tr>
+  </tbody>
+</table>
+
+<p>把三个内部理由折叠到 <code>rejected_no_significant_improvement</code> 是有意为之。LLM 不需要区分 "我交易太少" 与 "我在 train 上过拟合"：两者都表示 "你的 edit 没有让策略前进"，正确的回应也都是 "试一种不同形态的 edit"。在 agent context 中区分它们会引诱 reward hacking，针对其中更容易触发的那个写作弊。</p>
+
+<h3>complexity 完整公式</h3>
+
+<p>五项之和，所有权重在 §20 锁定列表中冻结：</p>
+
+<div class="math">
+\[
+\mathrm{Complexity}(H) \;=\; \lambda_1 |A_k| + \lambda_2 |\text{filters}| + \lambda_3 |\text{params}| + \lambda_4 \cdot \mathrm{LOC} + \lambda_5 \cdot \#\text{branches}
+\]
+<span class="where">冻结权重：λ<sub>1</sub>=1.0（每个 indicator），λ<sub>2</sub>=0.5（每个 filter），λ<sub>3</sub>=0.1（每个 param），λ<sub>4</sub>=0.005（所有 indicator 文件累计的有效 LOC），λ<sub>5</sub>=0.05（If/While/For/Try 等 AST 控制流节点）。LOC 与 branch 在<em>不同</em>的 indicator 文件之间累计，两个 spec 共用一个 <code>fn</code> 不重复计数。</span>
+</div>
+
+<p>添加一个 50 行、3 个分支节点的 ATR 实现，会让 complexity 增加 <code>1.0 + 0.005·50 + 0.05·3 = 1.4</code>。<code>MAX_DELTA = 3.0</code> 意味着一个 trial 大致可以做两次这样的添加，第三次必须等 Curator 的 <code>simplify</code> 把存量复杂度先压下来。</p>
+</section>
+
+<!-- ============================== § 5 sealed window 与 H1 ============================== -->
+<section id="sealed">
+<div class="section-marker">
+  <span class="section-num">§ 5</span>
+  <h2>封存窗口与 H1 verdict</h2>
+</div>
+
+<p>整个架构最重要的一条不变量是：agent <em>永远看不到 split_C</em>。看不到数据、看不到指标、也看不到 split 边界的日历日期。Orchestrator 在 Discovery 循环的最末刻打开它一次，把 verdict 写入一次性 vault，由人类阅读。</p>
+
+<div class="figure">
+<div class="chart-wrap" style="background: var(--paper-warm); padding: 36px 24px 28px;">
+<svg viewBox="0 0 700 220" width="100%" role="img">
+  <title>三分片协议在 SPY 2010 – 2024 上的布局</title>
+
+  <line x1="40" y1="130" x2="660" y2="130" stroke="#1a1a1c" stroke-width="0.8"/>
+
+  <g font-family="Fraunces, serif" font-size="11" fill="#6b6b70">
+    <text x="40" y="180" text-anchor="middle">2010</text>
+    <text x="412" y="180" text-anchor="middle">2019</text>
+    <text x="495" y="180" text-anchor="middle">2021</text>
+    <text x="660" y="180" text-anchor="middle">2024</text>
+  </g>
+
+  <g>
+    <line x1="40" y1="125" x2="40" y2="135" stroke="#1a1a1c"/>
+    <line x1="412" y1="125" x2="412" y2="135" stroke="#1a1a1c"/>
+    <line x1="495" y1="125" x2="495" y2="135" stroke="#1a1a1c"/>
+    <line x1="660" y1="125" x2="660" y2="135" stroke="#1a1a1c"/>
+  </g>
+
+  <!-- 三个 split -->
+  <rect x="40" y="90" width="372" height="35" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.2" rx="2"/>
+  <text x="226" y="113" text-anchor="middle" font-family="Fraunces, serif" font-size="13" fill="#1a1a1c">split_A · train · 2264 bar</text>
+
+  <rect x="412" y="90" width="83" height="35" fill="#fbfaf6" stroke="#b88a2c" stroke-width="1.2" rx="2"/>
+  <text x="453.5" y="113" text-anchor="middle" font-family="Fraunces, serif" font-size="12" fill="#1a1a1c">split_B · val · 505</text>
+
+  <rect x="495" y="90" width="165" height="35" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1.2" rx="2"/>
+  <text x="577.5" y="113" text-anchor="middle" font-family="Fraunces, serif" font-size="13" fill="#1a1a1c">split_C · sealed · 1005</text>
+
+  <!-- agent 可见性，三段分别置于各自 split 中央且互不重叠 -->
+  <text x="226" y="50" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9.5" letter-spacing="0.06em" fill="#8b3a2f">完整 train 指标</text>
+  <text x="226" y="66" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">agent 可见</text>
+
+  <text x="453.5" y="50" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9.5" letter-spacing="0.06em" fill="#b88a2c">仅类别化信号</text>
+  <text x="453.5" y="66" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">5 种之一</text>
+
+  <text x="577.5" y="50" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9.5" letter-spacing="0.06em" fill="#2d6a5c">永远不可见</text>
+  <text x="577.5" y="66" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">最后一次写入</text>
+
+  <!-- vault marker -->
+  <line x1="660" y1="68" x2="660" y2="90" stroke="#2d6a5c" stroke-width="1" stroke-dasharray="2 2"/>
+  <text x="660" y="200" text-anchor="end" font-family="Fraunces, serif" font-style="italic" font-size="11" fill="#2d6a5c">SealedVault.open_and_write()</text>
+</svg>
+</div>
+<div class="figure-caption"><strong>图 4。</strong> 三个 split 在数据流中以 <code>split_A</code> / <code>split_B</code> / <code>split_C</code> 的别名出现，agent 永远看不到日历年份。坐标轴上的年份只是给人类读者参考。封存只在循环末尾打开一次。</div>
+</div>
+
+<h3>H1 检验</h3>
+
+<p>最终判别是对 LBG-Trader 与最强 pre-registered baseline 之间 sealed Sharpe 的<em>配对差</em>做 moving block bootstrap 置信区间：</p>
+
+<div class="math">
+\[
+\Delta\hat{S} \;=\; \hat{S}_{\text{LBG}} - \hat{S}_{B^{*}}
+\quad\text{with}\quad
+\mathrm{CI}_{95\%}(\Delta\hat{S}) \;=\; \bigl[\hat{q}_{2.5\%},\, \hat{q}_{97.5\%}\bigr]
+\]
+<span class="where">百分位 <em>q̂</em> 在 1000 次 bootstrap 重采样上取得。每次重采样从配对日收益序列里有放回地抽 ⌈n / block_len⌉ 个长度为 10 的重叠 block，重新计算两侧 Sharpe。<em>B</em>* 取两个 pre-registered baseline（buy-and-hold、sixty-forty）在 split_C 上点 Sharpe 较高者。</span>
+</div>
+
+<p><em>强</em>判据是 <code>CI.lower &gt; 0</code>；<em>弱</em>判据是 <code>ΔS&#770; &gt; 0</code>。两者都报告，但 verdict 取决于强判据。</p>
+
+<h3>为什么用 block bootstrap</h3>
+
+<p>SPY 日收益存在非可忽略的自相关，波动率层面尤其明显。iid bootstrap（按日单独重采样）会抹平这种结构，进而高估 Sharpe 估计的精度。长度为 10 的 moving block 保留了短期自相关，又能在 1000 次重采样下给出稳定的 95% CI。</p>
+
+<h3>vault 内容</h3>
+
+<span class="code-label">artifacts/sealed/sealed_test_final.json</span>
+<pre><span class="n">{
+  "sealed_at_utc": "2026-05-23T...",
+  "strategy_name": "sma_cross_baseline",
+  "sharpe": 0.108, "max_drawdown": -0.280, "turnover": 4.27,
+  "num_trades": 17, "cagr": 0.0059, "final_equity": 1.024,
+  "complexity": 2.405,
+  "h1_verdict": {
+    "strategy_sharpe":     0.108,
+    "best_baseline_name":  "buy_and_hold",
+    "best_baseline_sharpe": 0.861,
+    "delta_sharpe":       -0.753,
+    "ci_lower":           -1.440,
+    "ci_upper":            0.003,
+    "alpha": 0.05, "n_bootstrap": 1000, "block_len": 10,
+    "h1_strong": false,
+    "h1_weak":   false
+  }
+}</span></pre>
+
+<p>写入后立刻 <code>chmod 0o444</code>，第二次写入抛 <code>SealedVaultError</code>。vault 是整个项目对"是否泛化"这件事的唯一关键性主张，而它不能通过 Orchestrator 被篡改。</p>
+</section>
+
+<!-- ============================== § 6 反 sycophancy ============================== -->
+<section id="sycophancy">
+<div class="section-marker">
+  <span class="section-num">§ 6</span>
+  <h2>反 sycophancy 的防御</h2>
+</div>
+
+<p>如果直接问 LLM Reflector "这个 trial 是否得到了确认"，它倾向于答 "是"，特别是 system prompt 流露出在意进度的时候。我们的防御不是劝它别这样做，而是结构上不给它这个机会：我们从不问它那个问题。</p>
+
+<div class="pullquote">
+"Memory 记录的是发生了什么。Reflector <em>解释</em>，Orchestrator <em>裁决</em>。"
+</div>
+
+<h3>HypothesisScorer.compare 这一段是机械的</h3>
+
+<p>Editor 的 proposal 含有两个枚举化的预测：</p>
+
+<ul>
+  <li><strong>expected_train_signal</strong> ∈ {strong_improvement, mild_improvement, neutral, mild_regression, strong_regression}</li>
+  <li><strong>expected_validation_signal</strong> ∈ {accept, reject}</li>
+</ul>
+
+<p>gate 结束后，Orchestrator 计算 <code>delta_sharpe_train = candidate.train.sharpe − incumbent.train.sharpe</code>，用固定阈值 <code>(±0.05, ±0.30)</code> 分到同样的五个桶里。Reflector 被告知结果，<em>不被询问</em>结果。</p>
+
+<table>
+  <thead>
+    <tr><th>train 桶</th><th>val 是否吻合</th><th>HypothesisOutcome</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>吻合</td><td>吻合</td><td class="yes"><code>confirmed</code></td></tr>
+    <tr><td>不吻合</td><td>不吻合</td><td class="no"><code>disconfirmed</code></td></tr>
+    <tr><td colspan="2">恰有一项吻合</td><td><code>partially_confirmed</code></td></tr>
+  </tbody>
+</table>
+
+<p>Reflector 的任务是窄小的：<em>给定</em> outcome，机械地解释策略机制中是什么驱动了这个结果。system prompt 禁止它重述 outcome、禁止它评判 hypothesis、要求它对四份语义记忆文档给出 bullet 形态的更新。<code>ReflectorOutputPayload</code> <em>不包含</em> <code>hypothesis_outcome</code> 字段，schema 本身就让覆写机械结果在结构上不可能。</p>
+
+<h3>三层 redaction</h3>
+
+<div class="ladder">
+  <div class="rung">
+    <div class="rung-tag">L1</div>
+    <div class="rung-body"><strong>结构层。</strong><code>PastTrialSummary</code> dataclass 不含 <code>validation_sharpe</code> / <code>validation_max_drawdown</code> / <code>validation_turnover</code> 字段。Editor 看不到 val 指标，因为承载 trial 历史的数据结构里根本没有这些字段。测试 <code>test_past_trial_summary_omits_validation_metrics</code> 在每次 CI 都验证这个不变量。</div>
+  </div>
+  <div class="rung">
+    <div class="rung-tag">L2</div>
+    <div class="rung-body"><strong>文本层 · 发送方向。</strong>每个组装好的 prompt 在 <code>messages.create</code> 触发前都过 <code>assert_redacted</code>。匹配模式包括 <code>[1990, 2050]</code> 之间的四位数字年份、ISO 日期、35 个具名市场事件（如 <em>covid</em>、<em>gfc</em>、<em>lehman</em>、<em>brexit</em>、<em>9/11</em>）。任何命中都在请求发出网络之前抛 <code>RedactionError</code>。</div>
+  </div>
+  <div class="rung">
+    <div class="rung-tag">L3</div>
+    <div class="rung-body"><strong>文本层 · 接收方向。</strong>同一个扫描器再过一遍 LLM 的原始响应。如果模型在 reflection 里幻觉了 "在 2020 的回撤之后..."，我们立刻报错，而非把一条泄漏 bullet 写进 <code>accepted_rules.md</code>。整个 trial 中止，下一次 Editor turn 看不到这条记录。</div>
+  </div>
+</div>
+
+<h3>Reflector 真实积累的内容</h3>
+
+<p>即便在 0 个 accepted trial 的情况下，Reflector 也产出真实的、机械的、有证据支撑的 bullet。来自 MIMO run 的 <code>failed_directions.md</code>：</p>
+
+<div class="aside">
+"在没有重构 entry/exit 规则的前提下，单独把 sizing 切到 volatility_target 会导致仓位频繁缩放、交易激增，整体并无净改善。"<br><br>
+"把慢线 SMA 从 50 拉宽到 100（fast 保持 20）能减少交易数，但同时把 exit 延后到了让 Sharpe 变差、val 端触发 drawdown_regression 的程度；这条慢线作为过滤器太钝。"
+</div>
+
+<p>这些是 Reflector 在 trial 之后给出的、对 gate 拒绝原因的机械解释。它点名了机制（<em>仓位频繁缩放</em>、<em>过滤器太钝</em>），而不只是症状。三个 trial 之后，系统已经积累了一张非平凡的失败模式地图，下一个 Editor turn 会读到它。</p>
+</section>
+
+<!-- ============================== § 7 实验与发现 ============================== -->
+<section id="experiments">
+<div class="section-marker">
+  <span class="section-num">§ 7</span>
+  <h2>实验与发现</h2>
+</div>
+
+<p>两次 budget=20 的长 Discovery，一次走一个 provider，两次都从同一个 baseline 策略起步。</p>
+
+<h3>baseline</h3>
+
+<p>SMA 20/50 的 long-only 交叉策略。20 周期 SMA 上穿 50 周期 SMA 时入场，反向交叉时出场。fixed-fraction 100% 仓位。每边成本 5.5 bps。baseline 在各 split 上的指标：</p>
+
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-label">split_A · train</div>
+    <div class="kpi-value">0.693</div>
+    <div class="kpi-sub">MDD -24%，46 笔交易</div>
+  </div>
+  <div class="kpi teal">
+    <div class="kpi-label">split_B · val</div>
+    <div class="kpi-value">0.933</div>
+    <div class="kpi-sub">MDD -15%，7 笔交易</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">split_C · sealed</div>
+    <div class="kpi-value">0.108</div>
+    <div class="kpi-sub">MDD -28%，17 笔交易</div>
+  </div>
+  <div class="kpi gold">
+    <div class="kpi-label">buy_and_hold · sealed</div>
+    <div class="kpi-value">0.861</div>
+    <div class="kpi-sub">需要跨越的门槛</div>
+  </div>
+</div>
+
+<p>baseline 的 val 窗口恰好比 train 窗口对它更友好（val Sharpe 高于 train Sharpe）。sealed 窗口（横跨一次大幅回撤与一次猛烈反弹的四年区间）则非常严酷。SMA cross 在反复震荡中被反复砍掉。</p>
+
+<h3>两个 provider 各自提出了什么</h3>
+
+<div class="two-col">
+  <div class="col-card">
+    <h4>Anthropic Opus 4.7</h4>
+    <ul style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7;">
+      <li>8 个完整完成的 trial</li>
+      <li>0 接受，8 个被 gate 拒</li>
+      <li>12 个 invariant failure（多为 <em>filter 引用未声明 indicator</em>）</li>
+      <li>token 成本 $1.44，wall-clock 218 秒</li>
+      <li>偏向<em>结构性</em> edit：change_sizing_mode、change_exit_rule、add_indicator</li>
+    </ul>
+  </div>
+  <div class="col-card alt">
+    <h4>MIMO v2.5 Pro</h4>
+    <ul style="font-family: var(--sans); font-size: 13.5px; line-height: 1.7;">
+      <li>4 个完整完成的 trial</li>
+      <li>0 接受，4 个被 gate 拒</li>
+      <li>4 个 invariant failure + 12 个 parser abort（缺 YAML 代码块）</li>
+      <li>未计费，wall-clock 1116 秒（约 5 倍慢）</li>
+      <li>偏向<em>参数空间</em>探索：SMA 周期 50 → {75, 100}</li>
+    </ul>
+  </div>
+</div>
+
+<h3>每个 trial 的 Sharpe（两个 provider）</h3>
+
+<div class="figure">
+<div class="chart-wrap" style="padding: 18px 12px;">
+  <canvas id="trialChart" height="300"></canvas>
+</div>
+<div class="figure-caption"><strong>图 5。</strong> 每个候选在 split_A（train，深色）与 split_B（val，浅色）上的 Sharpe，通过在每个 trial commit 上重跑 policy + backtest 得到。基线水平虚线在顶部（train 0.693，val 0.933）。标记 <code>noop</code> 的 trial 是 <code>add_indicator</code> / <code>add_filter</code> 但没接入 entry/exit 的 edit，候选与 baseline 逐位一致。Anthropic trial 2 的 train Sharpe 单独冲到 0.854，但对应只有 1 笔交易，被 <code>min_trades</code> 拒。</div>
+</div>
+
+<h3>失败的形态</h3>
+
+<p>两次运行交叉验证之后有三个共同模式：</p>
+
+<ol>
+  <li><strong>两个 provider 独立发现了同一个最佳改动。</strong><code>change_sizing_mode → volatility_target</code> 在 Anthropic trial 1 与 MIMO trial 0 都给出了 train Sharpe 0.722（比 baseline 高 0.029），逐位一致。这是 Orchestrator 确定性主张在 provider 切换后仍然成立的最强证据，也是 LBG 思想的一个小确证：好 edit 是<em>可发现的</em>。</li>
+  <li><strong>每个真实的 train 改进都让 val 变得<em>更差</em>。</strong>vol-target sizing：val Sharpe 0.933 → 0.876。SMA 周期变宽：val Sharpe 0.933 → 0.223。val 窗口恰好对 baseline 极为友好，任何动作都付出代价。这正是一个反过拟合 gate 必须捕获的现象。</li>
+  <li><strong>接受率 = 0 / 24。</strong>这不是设计意图，是数据使然。<code>min_trades=20</code> 加上小验证窗口上 <code>1.15×</code> 的 MDD 阈值，让 gate 不留情。LLM 的单步 edit 无法解决 "这个 baseline 在它自己的 DSL 里已经接近局部最优" 这一根本问题。这就是负向结果。</li>
+</ol>
+
+<h3>两次运行的 sealed verdict</h3>
+
+<p>两次完全一致到最后一位小数，因为 sealed evaluation 跑在最终现任策略上，两次运行结束时现任都是 baseline（两次都没有 accept）：</p>
+
+<div class="figure">
+<div class="chart-wrap" style="padding: 24px 18px;">
+<svg viewBox="0 0 700 220" width="100%" role="img">
+  <title>H1 verdict 区间：sealed 配对 Sharpe 差</title>
+
+  <!-- 横坐标 -->
+  <line x1="60" y1="130" x2="660" y2="130" stroke="#1a1a1c" stroke-width="0.8"/>
+  <g font-family="JetBrains Mono, monospace" font-size="10" fill="#6b6b70">
+    <text x="60"  y="158" text-anchor="middle">-1.5</text>
+    <text x="180" y="158" text-anchor="middle">-1.0</text>
+    <text x="300" y="158" text-anchor="middle">-0.5</text>
+    <text x="420" y="158" text-anchor="middle">0.0</text>
+    <text x="540" y="158" text-anchor="middle">+0.5</text>
+    <text x="660" y="158" text-anchor="middle">+1.0</text>
+  </g>
+  <!-- 零线（H1 strong 阈值） -->
+  <line x1="420" y1="60" x2="420" y2="145" stroke="#2d6a5c" stroke-width="1" stroke-dasharray="3 3"/>
+  <text x="420" y="50" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="11" fill="#2d6a5c">H1 强判据：CI 下界 &gt; 0</text>
+
+  <!-- CI 区域 (-1.44, 0.003) -->
+  <rect x="74.4" y="102" width="346.4" height="20" fill="#8b3a2f" opacity="0.18"/>
+  <line x1="74.4" y1="90" x2="74.4" y2="134" stroke="#8b3a2f" stroke-width="2"/>
+  <line x1="420.8" y1="90" x2="420.8" y2="134" stroke="#8b3a2f" stroke-width="2"/>
+  <text x="74.4" y="180" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8b3a2f">-1.44</text>
+  <text x="420.8" y="180" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8b3a2f">+0.003</text>
+  <text x="247" y="83" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#8b3a2f">配对 ΔSharpe 的 95% CI（block bootstrap）</text>
+
+  <!-- 点估计 -->
+  <circle cx="239.36" cy="112" r="5" fill="#1a1a1c"/>
+  <text x="239.36" y="200" text-anchor="middle" font-family="Fraunces, serif" font-size="12" fill="#1a1a1c">点估计 -0.75</text>
+</svg>
+</div>
+<div class="figure-caption"><strong>图 6。</strong> split_C 上 <em>Sharpe(LBG) − Sharpe(buy_and_hold)</em> 的 95% block-bootstrap CI。区间 <code>[-1.44, +0.003]</code>，上界仅勉强触碰零。<em>H1 强</em>要求下界 &gt; 0，显然不成立；<em>H1 弱</em>要求点估计 &gt; 0，也不成立。该策略在这个窗口上统计意义上不如 buy-and-hold。</div>
+</div>
+
+<h3>token、时间与花费</h3>
+
+<table>
+  <thead>
+    <tr><th>provider</th><th class="num">耗时（秒）</th><th class="num">完成 trial</th><th class="num">输入 token</th><th class="num">输出 token</th><th class="num">花费</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Anthropic Opus 4.7</td>
+      <td class="num">218</td>
+      <td class="num">8 / 20</td>
+      <td class="num">59 073</td>
+      <td class="num">7 390</td>
+      <td class="num">$1.44</td>
+    </tr>
+    <tr>
+      <td>MIMO v2.5 Pro</td>
+      <td class="num">1 116</td>
+      <td class="num">4 / 20</td>
+      <td class="num">4 526</td>
+      <td class="num">9 092</td>
+      <td class="num">—</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>MIMO 单 trial 大约 5 倍慢，但每次响应的<em>输出</em>token 更多。它的提案在 reasoning 段落更冗长。不同 provider，不同风格，相同的算法表面，相同的 H1 结论。</p>
+
+<div class="aside note">
+<span class="aside-label">MIMO 暴露的一个 bug</span>
+MIMO 这次运行让我们发现原版循环把 trial id 取自 <code>max(trials.jsonl) + 1</code>。aborted trial（parser / redaction 失败）不会写入 <code>trials.jsonl</code>，所以循环可能反复用同一个 <code>trial_id</code> 重试。MIMO 偶尔会丢掉 YAML 代码块，于是表现为同一个 trial_id 4 上连续 12 次 abort。修复方式是把 <code>next_trial_id()</code> 替换为从初始 id 起的顺序计数器，两个回归测试钉死这个不变量。Anthropic 早前的 20 trial 也存在这个 bug，只是它较少丢 YAML 代码块，所以更隐蔽。
+</div>
+</section>
+
+<!-- ============================== § 8 启示 ============================== -->
+<section id="implications">
+<div class="section-marker">
+  <span class="section-num">§ 8</span>
+  <h2>这意味着什么，下一步做什么</h2>
+</div>
+
+<p>对 H1 verdict 的诚实解读令人不舒服：LBG 框架在 SMA 20/50 起点上、20 trial 预算下，没有产出一个能胜过 buy-and-hold 的策略。这是结论，不是实现失败。原因按重要性排序有三：</p>
+
+<div class="ladder">
+  <div class="rung">
+    <div class="rung-tag">1 · 数据</div>
+    <div class="rung-body"><strong>sealed 窗口本身很难。</strong>split_C 横跨 SPY 一段多 regime 的时段，既包含一次主要回撤也包含一次有力反弹。SMA cross 在 regime 切换中必然被反复砍。buy-and-hold 在 sealed 上的 Sharpe 0.861 反映了 long-only 持仓在那个时段拿到的强顺风，而 SMA cross 按定义会错过部分上涨。</div>
+  </div>
+  <div class="rung">
+    <div class="rung-tag">2 · DSL</div>
+    <div class="rung-body"><strong>动作空间太窄。</strong>单步 <code>parameter_change</code> / <code>add_filter</code> / <code>change_sizing_mode</code> 无法把一个 SMA cross 改造为根本不同的策略形态。框架找到的最强改动（vol-target sizing）让 train Sharpe 移动 0.029。gate 不可能接受这么薄的候选，即使接受了，val 窗口也会惩罚任何偏离 baseline 的动作。DSL 需要<em>组合式</em>edit，或者 Editor 需要规划跨多个 trial 的策略序列。</div>
+  </div>
+  <div class="rung">
+    <div class="rung-tag">3 · 预算</div>
+    <div class="rung-body"><strong>20 trial 太少。</strong>PROPOSAL §10 提出过 ~50 trial 的工作预算。在我们观察到的 0 接受率（两个 provider 合计 24 trial 都没有 accept）下，即使 50 trial 也无济于事：Editor 没有在学组合，只是在采样局部 edit。下一个实验不是 "更大 budget"，而是 "Editor 的先验更好"，可能通过更丰富的 skill artifact、多步规划，或者结构上更大的 DSL 实现。</div>
+  </div>
+</div>
+
+<h3>下一步要做什么</h3>
+
+<table>
+  <thead>
+    <tr><th>方向</th><th>原因</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Editor 多步规划</td>
+      <td>目前最大的可观察弱点。第 N 次 trial 经常引用 Editor 想象在第 N+1 次 trial 才会添加的 indicator。要么 prompt 显式承认这一点并要求一份 N-step plan，要么在 Orchestrator 外加一层 Curator 风格的 outer loop，让 Editor 看到自己跨多步的意图。</td>
+    </tr>
+    <tr>
+      <td>内置 indicator 模板</td>
+      <td>Anthropic 大约 5/8 的 trial 都是 noop <code>add_indicator</code>：Editor 添加了 RSI / ATR / regime indicator 却没接线。一套经过预校验的 indicator 库（RSI、ATR、MACD、ADX、realized vol），附带各自的触发语义说明，可以让 agent 把精力放在<em>会实际产生效果</em>的 filter edit 上。</td>
+    </tr>
+    <tr>
+      <td>SkillManager active 模式</td>
+      <td>shadow Curator 已经在工作，active Curator（由 Curator 提出策略简化）的触发条件是 "系统已被证明稳定"。我们至今没在单次运行里看过 10 个 accepted trial，触发器从未点燃。一旦点燃，要审计 Curator 自创 edit 的 strict <code>change</code> 路径。</td>
+    </tr>
+    <tr>
+      <td>Stage 4 broker adapter</td>
+      <td>当前不在范围内（已确认）。Stage 3 的 <code>PaperTradingEngine</code> 已经提供了真实 broker 会消费的逐 bar 流式接口，真接入大约几百行 LOC 加合规文档。</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>框架已经造好。防御是真实的。账目是诚实的。下一步动作在动作空间上，不在架构上。</p>
+
+<div class="pullquote">
+"如果一个框架能在 SMA(20/50) 上、20 trial 之内给出正向 H1，那不会是 LBG 思想的证据，而是某个地方的偏差的证据。"
+</div>
+</section>
+
+<!-- ============================== 页脚 ============================== -->
+<footer class="footer">
+<div>LBG-Trader · 第一阶段回顾 · 2026-05-23</div>
+<div>repo · <span class="accent">commit c3ecba5</span> · 330 tests · 19 377 LOC · <em>uv run pytest -q</em> · <em>uv run ruff check</em></div>
+<div>对照阅读 · <span class="accent">PROPOSAL.html</span> · 所有 § 1-7 引用的源头规范</div>
+</footer>
+
+</div>
+
+<script>
+const CTX = (id) => document.getElementById(id).getContext('2d');
+const PAPER = '#fbfaf6';
+const INK = '#1a1a1c';
+const INK_MUTED = '#6b6b70';
+const ACCENT = '#8b3a2f';
+const ACCENT_SOFT = '#b76b5e';
+const TEAL = '#2d6a5c';
+const TEAL_SOFT = '#7baba1';
+const GOLD = '#b88a2c';
+
+Chart.defaults.font.family = "'Inter', 'Noto Sans SC', system-ui, sans-serif";
+Chart.defaults.font.size = 11.5;
+Chart.defaults.color = INK_MUTED;
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+Chart.defaults.plugins.legend.labels.boxHeight = 12;
+
+/* ============ 图 5：per-trial sharpe（train + val） ============ */
+new Chart(CTX('trialChart'), {
+  type: 'bar',
+  data: {
+    labels: [
+      'A·0 add_ind',   'A·1 sizing',    'A·2 exit',      'A·3 add_ind*',
+      'A·4 add_ind*',  'A·5 add_filt*', 'A·6 add_filt*', 'A·7 add_ind*',
+      'M·0 sizing',    'M·1 add_ind*',  'M·2 sma 50→100','M·3 sma 50→75',
+    ],
+    datasets: [
+      {
+        label: 'train sharpe (split_A)',
+        data: [0.693, 0.722, 0.854, 0.693, 0.693, 0.693, 0.693, 0.693,
+               0.722, 0.693, 0.633, 0.681],
+        backgroundColor: ACCENT,
+        borderRadius: 0,
+        barPercentage: 0.85,
+        categoryPercentage: 0.85,
+      },
+      {
+        label: 'val sharpe (split_B)',
+        data: [0.933, 0.876, 0.726, 0.933, 0.933, 0.933, 0.933, 0.933,
+               0.876, 0.933, 0.223, 0.579],
+        backgroundColor: TEAL_SOFT,
+        borderRadius: 0,
+        barPercentage: 0.85,
+        categoryPercentage: 0.85,
+      },
+    ],
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', align: 'end' },
+      tooltip: {
+        backgroundColor: INK,
+        titleFont: { family: "'Fraunces', serif", weight: 400 },
+        bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
+        padding: 10,
+      },
+    },
+    scales: {
+      x: {
+        ticks: { color: INK_MUTED, font: { family: "'JetBrains Mono', monospace", size: 10 } },
+        grid: { display: false },
+      },
+      y: {
+        beginAtZero: true,
+        max: 1.05,
+        ticks: {
+          color: INK_MUTED,
+          font: { family: "'JetBrains Mono', monospace", size: 10 },
+          stepSize: 0.2,
+        },
+        grid: { color: '#e8e4d8' },
+      },
+    },
+  },
+  plugins: [{
+    id: 'baselineLines',
+    afterDraw(chart) {
+      const { ctx, chartArea: { left, right }, scales: { y } } = chart;
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = ACCENT;
+      ctx.beginPath();
+      ctx.moveTo(left, y.getPixelForValue(0.693));
+      ctx.lineTo(right, y.getPixelForValue(0.693));
+      ctx.stroke();
+      ctx.strokeStyle = TEAL;
+      ctx.beginPath();
+      ctx.moveTo(left, y.getPixelForValue(0.933));
+      ctx.lineTo(right, y.getPixelForValue(0.933));
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = "10px 'JetBrains Mono', monospace";
+      ctx.fillStyle = ACCENT;
+      ctx.fillText('baseline train 0.693', right - 130, y.getPixelForValue(0.693) - 5);
+      ctx.fillStyle = TEAL;
+      ctx.fillText('baseline val 0.933', right - 120, y.getPixelForValue(0.933) - 5);
+      ctx.restore();
+    }
+  }],
+});
+</script>
+
+</body>
+</html>
