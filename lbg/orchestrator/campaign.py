@@ -176,12 +176,9 @@ class CampaignRunner:
                 repo_root=self.repo_root,
                 runner=self.runner,
                 gate_config=self.gate_config,
+                live=live,  # share the campaign writer across iterations
             )
             disc.iter_id = i
-            # Share the campaign-scoped live writer so all iterations
-            # append into the same jsonl (Discovery's default writer
-            # would truncate it on each iteration's __init__).
-            disc.live = live
             vault_path = (
                 self.repo_root / "campaigns" / f"iteration_{i:03d}" / "sealed_test_final.json"
             )
