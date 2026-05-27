@@ -21,8 +21,9 @@ __pycache__/
 # Secrets
 .env
 
-# Cached market data
-data/
+# Cached market data — anchored at repo root so `lbg/data/` (the Python
+# package with the loader code) is NOT swallowed by this pattern.
+/data/
 
 # Large knowledge / factor library data (code in lbg/knowledge/ + scripts/ is tracked).
 # Anchor at root so the pattern doesn't accidentally swallow lbg/knowledge/.
