@@ -77,12 +77,18 @@ def test_banned_includes_rejected_fns(tmp_path):
     cb = ContextBuilder(mm, repo_root=tmp_path)
     strategy = load_strategy(REPO / "strategy.yaml")
     banned = cb._banned_indicator_fns(strategy)
-    assert banned == ("chandelier_long", "chandelier_long_tight")
+    # Updated: baseline `sma` is also included (current-strategy ban).
+    # The two chandelier_long variants must be there too.
+    assert "chandelier_long" in banned
+    assert "chandelier_long_tight" in banned
 
 
-def test_banned_skips_accepted(tmp_path):
-    """An accept means the fn is now part of strategy (or is otherwise a
-    legitimate live one) -- not a ban candidate."""
+def test_banned_includes_accepted(tmp_path):
+    """Updated semantic (2026-05-25): accepted fns are also banned from
+    re-proposal so the campaign loop accumulates *distinct* factors
+    rather than converging on a single factor. The Editor can still
+    tune accepted fns via parameter_change; the ban only applies to
+    `add_indicator`."""
     mm = MemoryManager(tmp_path / "memory")
     _seed_tried(
         mm,
@@ -94,18 +100,20 @@ def test_banned_skips_accepted(tmp_path):
     cb = ContextBuilder(mm, repo_root=tmp_path)
     strategy = load_strategy(REPO / "strategy.yaml")
     banned = cb._banned_indicator_fns(strategy)
-    assert "lsma" not in banned
+    # Both should be banned now -- accepted no longer gets a free pass.
+    assert "lsma" in banned
     assert "chandelier_long" in banned
 
 
-def test_banned_skips_current_strategy_fns(tmp_path):
-    """sma is in the baseline; even if a jsonl line says 'reject + sma'
-    we should not ban it -- the baseline still uses it."""
+def test_banned_includes_current_strategy_fns(tmp_path):
+    """sma is in the baseline AND was tried at trial 0; it appears in the
+    ban list. Editor can still tune sma's period via parameter_change --
+    the ban is on re-authoring it as a new add_indicator."""
     mm = MemoryManager(tmp_path / "memory")
     _seed_tried(mm, [(0, "reject", "add_indicator_only", "sma")])
     cb = ContextBuilder(mm, repo_root=tmp_path)
     strategy = load_strategy(REPO / "strategy.yaml")
-    assert "sma" not in cb._banned_indicator_fns(strategy)
+    assert "sma" in cb._banned_indicator_fns(strategy)
 
 
 def test_banned_dedupes(tmp_path):
@@ -120,13 +128,20 @@ def test_banned_dedupes(tmp_path):
     )
     cb = ContextBuilder(mm, repo_root=tmp_path)
     banned = cb._banned_indicator_fns(load_strategy(REPO / "strategy.yaml"))
-    assert banned == ("chandelier_long",)
+    # Updated semantic (2026-05-25): baseline `sma` is also banned (it's
+    # already in the strategy; you can't add_indicator the same fn twice).
+    # chandelier_long should still be present.
+    assert "sma" in banned
+    assert "chandelier_long" in banned
 
 
 def test_banned_empty_when_no_tried_factors(tmp_path):
     mm = MemoryManager(tmp_path / "memory")
     cb = ContextBuilder(mm, repo_root=tmp_path)
-    assert cb._banned_indicator_fns(load_strategy(REPO / "strategy.yaml")) == ()
+    # Updated semantic: even with no tried_factors, fns currently in the
+    # strategy are banned (you can't re-add what's already there).
+    banned = cb._banned_indicator_fns(load_strategy(REPO / "strategy.yaml"))
+    assert "sma" in banned
 
 
 def test_editor_view_surfaces_banned(tmp_path):
@@ -135,7 +150,9 @@ def test_editor_view_surfaces_banned(tmp_path):
     cb = ContextBuilder(mm, repo_root=tmp_path)
     strategy = load_strategy(REPO / "strategy.yaml")
     view = cb.editor_view(strategy)
-    assert view.banned_indicator_fns == ("chandelier_long",)
+    # Banned list now includes baseline fns AND tried fns.
+    assert "sma" in view.banned_indicator_fns
+    assert "chandelier_long" in view.banned_indicator_fns
 
 
 # -------- prompt rendering --------

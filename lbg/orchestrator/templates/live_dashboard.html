@@ -111,6 +111,7 @@ footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--ink-mu
   <div class="kpi gold"><div class="kpi-label">invariant fail</div><div class="kpi-value" id="kpiInvariant">0</div><div class="kpi-sub">unwired / parse / prefix</div></div>
   <div class="kpi"><div class="kpi-label">最近 train Sharpe</div><div class="kpi-value" id="kpiSharpe">—</div><div class="kpi-sub" id="kpiSharpeSub">baseline 0.693</div></div>
   <div class="kpi teal"><div class="kpi-label">最近 sealed Sharpe</div><div class="kpi-value" id="kpiSealed">—</div><div class="kpi-sub" id="kpiSealedSub">buy-and-hold 0.861</div></div>
+  <div class="kpi gold"><div class="kpi-label">H1 · validated factor count</div><div class="kpi-value" id="kpiValidated">—</div><div class="kpi-sub" id="kpiValidatedSub">CI lower bound &gt; 0</div></div>
 </div>
 
 <div class="chart-grid">
@@ -129,6 +130,17 @@ footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--ink-mu
     <div class="hint">仅统计 Editor 显式 <code>cited_factors</code> 字段。柱体顺序按出现顺序。</div>
     <div style="position: relative; height: 220px;"><canvas id="factorChart"></canvas></div>
   </div>
+  <div class="chart-card full">
+    <h3>alpha card 增量 Sharpe · 95% 区间</h3>
+    <div class="hint">主 H1 计量。横条 = 单 alpha card 在 sealed 窗口的 pathwise 增量 Sharpe 区间 [ci_lower, ci_upper]；红点 = 点估计；竖虚线 = 验证阈值 0。<code>ci_lower &gt; 0</code> 的 card 计入 <code>validated_factor_count</code>。</div>
+    <div style="position: relative; height: 260px;"><canvas id="alphaCardChart"></canvas></div>
+  </div>
+
+  <div class="chart-card full">
+    <h3>alpha card 库 · 因子参数清单 <span id="libCount" style="color: var(--ink-muted); font-size: 12px; font-family: var(--mono);">—</span></h3>
+    <div class="hint">来自 <code>alpha_cards_library/</code>，campaign 启动时 auto-inject 进 baseline。表格列出每个因子的 fn、category、params、attach 配置（threshold / rearm / target）、sealed CI。</div>
+    <div id="libraryTable" style="font-family: var(--mono); font-size: 11.5px; overflow-x: auto;"></div>
+  </div>
 </div>
 
 <div class="chart-card">
@@ -136,6 +148,21 @@ footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--ink-mu
   <div class="hint">从 run_status.jsonl 最近 60 条事件。</div>
   <div class="event-log" id="eventLog"></div>
 </div>
+
+<style>
+  /* library panel */
+  .lib-tbl { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  .lib-tbl th, .lib-tbl td { padding: 6px 10px; border-bottom: 1px solid #e8e0cf; text-align: left; vertical-align: top; }
+  .lib-tbl th { font-weight: 500; color: var(--ink-muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.06em; background: rgba(0,0,0,0.02); }
+  .lib-tbl td.num { font-family: var(--mono); text-align: right; }
+  .lib-tbl .cat { color: var(--gold); }
+  .lib-tbl .role-entry { color: var(--teal); font-weight: 500; }
+  .lib-tbl .role-exit { color: var(--accent); font-weight: 500; }
+  .lib-tbl .ci-valid { color: var(--teal); font-weight: 500; }
+  .lib-tbl .ci-fail { color: var(--accent); }
+  .lib-tbl .ci-null { color: var(--ink-faint); font-style: italic; }
+  .lib-empty { padding: 16px; color: var(--ink-muted); font-style: italic; }
+</style>
 
 <footer>
   LBG-Trader · live dashboard · <span id="totalEvents">0</span> events received · refresh interval 2s
@@ -158,6 +185,18 @@ const BASELINE_SHARPE = 0.693;
 Chart.defaults.font.family = "'Inter', 'Noto Sans SC', system-ui, sans-serif";
 Chart.defaults.font.size = 11.5;
 Chart.defaults.color = INK_MUTED;
+
+// Declared up here so Chart constructor callbacks that reference them
+// don't trip the let temporal dead zone if Chart.js calls styled options
+// during initialization.
+let EVENTS = [];
+let TRIALS = [];
+let ITER_BOUNDARIES = [];
+let FACTOR_COUNTS = {};
+let ALPHA_CARDS = [];
+let LATEST_H1 = null;
+let LATEST_LIBRARY = null;
+let SEEN_BYTES = 0;
 
 const sharpeChart = new Chart(document.getElementById('sharpeChart').getContext('2d'), {
   type: 'bar',
@@ -215,6 +254,85 @@ const mddChart = new Chart(document.getElementById('mddChart').getContext('2d'),
   },
 });
 
+const alphaCardChart = new Chart(document.getElementById('alphaCardChart').getContext('2d'), {
+  type: 'bar',
+  data: {
+    labels: [],
+    datasets: [
+      {
+        label: '95% CI',
+        data: [],
+        backgroundColor: (ctx) => {
+          const c = ALPHA_CARDS[ctx.dataIndex];
+          if (!c) return 'rgba(187,183,176,0.5)';
+          if (c.error) return 'rgba(187,183,176,0.5)';
+          return c.validated ? 'rgba(45,106,92,0.45)' : 'rgba(139,58,47,0.30)';
+        },
+        borderColor: (ctx) => {
+          const c = ALPHA_CARDS[ctx.dataIndex];
+          if (!c || c.error) return GRAY;
+          return c.validated ? TEAL : ACCENT;
+        },
+        borderWidth: 1,
+        borderSkipped: false,
+        barPercentage: 0.55,
+      },
+      {
+        label: 'point estimate',
+        type: 'scatter',
+        data: [],
+        backgroundColor: ACCENT,
+        borderColor: ACCENT,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+      },
+    ],
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: {
+      legend: { display: true, labels: { font: { family: "'JetBrains Mono', monospace", size: 10 } } },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => {
+            const c = ALPHA_CARDS[ctx.dataIndex];
+            if (!c) return '';
+            if (c.error) return `error: ${c.error}`;
+            return [
+              `point: ${c.point.toFixed(3)}`,
+              `95% CI: [${c.ci_lower.toFixed(3)}, ${c.ci_upper.toFixed(3)}]`,
+              c.validated ? 'validated (ci_lower > 0)' : 'not validated',
+            ];
+          },
+        },
+      },
+    },
+    scales: {
+      x: { ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 } }, grid: { color: '#e8e4d8' }, title: { display: true, text: 'incremental Sharpe (sealed)', font: { family: "'JetBrains Mono', monospace", size: 10 } } },
+      y: { ticks: { font: { family: "'Inter', 'Noto Sans SC', sans-serif", size: 11 } }, grid: { display: false } },
+    },
+  },
+  plugins: [{ id: 'zeroLine', afterDraw(chart) {
+    const { ctx, chartArea: { top, bottom }, scales: { x } } = chart;
+    const px = x.getPixelForValue(0);
+    ctx.save();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = ACCENT;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(px, top);
+    ctx.lineTo(px, bottom);
+    ctx.stroke();
+    ctx.fillStyle = ACCENT;
+    ctx.font = "10px 'JetBrains Mono', monospace";
+    ctx.fillText('threshold 0', px + 6, top + 12);
+    ctx.restore();
+  }}],
+});
+
 const factorChart = new Chart(document.getElementById('factorChart').getContext('2d'), {
   type: 'bar',
   data: { labels: [], datasets: [{ label: 'count', data: [], backgroundColor: TEAL_SOFT, borderRadius: 0, barPercentage: 0.7 }] },
@@ -228,12 +346,6 @@ const factorChart = new Chart(document.getElementById('factorChart').getContext(
     },
   },
 });
-
-let EVENTS = [];
-let TRIALS = [];
-let ITER_BOUNDARIES = [];
-let FACTOR_COUNTS = {};
-let SEEN_BYTES = 0;
 
 function colorFor(decision) {
   if (decision === 'accept') return TEAL;
@@ -251,6 +363,8 @@ function rebuildCharts() {
   TRIALS = [];
   ITER_BOUNDARIES = [];
   FACTOR_COUNTS = {};
+  ALPHA_CARDS = [];
+  LATEST_H1 = null;
   let iterCount = 0;
   let prevIter = null;
   let lastIter = null;
@@ -282,6 +396,22 @@ function rebuildCharts() {
         latestSealed = ev.sealed_sharpe;
         latestSealedMdd = ev.sealed_max_drawdown;
       }
+    } else if (ev.kind === 'library_snapshot') {
+      // Replace; latest snapshot wins (campaign emits at start + after each sync).
+      LATEST_LIBRARY = ev;
+    } else if (ev.kind === 'alpha_card_summary') {
+      // The latest summary wins -- per-iter resealing means a later
+      // iteration's summary supersedes the prior one for KPI display.
+      // Keep the union of cards across iterations on the chart so the
+      // user sees lineage; mark each card with its iter.
+      LATEST_H1 = ev;
+      (ev.cards || []).forEach(c => {
+        // Replace any prior entry with the same alpha_id (cards can be
+        // re-validated on later iterations with updated CI numbers).
+        const idx = ALPHA_CARDS.findIndex(x => x.alpha_id === c.alpha_id);
+        const entry = { ...c, iter: ev.iter };
+        if (idx >= 0) ALPHA_CARDS[idx] = entry; else ALPHA_CARDS.push(entry);
+      });
     } else if (ev.kind === 'campaign_end') {
       campaignEndPayload = ev;
     }
@@ -304,6 +434,18 @@ function rebuildCharts() {
   factorChart.data.datasets[0].data = sortedFactors.map(([, c]) => c);
   factorChart.update();
 
+  // Alpha card CI chart -- floating bars over [ci_lower, ci_upper] plus
+  // a scatter overlay at the point estimate. Errored cards show as a
+  // faded zero-width bar so the alpha_id still appears (audit lineage).
+  alphaCardChart.data.labels = ALPHA_CARDS.map(c => `${c.alpha_id} (i${(c.iter ?? 0) + 1})`);
+  alphaCardChart.data.datasets[0].data = ALPHA_CARDS.map(c =>
+    c.error ? [0, 0] : [c.ci_lower, c.ci_upper]
+  );
+  alphaCardChart.data.datasets[1].data = ALPHA_CARDS.map((c, i) =>
+    c.error ? null : { x: c.point, y: i }
+  );
+  alphaCardChart.update();
+
   // KPIs
   document.getElementById('kpiIter').textContent = lastIter !== null ? String(lastIter + 1) : '—';
   document.getElementById('kpiIterSub').textContent = `iter ${(lastIter ?? 0) + 1}, ${iterCount} started`;
@@ -319,6 +461,14 @@ function rebuildCharts() {
   if (latestSealedMdd !== null) {
     document.getElementById('kpiSealedSub').textContent = `MaxDD ${latestSealedMdd.toFixed(3)}`;
   }
+  if (LATEST_H1) {
+    const n = LATEST_H1.validated_factor_count ?? 0;
+    const total = LATEST_H1.candidate_card_count ?? 0;
+    document.getElementById('kpiValidated').textContent = String(n);
+    const tag = LATEST_H1.h1_strong ? ' · H1 strong' : (LATEST_H1.h1_weak ? ' · H1 weak' : '');
+    document.getElementById('kpiValidatedSub').textContent = `of ${total} candidate cards${tag}`;
+  }
+  renderLibraryPanel();
   document.getElementById('totalEvents').textContent = EVENTS.length;
   if (campaignEndPayload) {
     document.getElementById('campaignStatus').innerHTML =
@@ -329,6 +479,67 @@ function rebuildCharts() {
       `iter ${(lastIter ?? 0) + 1} 进行中 · ${totals.accept + totals.reject + totals.invariant} trials so far`;
   }
 }
+
+function renderLibraryPanel() {
+  const container = document.getElementById('libraryTable');
+  const countEl = document.getElementById('libCount');
+  if (!LATEST_LIBRARY || !LATEST_LIBRARY.cards || LATEST_LIBRARY.cards.length === 0) {
+    container.innerHTML = '<div class="lib-empty">library 为空 · 等待第一个 add_indicator 接受</div>';
+    if (countEl) countEl.textContent = '—';
+    return;
+  }
+  const cur = LATEST_LIBRARY.current_distinct_fns ?? LATEST_LIBRARY.cards.length;
+  const tgt = LATEST_LIBRARY.target_distinct_fns ?? 0;
+  if (countEl) {
+    countEl.textContent = tgt > 0 ? `${cur} / ${tgt}` : `${cur}`;
+  }
+  const rows = LATEST_LIBRARY.cards.map(c => {
+    const params = c.params && Object.keys(c.params).length
+      ? Object.entries(c.params).map(([k, v]) => `${k}=${v}`).join(', ')
+      : '<span style="color:#a4a4a8;">—</span>';
+    let attach = '<span class="ci-null">未记录</span>';
+    let role = '';
+    if (c.attach_config) {
+      const ac = c.attach_config;
+      role = ac.target === 'exit'
+        ? '<span class="role-exit">exit</span>'
+        : '<span class="role-entry">entry</span>';
+      const rearm = ac.rearm_threshold !== null && ac.rearm_threshold !== undefined
+        ? ` · rearm=${(+ac.rearm_threshold).toFixed(3)}`
+        : '';
+      attach = `${ac.rule} · t=${(+ac.threshold).toFixed(3)}${rearm}`;
+    }
+    let ci = '<span class="ci-null">未验证</span>';
+    if (c.sealed_summary) {
+      const s = c.sealed_summary;
+      const lo = s.incremental_sharpe_ci_lower;
+      const hi = s.incremental_sharpe_ci_upper;
+      const pt = s.incremental_sharpe_point;
+      if (lo !== undefined && hi !== undefined && pt !== undefined) {
+        const cls = lo > 0 ? 'ci-valid' : 'ci-fail';
+        ci = `<span class="${cls}">pt ${pt >= 0 ? '+' : ''}${pt.toFixed(3)} · [${lo >= 0 ? '+' : ''}${lo.toFixed(3)}, ${hi >= 0 ? '+' : ''}${hi.toFixed(3)}]</span>`;
+      }
+    }
+    const dossier = c.dossier_factor ? `<span style="color:#b88a2c;">${c.dossier_factor}</span>` : '<span style="color:#a4a4a8;">—</span>';
+    return `<tr>
+      <td><strong>${c.indicator}</strong> <span style="color:#6b6b70;">(${c.fn})</span></td>
+      <td>${role}</td>
+      <td>${params}</td>
+      <td>${attach}</td>
+      <td>${ci}</td>
+      <td>${dossier}</td>
+      <td>trial ${c.source_trial}</td>
+    </tr>`;
+  }).join('');
+  container.innerHTML = `<table class="lib-tbl">
+    <thead><tr>
+      <th>因子 (fn)</th><th>role</th><th>params</th><th>attach</th>
+      <th>sealed CI</th><th>dossier 链接</th><th>来源</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
 
 function appendEventToLog(ev) {
   const log = document.getElementById('eventLog');
@@ -346,6 +557,15 @@ function appendEventToLog(ev) {
             (ev.gate_reason ? ` <span style="color: #6b6b70;">(${ev.gate_reason})</span>` : '');
   } else if (ev.kind === 'invariant') {
     line += `<span class="invariant">⚠ invariant ${ev.iter + 1}·${ev.trial_id} ${ev.invariant_name}: ${ev.message}</span>`;
+  } else if (ev.kind === 'library_snapshot') {
+    const cur = ev.current_distinct_fns ?? 0;
+    const tgt = ev.target_distinct_fns ?? 0;
+    line += `<span class="iter">📚 library snapshot · ${cur}/${tgt} distinct factors</span>`;
+  } else if (ev.kind === 'alpha_card_summary') {
+    const n = ev.validated_factor_count ?? 0;
+    const tot = ev.candidate_card_count ?? 0;
+    const tag = ev.h1_strong ? ' [H1 strong]' : (ev.h1_weak ? ' [H1 weak]' : '');
+    line += `<span class="iter">H1 · iter ${ev.iter + 1} · validated ${n}/${tot}${tag}</span>`;
   } else if (ev.kind === 'campaign_end') {
     line += `<strong>campaign 完成 · 累计 ${ev.total_accepted} accepted · ${ev.elapsed_sec}s</strong>`;
   }

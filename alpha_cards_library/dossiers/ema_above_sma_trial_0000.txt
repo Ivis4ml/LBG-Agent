@@ -1,0 +1,31 @@
+{
+  "factor_name": "ema_above_sma",
+  "lbg_provenance": {
+    "kind": "lbg_emitted",
+    "trial_id": 0,
+    "source_commit": "5e02f66",
+    "source_path": "indicators/ema_above_sma.py",
+    "cited_factors": [
+      "SMA"
+    ]
+  },
+  "严密的因子定义": "[observation] 给定收盘价序列 C_t，先计算 fast_ema_t = EWM(C_t, span=20, adjust=false, min_periods=20)，再计算 slow_sma_t = rolling_mean(C_t, window=100)。因子值为 signal_t = fast_ema_t - slow_sma_t。signal_t > 0 表示 20 日 EMA 高于 100 日 SMA；signal_t < 0 表示 20 日 EMA 低于 100 日 SMA。该函数输出连续差值，不输出离散买卖信号。",
+  "金融学意义阐释": "[inference] 该因子表达短中期价格趋势相对较长期均线的位置。Editor hypothesis 认为它可作为多头趋势确认项，用于减少在更大趋势仍弱时的 SMA 交叉误入场，从而降低震荡交易并改善回撤控制。该解释仅由源码结构和 hypothesis 推断，不代表单独因果证明。",
+  "参数化实现方式": "[observation] 参数 fast_period 默认 20，slow_period 默认 100。二者必须 >= 2，否则抛出 ValueError。fast_period 用于 close 的指数加权移动平均，参数为 span=fast_period、adjust=False、min_periods=fast_period。slow_period 用于 close 的简单滚动均值，窗口为 slow_period。最终返回 fast_ema - slow_sma，并命名为 ema_above_sma。",
+  "实测训练表现": {
+    "evidence_type": "observation",
+    "sharpe": 0.8702,
+    "max_drawdown": -0.1219,
+    "turnover": 10.69,
+    "num_trades": 96,
+    "window": "split_A (LBG 训练窗口，约 2266 个 bar)",
+    "notes": "[observation] validation_signal 为 accepted。未提供 baseline 指标，因此不声明相对 baseline 的提升幅度。"
+  },
+  "数据预处理与清洗要求": "[observation] 输入 df 必须包含 close 列，且 close 应按时间顺序排列。源码未做缺失值填充、去极值或标准化。EWM 设置 min_periods=fast_period，SMA 使用 rolling(slow_period)，因此早期样本会产生 NaN，实际最早完整差值受 slow_period=100 约束。源码未使用 shift，未引入未来数据。prefix_stability 不变式来自 trailing EWM、trailing rolling mean 与逐 bar 相减：追加新 bar 不应改变已固定历史 bar 的计算值。",
+  "稳健性与过拟合检验": "[observation] 在 SPY 日频 split_A 训练窗口中，该因子的实测 Sharpe 为 0.8702，max_drawdown 为 -0.1219，validation_signal 为 accepted。[inference] accepted 说明它通过了本次 LBG 协议的接受门槛，但只覆盖已观测训练窗口，不能推出跨市场、跨频率或未来样本稳健。未提供 hypothesis_outcome 字段，因此不声称 partially_confirmed 或 disconfirmed。",
+  "因子衰减速度与最优持有期": "[inference] split_A 约 2266 个 bar、num_trades=96，隐含平均每笔交易间隔约 23.6 个 bar。结合 20/100 均线结构，该因子更像低频趋势确认项，而非短周期反转信号。该持有期估计来自交易次数与窗口长度的简单比值，不是单独测得的最优持有期。",
+  "可与哪些因子概念组合融合": "[observation] cited_factors 包含 SMA。[inference] 可与 SMA 类趋势跟随或均线交叉概念组合：SMA 提供较慢的趋势基准，ema_above_sma 提供较快均线相对慢均线的确认差值。组合假设是用正差值过滤趋势弱区间的多头信号；该假设尚未在其他因子组合上单独测量。",
+  "适用市场与品种范围": "本因子仅在 SPY 日频上经过 LBG 协议验证。其他市场/品种/频率为 inference。",
+  "因子逻辑分类体系": "[inference] 逻辑类别为趋势跟随 / 均线价差 / 多头趋势确认。该分类依据是源码中的 EMA 与 SMA 价差结构，以及 cited_factors 中的 SMA。",
+  "未测量指标": "[observation] 未测量 IC、ICIR、Rank IC、月度 alpha、分市场表现、分年份表现、样本外表现和容量指标；因此不对这些指标作数值声明。"
+}

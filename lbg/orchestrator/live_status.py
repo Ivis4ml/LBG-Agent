@@ -147,6 +147,88 @@ class LiveStatusWriter:
             }
         )
 
+    def library_snapshot(
+        self,
+        *,
+        iter_id: int,
+        cards: list[dict[str, Any]],
+        target_distinct_fns: int,
+    ) -> None:
+        """Emit the current alpha-card library as a single JSONL event.
+
+        Used by the dashboard's library panel to render every factor's
+        params + attach config + sealed CI. Called at campaign start
+        (after auto-inject) and after every library sync so the panel
+        stays current. Each `cards[i]` is a flat dict with: alpha_id,
+        fn, indicator, category, params, attach_config (or None),
+        sealed_summary (or None), source_trial.
+        """
+        distinct_fns: list[str] = []
+        for c in cards:
+            fn = c.get("fn")
+            if fn and fn not in distinct_fns:
+                distinct_fns.append(fn)
+        self._write(
+            {
+                "kind": "library_snapshot",
+                "iter": iter_id,
+                "target_distinct_fns": target_distinct_fns,
+                "current_distinct_fns": len(distinct_fns),
+                "distinct_fns": distinct_fns,
+                "library_total": len(cards),
+                "cards": cards,
+            }
+        )
+
+    def alpha_card_summary(
+        self,
+        *,
+        iter_id: int,
+        h1_verdict: dict[str, Any],
+        per_card_results: list[dict[str, Any]],
+    ) -> None:
+        """Emit per-card sealed-validation results + the primary H1 count.
+
+        Fires once per iteration after the sealed window is opened. The
+        dashboard renders the cards as a horizontal floating-bar chart
+        (CI lower -> CI upper), with the point estimate overlaid as a
+        scatter and a red vertical line at 0 marking the validation
+        threshold. The H1 KPI ("validated factor count") reads
+        `validated_factor_count` directly from this event.
+        """
+        cards: list[dict[str, Any]] = []
+        for r in per_card_results:
+            entry: dict[str, Any] = {
+                "alpha_id": r.get("alpha_id"),
+                "source_trial": r.get("source_trial"),
+            }
+            err = r.get("validation_error")
+            if err is not None:
+                entry["error"] = err
+                entry["validated"] = False
+            else:
+                ci_lo = float(r.get("incremental_sharpe_ci_lower", 0.0))
+                ci_hi = float(r.get("incremental_sharpe_ci_upper", 0.0))
+                point = float(r.get("incremental_sharpe_point", 0.0))
+                entry["ci_lower"] = ci_lo
+                entry["ci_upper"] = ci_hi
+                entry["point"] = point
+                entry["validated"] = ci_lo > 0.0
+            cards.append(entry)
+        self._write(
+            {
+                "kind": "alpha_card_summary",
+                "iter": iter_id,
+                "validated_factor_count": int(h1_verdict.get("validated_factor_count", 0) or 0),
+                "candidate_card_count": int(h1_verdict.get("candidate_card_count", 0) or 0),
+                "best_baseline_count": int(h1_verdict.get("best_baseline_count", 0) or 0),
+                "tau": int(h1_verdict.get("tau", 0) or 0),
+                "h1_strong": bool(h1_verdict.get("h1_strong", False)),
+                "h1_weak": bool(h1_verdict.get("h1_weak", False)),
+                "cards": cards,
+            }
+        )
+
     def campaign_end(
         self, *, total_accepted: int, total_alpha_cards: int, elapsed_sec: float
     ) -> None:

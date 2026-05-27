@@ -1,0 +1,28 @@
+{
+  "factor_name": "upper_wick_ratio",
+  "lbg_provenance": {
+    "kind": "lbg_emitted",
+    "trial_id": 4,
+    "source_commit": "2b73b9b5",
+    "source_path": "indicators/upper_wick_ratio.py",
+    "cited_factors": []
+  },
+  "严密的因子定义": "[observation] 对每个 bar，令 body_top_t = max(open_t, close_t)，upper_t = max(high_t - body_top_t, 0)，range_t = high_t - low_t。若 range_t = 0，则该期比值记为缺失；否则 raw_t = clip(upper_t / range_t, 0, 1)。因子值为 raw_t 的 10 日滚动均值：upper_wick_ratio_t = mean(raw_{t-9:t})。",
+  "金融学意义阐释": "[inference] 该因子度量近期 K 线中上影线占全日振幅的平均比例。较高数值表示价格在盘中上探后回落的频率或强度较高，可解释为上方供给压力或趋势交易中的上行动能衰竭信号。",
+  "参数化实现方式": "[observation] 参数 period 默认值为 10，且必须 >= 1。源码使用 open、high、low、close 四列；先计算单期 upper wick ratio，再对该比率执行 rolling(period).mean()。未使用 shift、ewm 或额外阈值。",
+  "实测训练表现": {
+    "evidence_type": "observation",
+    "sharpe": 0.6153,
+    "max_drawdown": -0.1177,
+    "turnover": 6.681,
+    "num_trades": 60,
+    "window": "split_A (LBG 训练窗口，约 2266 个 bar)",
+    "notes": "validation_signal 为 accepted；未记录 IC、ICIR、Rank IC 或月度 alpha。"
+  },
+  "数据预处理与清洗要求": "[observation] 输入需要包含 open、high、low、close。high-low 为 0 时替换为缺失值，避免除零；ratio 被裁剪到 [0, 1]；rolling(period).mean() 会在窗口不足或窗口内存在缺失时产生缺失值。源码未做 fillna。该实现只依赖当前及历史 bar，满足 prefix_stability 不变式。",
+  "稳健性与过拟合检验": "[observation] 在 split_A 训练窗口上 Sharpe 为 0.6153，categorical validation_signal 为 accepted。[inference] 该结果仅说明它通过了本次 LBG 训练协议的接受标准；未观察到跨市场、跨频率、样本外或横截面稳健性证据。",
+  "因子衰减速度与最优持有期": "[inference] split_A 约 2266 个 bar 内记录 60 笔交易，隐含平均每笔交易约 37.77 个 bar。由于因子本身使用 10 bar 平滑，较适合作为短到中等周期的退出或降风险过滤信号；最优持有期未被直接测量。",
+  "可与哪些因子概念组合融合": "[observation] Editor 未引用种子库近邻因子，cited_factors 为空。[inference] 从源码结构看，它可与趋势资格、波动率扩张、实体大小、close-to-close 速度或下行风险过滤类概念组合，用于区分盘中上探失败与单纯大振幅冲击。",
+  "适用市场与品种范围": "[observation] 本因子仅在 SPY 日频 split_A 训练窗口上经过 LBG 协议验证。[inference] 其他市场、品种、频率或交易成本设定下的有效性未测量。",
+  "因子逻辑分类体系": "[inference] 价格形态 / K 线结构 / 上影线压力 / 趋势衰竭过滤。分类依据是源码直接使用 OHLC 单 bar 形态，并对上影线比例做滚动平滑。"
+}

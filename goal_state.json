@@ -1,0 +1,20 @@
+{
+  "target_distinct_fns": 10,
+  "current_distinct_fns": 11,
+  "distinct_fns": [
+    "vol_regime_zscore",
+    "body_to_range",
+    "velocity_zscore",
+    "roc_n",
+    "macd_histogram",
+    "ema_above_sma",
+    "donchian_position",
+    "fractal_efficiency",
+    "aroon_up_minus_down",
+    "kama_ratio",
+    "upper_wick_ratio"
+  ],
+  "library_total": 11,
+  "met": true,
+  "ts_utc": "2026-05-26T03:00:49+00:00"
+}

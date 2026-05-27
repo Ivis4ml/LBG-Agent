@@ -1,0 +1,27 @@
+{
+  "factor_name": "vol_regime_zscore",
+  "lbg_provenance": {
+    "kind": "lbg_emitted",
+    "trial_id": 3,
+    "source_commit": "a669ec55",
+    "source_path": "indicators/vol_regime_zscore.py",
+    "cited_factors": []
+  },
+  "严密的因子定义": "observation: 令 C_t 为 close，r_t = log(C_t / C_{t-1})。先计算 realised_vol_t = rolling_std(r_t, window=vol_period) * sqrt(252.0)。再计算 mean_t = rolling_mean(realised_vol_t, window=zscore_lookback)，std_t = rolling_std(realised_vol_t, window=zscore_lookback)。因子值为 z_t = (realised_vol_t - mean_t) / std_t，并命名为 vol_regime_zscore。该值度量当前已实现收盘到收盘波动率相对其自身历史分布的位置。",
+  "金融学意义阐释": "inference: 该因子被设计为退出侧的波动率状态过滤器。假设是：当已实现波动率相对自身历史显著偏高时，SMA-cross 类趋势策略更容易出现较大回撤，因此可在波动率尖峰时降低或退出风险暴露，并在波动率回落后重新进入。该解释来自 Editor hypothesis，尚未在 SPY 日频训练窗口之外验证。",
+  "参数化实现方式": "observation: 参数 vol_period=20，用于计算 close-to-close log return 的滚动标准差并年化；参数 zscore_lookback=252，用于计算 realised_vol 自身滚动均值与滚动标准差；源码要求 vol_period >= 2 且 zscore_lookback >= 5，否则抛出 ValueError。源码未使用额外平滑、截尾、fillna 或输出 shift。",
+  "实测训练表现": {
+    "sharpe": 0.8966,
+    "max_drawdown": -0.1356,
+    "turnover": 4.9,
+    "num_trades": 44,
+    "window": "split_A (LBG 训练窗口，约 2266 个 bar)",
+    "notes": "observation: categorical validation_signal 为 accepted。未测量 IC、ICIR、Rank IC、月度 alpha 或跨品种表现。"
+  },
+  "数据预处理与清洗要求": "observation: 输入需要包含 close 列；close 应为正值，否则 log(C_t / C_{t-1}) 不具备有效金融含义。log_ret 使用 close.shift(1)，rolling(...).std()、rolling(...).mean() 均使用 pandas 默认 min_periods，因此窗口未满阶段会产生 NaN。源码未做 fillna、winsorize 或异常值替换。prefix_stability 不变式：任一时点 t 的输出只依赖 t 及其之前的 close，未来新增数据不应改写既有时点的因子值。",
+  "稳健性与过拟合检验": "observation: 在 split_A 训练窗口中 Sharpe=0.8966，max_drawdown=-0.1356，turnover=4.900，num_trades=44，validation_signal=accepted。inference: accepted 表示该 trial 在 LBG 协议下通过了分类验证门槛，但并不等同于跨样本、跨市场或横截面稳健性证明。未观察到 hypothesis_outcome 字段，因此不声称 partially_confirmed 或 disconfirmed。",
+  "因子衰减速度与最优持有期": "inference: 基于 split_A 约 2266 个 bar 与 num_trades=44，隐含平均每次交易间隔约为 2266/44≈51.5 个 bar。该数值只是由记录的交易次数和训练窗口长度反推的节奏，不是直接测量的最优持有期，也不是换手半衰期。",
+  "可与哪些因子概念组合融合": "inference: Editor 未引用 seed-library 因子，因此 cited_factors 为空。概念上可作为趋势、均线交叉或动量类信号的退出侧风险过滤器：主信号决定入场方向，vol_regime_zscore 只在已实现波动率异常偏高时调节风险暴露。该组合假设未在给定材料中单独测量。",
+  "适用市场与品种范围": "observation: 本因子仅在 SPY 日频 split_A 训练窗口上经过 LBG 协议验证。inference: 其他市场、品种、频率和交易成本设定均未验证，不能据此声称有效。",
+  "因子逻辑分类体系": "inference: 该因子属于时间序列波动率状态识别 / 风险过滤 / regime filter 类因子。计算结构不是价格方向预测，而是对已实现波动率相对自身历史分布的标准化偏离进行度量。"
+}

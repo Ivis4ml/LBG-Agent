@@ -59,23 +59,65 @@ CrossRule = Annotated[
 
 
 class IndicatorAboveFilter(BaseModel):
-    """Entry allowed only when `indicator >= threshold`."""
+    """`indicator >= threshold`. Used as an entry filter (AND-gate on entry)
+    or an exit filter (OR-gate on exit signal).
+
+    Optional `rearm_threshold` lets an exit filter recover. When this field
+    is set AND the filter is used in `exit_filters`, the policy enters a
+    *muted* state after the filter fires the exit, and stays muted until
+    the indicator crosses back **down** through `rearm_threshold`. While
+    muted, the entry rule is blocked. This solves the edge-triggered cash
+    trap: a one-shot entry baseline (e.g. buyhold) plus a drawdown-style
+    exit filter no longer permanently exits after a single drawdown event.
+    A natural constraint is `rearm_threshold <= threshold` (validator).
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     rule: Literal["indicator_above"]
     indicator: str
     threshold: float
+    rearm_threshold: float | None = None
+
+    @field_validator("rearm_threshold")
+    @classmethod
+    def _rearm_below_threshold(cls, v: float | None, info) -> float | None:
+        threshold = info.data.get("threshold")
+        if v is not None and threshold is not None and v > threshold:
+            raise ValueError(
+                f"rearm_threshold ({v}) must be <= threshold ({threshold}) "
+                "for an indicator_above filter (the indicator has to come "
+                "back DOWN to re-arm)"
+            )
+        return v
 
 
 class IndicatorBelowFilter(BaseModel):
-    """Entry allowed only when `indicator <= threshold`."""
+    """`indicator <= threshold`. See `IndicatorAboveFilter` for rearm semantics.
+
+    For `indicator_below`, the rearm condition mirrors: after the filter
+    fires the exit, the policy stays muted until the indicator crosses
+    back **up** through `rearm_threshold` (which must be >= threshold).
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     rule: Literal["indicator_below"]
     indicator: str
     threshold: float
+    rearm_threshold: float | None = None
+
+    @field_validator("rearm_threshold")
+    @classmethod
+    def _rearm_above_threshold(cls, v: float | None, info) -> float | None:
+        threshold = info.data.get("threshold")
+        if v is not None and threshold is not None and v < threshold:
+            raise ValueError(
+                f"rearm_threshold ({v}) must be >= threshold ({threshold}) "
+                "for an indicator_below filter (the indicator has to come "
+                "back UP to re-arm)"
+            )
+        return v
 
 
 Filter = Annotated[

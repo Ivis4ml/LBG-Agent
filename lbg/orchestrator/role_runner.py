@@ -31,7 +31,12 @@ from lbg.memory.records import (
     ReflectionRecord,
     ReflectorOutputPayload,
 )
-from lbg.orchestrator.context_builder import EditorContext, FactorHint, PastTrialSummary
+from lbg.orchestrator.context_builder import (
+    EditorContext,
+    FactorHint,
+    IndicatorCodeSummary,
+    PastTrialSummary,
+)
 from lbg.orchestrator.redaction import RedactionError, assert_redacted
 from lbg.parser import ProposalParseError, parse_proposal
 from lbg.schemas import (
@@ -89,13 +94,20 @@ class ProviderConfig:
 
     All registered providers must expose an Anthropic-compatible
     `messages.create(...)` surface so the rest of the Orchestrator stays
-    provider-agnostic.
+    provider-agnostic. `kind` picks the transport:
+
+      * `"anthropic_sdk"` -- HTTP via the `anthropic` Python SDK. Reads
+        `api_key_env` and optional `base_url`.
+      * `"claude_cli"`    -- subprocess wrapper around `claude -p`. Uses
+        the user's Claude Code OAuth (Max plan) instead of API billing;
+        `api_key_env` and `base_url` are ignored.
     """
 
     name: str
-    api_key_env: str
+    api_key_env: str | None
     base_url: str | None  # None = use SDK default (anthropic.com)
     default_model: str
+    kind: str = "anthropic_sdk"
 
 
 PROVIDERS: dict[str, ProviderConfig] = {
@@ -112,6 +124,29 @@ PROVIDERS: dict[str, ProviderConfig] = {
         api_key_env="MIMO_API_KEY",
         base_url="https://api.xiaomimimo.com/anthropic",
         default_model="mimo-v2.5-pro",
+    ),
+    # Claude Code CLI -- no API cost on Max-plan subscriptions. See
+    # lbg/orchestrator/cli_provider.py for the subprocess wrapper. The
+    # `claude` binary must be on PATH; pass `--model` per call so the
+    # provider can route opus vs sonnet without re-launching the CLI
+    # against a different default.
+    "claude_cli": ProviderConfig(
+        name="claude_cli",
+        api_key_env=None,
+        base_url=None,
+        default_model="claude-sonnet-4-6",
+        kind="claude_cli",
+    ),
+    # Codex CLI -- OpenAI's subscription-CLI counterpart to claude_cli.
+    # Auth via `codex login` (ChatGPT Plus/Pro/Team). Default model is
+    # gpt-5.5 (verified available in codex-cli 0.133.0); pass other
+    # ChatGPT-accessible models via `RoleRunner(model=...)`.
+    "codex_cli": ProviderConfig(
+        name="codex_cli",
+        api_key_env=None,
+        base_url=None,
+        default_model="gpt-5.5",
+        kind="codex_cli",
     ),
 }
 
@@ -142,7 +177,7 @@ class ReflectorRunResult:
 class TranslatorRunResult:
     """Output of the Translator role: a dossier object plus accounting."""
 
-    dossier: "TranslatorDossier"
+    dossier: TranslatorDossier
     raw_text: str
     compute: AgentComputeRecord
 
@@ -179,7 +214,17 @@ class RoleRunner:
         # anthropic SDK at all.
         self._explicit_client = client
         self._provider_cfg = _resolve_provider(provider)
-        self._api_key = api_key or os.environ.get(self._provider_cfg.api_key_env)
+        # CLI providers don't take an API key -- they authenticate via the
+        # respective tool's subscription OAuth (claude_cli = Claude Code,
+        # codex_cli = ChatGPT). Keep the field as None for them.
+        if self._provider_cfg.kind in ("claude_cli", "codex_cli"):
+            self._api_key = None
+        else:
+            self._api_key = api_key or (
+                os.environ.get(self._provider_cfg.api_key_env)
+                if self._provider_cfg.api_key_env
+                else None
+            )
         self.model = model or self._provider_cfg.default_model
         self.max_tokens = max_tokens
 
@@ -190,6 +235,14 @@ class RoleRunner:
     def _client(self):
         if self._explicit_client is not None:
             return self._explicit_client
+        if self._provider_cfg.kind == "claude_cli":
+            from lbg.orchestrator.cli_provider import ClaudeCliClient
+
+            return ClaudeCliClient()
+        if self._provider_cfg.kind == "codex_cli":
+            from lbg.orchestrator.cli_provider import CodexCliClient
+
+            return CodexCliClient()
         if not self._api_key:
             raise RoleRunnerError(
                 f"{self._provider_cfg.api_key_env} is not set; "
@@ -380,7 +433,7 @@ class RoleRunner:
 
     def translator(
         self,
-        translator_input: "TranslatorInput",
+        translator_input: TranslatorInput,
     ) -> TranslatorRunResult:
         """Invoke the Translator LLM. The Translator turns an accepted
         Python factor function plus its alpha-card evidence into a
@@ -513,10 +566,25 @@ def _render_editor_user_prompt(context: EditorContext, *, trial_id: int) -> str:
     parts: list[str] = []
     parts.append(f"## Current trial id\n\ntrial_id: {trial_id}\n")
     parts.append("## Current strategy\n\n```yaml\n" + context.strategy_yaml + "```\n")
+    if context.indicator_code:
+        parts.append(
+            "## Current indicator source excerpts\n\n"
+            + _format_indicator_code(context.indicator_code)
+        )
     if context.factor_hints:
         parts.append(
             "## Candidate factors from knowledge base\n\n"
             + _format_factor_hints(context.factor_hints)
+        )
+    if context.seed_templates:
+        parts.append(
+            "## Executable seed templates (you can copy these verbatim)\n\n"
+            + _format_seed_templates(context.seed_templates)
+        )
+    if context.library_cards:
+        parts.append(
+            "## Alpha cards already in the library\n\n"
+            + _format_library_cards(context.library_cards)
         )
     parts.append("## Recent trial history\n\n" + _format_recent_trials(context.recent_trials))
     if context.banned_indicator_fns:
@@ -550,7 +618,7 @@ def _render_editor_user_prompt(context: EditorContext, *, trial_id: int) -> str:
     return "\n".join(parts)
 
 
-def _render_translator_user_prompt(ti: "TranslatorInput") -> str:
+def _render_translator_user_prompt(ti: TranslatorInput) -> str:
     """Pack all evidence the Translator needs into a single user message.
 
     Order: source code first so the model anchors on the executable
@@ -685,6 +753,89 @@ def _format_factor_hints(hints: list[FactorHint]) -> str:
         "hypothesis is encouraged but not required. Invariants run regardless."
     )
     return "\n".join(lines) + "\n"
+
+
+def _format_seed_templates(templates: list) -> str:
+    """Render the executable seed-template shortlist.
+
+    Each template carries: fn, category/role tags, suggested threshold
+    and rearm_threshold (when role=exit), one-line description, and the
+    Python source itself. The Editor is encouraged to copy the source
+    verbatim into `add_indicator.change.source` rather than authoring
+    from scratch.
+    """
+    parts: list[str] = []
+    for t in templates:
+        thresh_note = ""
+        if t.suggested_threshold is not None:
+            thresh_note = f" · suggested_threshold={t.suggested_threshold}"
+        rearm_note = ""
+        if t.suggested_rearm_threshold is not None:
+            rearm_note = f" · suggested_rearm_threshold={t.suggested_rearm_threshold}"
+        inputs_note = f" · inputs={list(t.inputs)}" if t.inputs else ""
+        default_params_note = (
+            f" · default_params={dict(t.default_params)}" if t.default_params else ""
+        )
+        header = (
+            f"### {t.fn}  [category={t.category} · role={t.role}"
+            f"{inputs_note}{default_params_note}{thresh_note}{rearm_note}]\n"
+            f"{t.one_line.strip()}\n"
+        )
+        body = "```python\n" + t.source.rstrip() + "\n```"
+        parts.append(header + "\n" + body)
+    tail = (
+        "\nThese are runnable templates. When you propose `add_indicator`, "
+        "prefer to copy one of these verbatim as `change.source`, set "
+        "`change.params` to the suggested defaults (or your own tuned values), "
+        "and `change.attach` using the suggested_threshold "
+        "(plus suggested_rearm_threshold when role=exit) to wire it in. "
+        "Invariants and the validation gate still apply -- no template is "
+        "exempt from prefix-stability or any other check.\n"
+    )
+    return "\n\n".join(parts) + "\n" + tail
+
+
+def _format_library_cards(cards: list) -> str:
+    """Render the persistent alpha-card library state for the Editor.
+
+    The Editor should treat these as "factors already discovered, do
+    NOT re-propose them; instead look for complementary directions".
+    Each entry shows fn name + dossier link + the recorded sealed
+    incremental Sharpe point estimate (when present), so the Editor
+    has both identifier and signal-strength context.
+    """
+    if not cards:
+        return "(library is empty)\n"
+    lines: list[str] = []
+    for c in cards:
+        point_note = ""
+        if c.incremental_sharpe_point is not None:
+            point_note = f" · incremental_sharpe_point={c.incremental_sharpe_point:+.3f}"
+        dossier_note = f" · dossier={c.dossier_factor}" if c.dossier_factor else ""
+        lines.append(f"- `{c.fn}` (indicator `{c.indicator_name}`){point_note}{dossier_note}")
+    lines.append(
+        "\n**Do not re-propose any of the above `fn` names**. The library is "
+        "accumulating; identical-fn re-proposals don't grow it. Aim for a "
+        "**complementary** signal -- a different category (trend / momentum / "
+        "mean-reversion / volatility / drawdown / regime), a different input "
+        "column, or a structurally different formula. If the strategy already "
+        "wires one of the above factors, your edit should *combine* with it "
+        "(e.g. exit filter on a different regime indicator + entry filter "
+        "from a momentum factor) rather than replace it."
+    )
+    return "\n".join(lines) + "\n"
+
+
+def _format_indicator_code(items: list[IndicatorCodeSummary]) -> str:
+    parts: list[str] = []
+    for item in items:
+        parts.append(
+            f"### {item.name} -> indicators/{item.fn}.py\n\n"
+            "```python\n"
+            f"{item.source_excerpt.rstrip()}\n"
+            "```"
+        )
+    return "\n\n".join(parts) + "\n"
 
 
 def _format_recent_trials(trials: list[PastTrialSummary]) -> str:

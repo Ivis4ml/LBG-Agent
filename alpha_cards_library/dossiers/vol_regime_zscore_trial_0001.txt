@@ -1,0 +1,29 @@
+{
+  "factor_name": "vol_regime_zscore",
+  "lbg_provenance": {
+    "evidence": "observation",
+    "kind": "lbg_emitted",
+    "trial_id": 1,
+    "source_commit": "3937ced1",
+    "source_path": "indicators/vol_regime_zscore.py",
+    "cited_factors": []
+  },
+  "严密的因子定义": "[observation] 令 r_t = log(close_t / close_{t-1})。令 RV_t = std(r_{t-vol_period+1:t}) * sqrt(252.0)。令 μ_t = mean(RV_{t-zscore_lookback+1:t})，σ_t = std(RV_{t-zscore_lookback+1:t})。因子值 Z_t = (RV_t - μ_t) / σ_t，输出序列命名为 vol_regime_zscore。",
+  "金融学意义阐释": "[observation] Editor 假设该因子作为波动风险退出信号，而非趋势确认入场过滤器；当已实现波动率相对自身历史分布异常升高时，策略退出以降低回撤，并在波动恢复后允许原 SMA cross 系统重新入场。[inference] 该定义刻画的是单标的时间序列波动状态偏离度，不是横截面风险溢价因子。",
+  "参数化实现方式": "[observation] vol_period=20，用于计算 close-to-close log return 的滚动标准差并年化；zscore_lookback=252，用于计算 realised_vol 自身滚动均值与滚动标准差。源码要求 vol_period >= 2 且 zscore_lookback >= 5，否则抛出 ValueError。",
+  "实测训练表现": {
+    "evidence": "observation",
+    "sharpe": 0.8966,
+    "max_drawdown": -0.1356,
+    "turnover": 4.9,
+    "num_trades": 44,
+    "window": "split_A (LBG 训练窗口，约 2266 个 bar)",
+    "notes": "[observation] validation_signal 为 accepted。未测量 IC、ICIR、Rank IC、月度 alpha 或跨品种表现。"
+  },
+  "数据预处理与清洗要求": "[observation] 输入需要包含 close 列。源码使用 close / close.shift(1) 计算对数收益，再使用 rolling(vol_period).std、rolling(zscore_lookback).mean 和 rolling(zscore_lookback).std。rolling 默认需要完整窗口，因此样本前段会产生 NaN。[observation] 代码未显式 fillna，未显式处理 close 非正值、缺失值或 σ_t 为 0 的情形。[observation] prefix_stability 不变式：计算仅依赖当前及过去 close、shift 与 rolling 窗口，不读取未来 bar。",
+  "稳健性与过拟合检验": "[observation] 在 SPY 日频 split_A 训练窗口中，Sharpe=0.8966，max_drawdown=-0.1356，turnover=4.900，num_trades=44，validation_signal=accepted。[inference] accepted 只表示该 trial 在 LBG 协议下被接受，不构成跨窗口、跨市场或横截面稳健性证明。",
+  "因子衰减速度与最优持有期": "[inference] 训练窗口约 2266 个 bar 且 num_trades=44，隐含平均每约 51.5 个 bar 出现一次交易事件。该数值只能粗略提示信号偏中低频，不能单独确定最优持有期。",
+  "可与哪些因子概念组合融合": "[observation] Editor 未引用 seed-library factors。[inference] 可与趋势入场类、均线交叉类、动量类信号组合，作为波动异常退出或再入场解锁条件；也可与风险预算、仓位缩放或止损机制组合。该组合假设未在本 dossier 可见数据中单独测量。",
+  "适用市场与品种范围": "[observation] 本因子仅在 SPY 日频上经过 LBG 协议验证。[inference] 其他市场、品种、频率或交易成本设置下的有效性均为推测。",
+  "因子逻辑分类体系": "[observation] 计算结构属于 realised volatility 的时间序列 z-score。[inference] 逻辑分类为波动率状态识别、风险退出、regime filter；不是价格趋势强度因子，也不是横截面选股因子。"
+}

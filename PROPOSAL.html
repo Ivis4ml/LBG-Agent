@@ -764,7 +764,7 @@ window.MathJax = {
   <a href="#thesis">§4 Thesis &amp; hypotheses</a>
   <a href="#formal">§4.5 Formal setup</a>
   <a href="#twoaction">§5 Two action spaces</a>
-  <a href="#agent">§6 Three LLM roles</a>
+  <a href="#agent">§6 Four LLM roles</a>
   <a href="#orchestrator">§6.5 Orchestrator</a>
   <a href="#memory">§6.6 Memory &amp; skills</a>
   <a href="#factorlib">§6.7 Factor library as input</a>
@@ -1283,15 +1283,15 @@ The DSL-only ablation in §10 corresponds to running an Editor that is only allo
 <section id="agent">
 <div class="section-marker">
   <span class="section-num">§ 6</span>
-  <h2>Three LLM roles</h2>
+  <h2>Four LLM roles</h2>
 </div>
 
-<p>The framework decomposes its LLM use into three structured roles. Each is a single LLM call with typed input and typed output — not an autonomous loop. The decomposition is functional: separating <em>propose</em> from <em>evaluate</em> from <em>compress</em> blocks the sycophancy bias that LLMs exhibit when asked to assess their own past proposals.</p>
+<p>The framework decomposes its LLM use into four structured roles. Each is a single LLM call with typed input and typed output — not an autonomous loop. The decomposition is functional: separating <em>propose</em> from <em>evaluate</em> from <em>compress</em> from <em>translate</em> blocks the sycophancy bias that LLMs exhibit when asked to assess their own past proposals, and lets the round-trip between executable code and declarative dossier close cleanly.</p>
 
 <div class="figure">
 <div class="chart-wrap" style="background: var(--paper-warm); padding: 32px 28px;">
-<svg viewBox="0 0 700 420" width="100%" role="img">
-<title>Three LLM roles: Editor, Reflector, Curator, around a persistent heuristic system</title>
+<svg viewBox="0 0 880 480" width="100%" role="img">
+<title>Four LLM roles: Editor, Reflector, Curator, Translator, around a persistent heuristic system</title>
 
 <defs>
   <marker id="arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -1299,51 +1299,67 @@ The DSL-only ablation in §10 corresponds to running an Editor that is only allo
   </marker>
 </defs>
 
-<rect x="40" y="30" width="180" height="80" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.5" rx="3"/>
-<text x="130" y="56" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">Editor</text>
-<text x="130" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">proposes one edit</text>
-<text x="130" y="92" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">+ hypothesis</text>
+<rect x="20" y="30" width="180" height="80" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.5" rx="3"/>
+<text x="110" y="56" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">Editor</text>
+<text x="110" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">proposes one edit</text>
+<text x="110" y="92" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">+ hypothesis</text>
 
-<rect x="260" y="30" width="180" height="80" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1.5" rx="3"/>
-<text x="350" y="56" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">Reflector</text>
-<text x="350" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">explains outcome</text>
-<text x="350" y="92" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">updates memory</text>
+<rect x="240" y="30" width="180" height="80" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1.5" rx="3"/>
+<text x="330" y="56" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">Reflector</text>
+<text x="330" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">explains outcome</text>
+<text x="330" y="92" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">updates memory</text>
 
-<rect x="480" y="30" width="180" height="80" fill="#fbfaf6" stroke="#b88a2c" stroke-width="1.5" rx="3"/>
-<text x="570" y="56" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">Curator</text>
-<text x="570" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">compresses memory</text>
-<text x="570" y="92" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">every 10 accepted</text>
+<rect x="460" y="30" width="180" height="80" fill="#fbfaf6" stroke="#b88a2c" stroke-width="1.5" rx="3"/>
+<text x="550" y="56" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">Curator</text>
+<text x="550" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">compresses memory</text>
+<text x="550" y="92" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">every 10 accepted</text>
 
-<line x1="220" y1="70" x2="256" y2="70" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arr3)"/>
-<line x1="440" y1="70" x2="476" y2="70" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arr3)"/>
+<rect x="680" y="30" width="180" height="80" fill="#fbfaf6" stroke="#b76b5e" stroke-width="1.5" rx="3"/>
+<text x="770" y="56" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">Translator</text>
+<text x="770" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">on add_indicator accept</text>
+<text x="770" y="92" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">.py → JSON dossier</text>
 
-<text x="240" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#6b6b70">trial done</text>
-<text x="460" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#6b6b70">N accepted</text>
+<line x1="200" y1="70" x2="236" y2="70" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arr3)"/>
+<line x1="420" y1="70" x2="456" y2="70" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arr3)"/>
+<line x1="640" y1="70" x2="676" y2="70" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arr3)"/>
 
-<rect x="40" y="160" width="620" height="80" fill="#fbfaf6" stroke="#d8d4c8" stroke-width="1" rx="3"/>
-<text x="60" y="184" font-family="Inter, sans-serif" font-size="11" letter-spacing="1" fill="#6b6b70" text-transform="uppercase">Heuristic System (persistent)</text>
-<text x="60" y="208" font-family="JetBrains Mono, monospace" font-size="11" fill="#1a1a1c">strategy.yaml · indicators/*.py · trials.jsonl</text>
-<text x="60" y="224" font-family="JetBrains Mono, monospace" font-size="11" fill="#1a1a1c">accepted_rules.md · failed_directions.md · reflections.jsonl</text>
+<text x="220" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#6b6b70">trial done</text>
+<text x="440" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#6b6b70">N accepted</text>
+<text x="660" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#6b6b70">add_indicator</text>
 
-<line x1="130" y1="110" x2="130" y2="156" stroke="#8b3a2f" stroke-width="1.2" marker-end="url(#arr3)"/>
-<line x1="350" y1="110" x2="350" y2="156" stroke="#2d6a5c" stroke-width="1.2" marker-end="url(#arr3)"/>
-<line x1="570" y1="110" x2="570" y2="156" stroke="#b88a2c" stroke-width="1.2" marker-end="url(#arr3)"/>
+<rect x="20" y="160" width="840" height="92" fill="#fbfaf6" stroke="#d8d4c8" stroke-width="1" rx="3"/>
+<text x="40" y="184" font-family="Inter, sans-serif" font-size="11" letter-spacing="1" fill="#6b6b70" text-transform="uppercase">Heuristic System (persistent)</text>
+<text x="40" y="208" font-family="JetBrains Mono, monospace" font-size="11" fill="#1a1a1c">strategy.yaml · indicators/*.py · trials.jsonl</text>
+<text x="40" y="224" font-family="JetBrains Mono, monospace" font-size="11" fill="#1a1a1c">accepted_rules.md · failed_directions.md · reflections.jsonl</text>
+<text x="40" y="240" font-family="JetBrains Mono, monospace" font-size="11" fill="#1a1a1c">alpha_cards/*.yaml · alpha_cards/dossiers/*.txt  ← Translator output</text>
 
-<text x="245" y="270" text-anchor="end" font-family="Inter, sans-serif" font-size="11" letter-spacing="1" fill="#6b6b70" text-transform="uppercase">outer loop · git</text>
-<rect x="260" y="260" width="180" height="80" fill="#1a1a1c" stroke="#1a1a1c" stroke-width="1" rx="3"/>
-<text x="350" y="286" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#fbfaf6">Outer loop</text>
-<text x="350" y="306" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#a4a4a8">invariants · backtest</text>
-<text x="350" y="322" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#a4a4a8">gate · commit</text>
+<line x1="110" y1="110" x2="110" y2="156" stroke="#8b3a2f" stroke-width="1.2" marker-end="url(#arr3)"/>
+<line x1="330" y1="110" x2="330" y2="156" stroke="#2d6a5c" stroke-width="1.2" marker-end="url(#arr3)"/>
+<line x1="550" y1="110" x2="550" y2="156" stroke="#b88a2c" stroke-width="1.2" marker-end="url(#arr3)"/>
+<line x1="770" y1="110" x2="770" y2="156" stroke="#b76b5e" stroke-width="1.2" marker-end="url(#arr3)"/>
 
-<line x1="350" y1="244" x2="350" y2="256" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arr3)"/>
+<text x="335" y="288" text-anchor="end" font-family="Inter, sans-serif" font-size="11" letter-spacing="1" fill="#6b6b70" text-transform="uppercase">outer loop · git</text>
+<rect x="350" y="278" width="180" height="80" fill="#1a1a1c" stroke="#1a1a1c" stroke-width="1" rx="3"/>
+<text x="440" y="304" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#fbfaf6">Outer loop</text>
+<text x="440" y="324" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#a4a4a8">invariants · backtest</text>
+<text x="440" y="340" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#a4a4a8">gate · commit</text>
 
-<text x="370" y="376" font-family="Fraunces, serif" font-style="italic" font-size="13" fill="#8b3a2f">→ on accept, commits to main branch</text>
-<line x1="440" y1="300" x2="540" y2="300" stroke="#1a1a1c" stroke-width="0.8" stroke-dasharray="3 3"/>
-<text x="550" y="304" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">git history</text>
+<line x1="440" y1="252" x2="440" y2="274" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arr3)"/>
+
+<text x="460" y="394" font-family="Fraunces, serif" font-style="italic" font-size="13" fill="#8b3a2f">→ on accept, commits to main branch</text>
+<line x1="530" y1="318" x2="640" y2="318" stroke="#1a1a1c" stroke-width="0.8" stroke-dasharray="3 3"/>
+<text x="650" y="322" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">git history</text>
+
+<!-- Persistent library (across campaigns) -->
+<rect x="20" y="410" width="840" height="50" fill="#f5f1e8" stroke="#2d6a5c" stroke-dasharray="3 2" stroke-width="1.2" rx="3"/>
+<text x="40" y="430" font-family="Inter, sans-serif" font-size="11" letter-spacing="1" fill="#6b6b70" text-transform="uppercase">Persistent library (cross-campaign)</text>
+<text x="40" y="450" font-family="JetBrains Mono, monospace" font-size="11" fill="#1a1a1c">alpha_cards_library/{cards,indicators,dossiers}/  +  index.jsonl   ·   auto-injected into next campaign's baseline</text>
+
+<line x1="440" y1="358" x2="440" y2="406" stroke="#1a1a1c" stroke-width="0.8" stroke-dasharray="3 3" marker-end="url(#arr3)"/>
 
 </svg>
 </div>
-<div class="figure-caption"><strong>Figure 2.</strong> Three LLM roles. The outer loop is deterministic Python that schedules the three roles, runs invariants and backtests, applies the validation gate, and commits accepted edits. The Heuristic System sits underneath as a git-tracked persistent artifact. Each trial corresponds to a commit; each Curator cycle corresponds to a branch.</div>
+<div class="figure-caption"><strong>Figure 2.</strong> Four LLM roles (Editor / Reflector / Curator / Translator). The outer loop is deterministic Python that schedules the roles, runs invariants and backtests, applies the validation gate, and commits accepted edits. Translator fires after each accepted <code>add_indicator</code> to convert the Python source into a JSON dossier matching the seed-library schema (round-trip; see §6.7). The Heuristic System sits underneath as a git-tracked persistent artifact. Each trial corresponds to a commit; each Curator cycle corresponds to a branch.</div>
 </div>
 
 <h3>Editor</h3>
@@ -1396,6 +1412,10 @@ fallback_if_rejected: |
 <h3>Curator</h3>
 
 <p>The Curator runs every 10 accepted trials. Initially it is a <em>shadow</em> Curator: it can only compress memory (merge accepted rules, prune contradicted failed directions, report complexity metrics) but cannot modify <code>strategy.yaml</code>. Once the system has proven stable, an <em>active</em> Curator may propose strategy simplifications, subject to mandatory validation re-checks. The Curator uses the strongest available model (Opus) because compression is the most semantically demanding operation in the system.</p>
+
+<h3>Translator</h3>
+
+<p>The Translator fires after each <em>accepted</em> <code>add_indicator</code> trial. Its input is the agent-authored Python source plus the alpha card's metadata (train metrics, validation signal, cited factors); its output is a JSON dossier matching the seed-library schema in <code>knowledge/factors/dossiers/</code>. The dossier captures what the code does in the same declarative form used by the read-only seed library — core analysis, parameterization, combination patterns, lbg_provenance pointing back to the trial commit. This is what closes the round-trip described in §11: the heuristic system gains new executable Python <em>and</em> a declarative description that future Editor invocations can search and cite. The Translator is evidence-only — it must distinguish what the code implements from what it infers, and is forbidden from claiming properties not visible in the source.</p>
 </section>
 
 <section id="orchestrator">
@@ -2437,7 +2457,12 @@ r^{\text{without } c}_t = \pi_{H \setminus \{c\}}(X_{\le t})\, R_{t+1} - \ldots
 \Delta r^{c}_t \;=\; r^{\text{with } c}_t \;-\; r^{\text{without } c}_t, \qquad
 \Delta S_c \;=\; \sqrt{252}\;\frac{\overline{\Delta r^{c}_t}}{\operatorname{std}(\Delta r^{c}_t)}
 \]
-<span class="where">\(\Delta S_c\) is the annualised information ratio of the marginal contribution that card \(c\) makes when added to the rest of the strategy \(H \setminus \{c\}\) on the sealed window. Leave-one-out, evaluated on \(D_\text{sealed}\) exactly once at the end of the run.</span>
+<span class="where">\(\Delta S_c\) is the annualised information ratio of the marginal contribution that card \(c\) makes when added to the rest of the strategy \(H \setminus \{c\}\) on the sealed window. Evaluated on \(D_\text{sealed}\) exactly once at the end of the run.</span>
+</div>
+
+<div class="aside">
+<span class="aside-label">Operational definition · pathwise incremental</span>
+Strict leave-one-out has no clean meaning for a card whose indicator wires into an <code>entry</code> or <code>exit</code> cross rule — removing one of the two indicators in <code>cross_above(fast, slow)</code> destroys the entry semantics rather than defining a "without \(c\)" policy. The implementation therefore reads "without \(c\)" as <em>the policy at the trial's parent commit</em>, and "with \(c\)" as <em>the policy at the trial commit</em>. Pathwise removes \(c\) along the construction trajectory rather than abstractly from the final composition. This makes the definition total (it covers all eight edit types and any non-trivial wiring), and aligns the H1 unit with the literal artifact LBG produces — a code modification accepted at a particular moment. The pre-registered method name in <code>analysis_plan.yaml</code> is <code>pathwise_incremental_sharpe</code>; the bootstrap on \(\Delta r^{c}_{1:T_\text{sealed}}\) in Step 2 is unchanged.
 </div>
 
 <h4>Step 2 · Block-bootstrap CI on the per-card contribution</h4>
@@ -3305,7 +3330,7 @@ The MVP described in this proposal trains on a single ticker (SPY). True multi-t
   <li>Single ticker SPY, daily bars, 2010-01-04 to 2024-12-31 for Stage 1 Discovery</li>
   <li>Three splits: train 2010-2018, validation 2019-2020, sealed 2021-2024; aliased <code>split_A/B/C</code> in agent context</li>
   <li>Agent action space: Python pure-function indicator authoring + DSL edits; eight discrete edit types</li>
-  <li>Three LLM roles: Editor / Reflector / Curator; Curator is shadow mode in this milestone</li>
+  <li>Four LLM roles: Editor / Reflector / Curator / Translator; Curator is shadow mode in this milestone; Translator emits a dossier per accepted <code>add_indicator</code></li>
   <li>Validation feedback to LLM is categorical only — never numbers, never curves</li>
   <li>Hypothesis outcome computed mechanically by Orchestrator, not by Reflector</li>
   <li>Invariants applied before any backtest: schema, AST static, prefix-stability dynamic, cost model, sandbox, no data snooping</li>
@@ -3329,7 +3354,7 @@ The MVP described in this proposal trains on a single ticker (SPY). True multi-t
   <li>Alpha cards exported on every accepted indicator-modifying trial (§6.6)</li>
   <li>Calendar labels (years, named events) appear only in human-facing final reports and in Orchestrator-internal logs; they are never present in agent prompt templates or in any file the <code>ContextBuilder</code> reads from</li>
   <li><strong>HL object of learning</strong> is the Heuristic System: the union of <code>indicators/*.py</code> (Python factor functions), <code>strategy.yaml</code>, the explicit memory layers, and git lineage. The <em>core artifact LBG produces</em> within that system is the set of Python factor functions the agent has authored. Dossier and alpha card are translations / metadata views of those functions, not the deliverable</li>
-  <li><strong>H1 statistical unit</strong> is the <em>surviving Python factor function</em>, counted operationally via its alpha card: a function whose individual leave-one-out sealed incremental Sharpe has 95% block-bootstrap CI lower bound &gt; 0 (block_len 10, n_bootstrap 1000). The H1 verdict is a count comparison across systems at equal compute budget; H1 strong requires LBG-Trader's count to strictly exceed the best baseline AND be at least \(\tau = 3\). Per-card validation is corrected for multiple testing using Benjamini-Hochberg at FDR 0.10</li>
+  <li><strong>H1 statistical unit</strong> is the <em>surviving Python factor function</em>, counted operationally via its alpha card: a function whose individual <em>pathwise</em> sealed incremental Sharpe has 95% block-bootstrap CI lower bound &gt; 0 (block_len 10, n_bootstrap 1000). The pathwise interpretation — "without \(c\)" = policy at trial parent commit, "with \(c\)" = policy at trial commit — is the only operationalisation that covers every edit type without ad-hoc removal semantics. The H1 verdict is a count comparison across systems at equal compute budget; H1 strong requires LBG-Trader's count to strictly exceed the best baseline AND be at least \(\tau = 3\). Per-card validation is corrected for multiple testing using Benjamini-Hochberg at FDR 0.10</li>
   <li>The alpha-card schema (§6.6) is locked as a <em>superset of the input dossier schema</em> in <code>knowledge/factors/dossiers/</code>: declarative fields (<code>factor_name</code>, <code>core_analysis</code>, <code>parameterization</code>, <code>combination_and_fusion</code>) plus executable evidence (<code>python_implementation_path</code>, <code>prefix_stability_passed</code>, <code>sealed_evidence</code>, <code>status</code>). This makes round-trip translation Python ↔ dossier well-defined</li>
   <li>The validated-factor library is append-only and shared across re-discoveries. A surviving function (and its card) from run N enters the seed pool for run N+1; it is re-validated against the new sealed window and either retained, marked <code>deprecated</code>, or merged. Functions are never silently dropped</li>
   <li>External factor dossiers live under <code>knowledge/factors/</code> (read-only, shared across runs) and are exposed to the Editor only via <code>lbg.knowledge.search()</code>. No dossier citation grants exemption from any invariant or from the sealed test</li>
@@ -3344,8 +3369,8 @@ The work succeeds whether the verdict is H1, H2, or H3. The failure mode the pro
 </section>
 
 <footer>
-  <span>lbg-trader · proposal v2026.05.22 r3 · spec-frozen</span>
-  <span>Part I–IV · 25 sections · 8 figures · 14 math blocks · 27 locked decisions</span>
+  <span>lbg-trader · proposal v2026.05.26 r5 · spec-frozen · four roles · pathwise H1 · figure 2 updated</span>
+  <span>Part I–IV · 25 sections · 8 figures · 14 math blocks · 31 locked decisions</span>
 </footer>
 
 </div>

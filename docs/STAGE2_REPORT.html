@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LBG-Trader 项目愿景与第二阶段路线图</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&family=Noto+Serif+SC:wght@300;400;500;600&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']],
+         processEscapes: true, processEnvironments: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+             ignoreHtmlClass: 'no-mathjax' }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" id="MathJax-script" async></script>
+<style>
+  :root {
+    --ink: #1a1a1c;
+    --ink-soft: #2c2c30;
+    --ink-muted: #6b6b70;
+    --ink-faint: #a4a4a8;
+    --paper: #fbfaf6;
+    --paper-warm: #f5f1e8;
+    --rule: #d8d4c8;
+    --rule-soft: #e8e4d8;
+    --accent: #8b3a2f;
+    --accent-soft: #b76b5e;
+    --teal: #2d6a5c;
+    --gold: #b88a2c;
+    --serif: 'Fraunces', 'Noto Serif SC', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+    --sans: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--paper); color: var(--ink); font-family: var(--serif);
+    font-size: 17px; line-height: 1.78;
+    font-feature-settings: "kern", "liga", "onum";
+  }
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; opacity: 0.03; z-index: 100;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .container { max-width: 820px; margin: 0 auto; padding: 80px 32px 120px; }
+  .title-block {
+    border-top: 2px solid var(--ink); border-bottom: 1px solid var(--rule);
+    padding: 32px 0 24px; margin-bottom: 64px;
+    display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end;
+  }
+  .title-meta {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink-muted); margin-bottom: 18px;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 400; font-size: 52px;
+    line-height: 1.08; letter-spacing: -0.01em; margin-bottom: 16px;
+  }
+  h1 em { font-style: italic; color: var(--accent); font-weight: 300; }
+  .subtitle {
+    font-family: var(--serif); font-size: 19px; line-height: 1.55;
+    color: var(--ink-soft); font-weight: 400; max-width: 580px;
+  }
+  .title-right {
+    text-align: right; font-family: var(--mono); font-size: 11px;
+    line-height: 1.6; color: var(--ink-muted); letter-spacing: 0.04em;
+  }
+  .title-right .v { color: var(--accent); font-weight: 500; }
+  section { margin-bottom: 76px; }
+  .section-marker {
+    display: flex; align-items: baseline; gap: 20px;
+    margin-bottom: 28px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  .section-num {
+    font-family: var(--mono); font-size: 13px; color: var(--accent);
+    letter-spacing: 0.08em; font-weight: 500;
+  }
+  h2 {
+    font-family: var(--serif); font-weight: 400; font-size: 30px;
+    line-height: 1.2; letter-spacing: -0.005em; color: var(--ink);
+  }
+  h3 {
+    font-family: var(--serif); font-weight: 500; font-size: 21px;
+    line-height: 1.4; margin: 40px 0 14px; color: var(--ink);
+  }
+  h4 {
+    font-family: var(--sans); font-weight: 500; font-size: 13px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-muted); margin: 28px 0 10px;
+  }
+  p { margin-bottom: 18px; text-wrap: pretty; }
+  .lede {
+    font-size: 20px; line-height: 1.65; color: var(--ink-soft);
+    font-weight: 400; margin-bottom: 32px;
+    padding: 4px 0 4px 20px; border-left: 2px solid var(--accent);
+  }
+  .lede em { font-style: italic; color: var(--accent); }
+  code {
+    font-family: var(--mono); font-size: 13.5px;
+    background: var(--paper-warm); padding: 1px 6px;
+    border-radius: 2px; color: var(--ink-soft);
+  }
+  em { font-style: italic; color: var(--accent); }
+  strong { font-weight: 500; color: var(--ink); }
+  .pullquote {
+    font-family: var(--serif); font-style: italic; font-weight: 300;
+    font-size: 24px; line-height: 1.5; color: var(--ink);
+    margin: 44px 0 44px -20px;
+    padding: 0 0 0 20px;
+    border-left: 3px solid var(--accent); max-width: 660px;
+  }
+  .aside {
+    background: var(--paper-warm); border-left: 3px solid var(--gold);
+    padding: 20px 24px; margin: 28px 0;
+    font-size: 15px; line-height: 1.75; color: var(--ink-soft);
+  }
+  .aside-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--gold);
+    margin-bottom: 8px; display: block;
+  }
+  .aside.warn { border-left-color: var(--accent); }
+  .aside.warn .aside-label { color: var(--accent); }
+  .aside.note { border-left-color: var(--teal); }
+  .aside.note .aside-label { color: var(--teal); }
+  pre {
+    background: var(--ink); color: #e8e4d8;
+    padding: 20px 24px; border-radius: 4px; overflow-x: auto;
+    font-family: var(--mono); font-size: 13px; line-height: 1.7; margin: 24px 0;
+  }
+  pre code { background: none; padding: 0; color: inherit; font-size: 13px; }
+  .code-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink-faint);
+    margin-bottom: -16px; margin-top: 24px; display: block;
+  }
+  table {
+    width: 100%; border-collapse: collapse; margin: 24px 0;
+    font-family: var(--sans); font-size: 14px;
+  }
+  thead th {
+    text-align: left; font-weight: 500; color: var(--ink-muted);
+    border-bottom: 1.5px solid var(--ink);
+    padding: 10px 12px 10px 0;
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  tbody td {
+    padding: 12px 12px 12px 0; border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top; line-height: 1.65;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td code { font-size: 12.5px; }
+  td.num { font-family: var(--mono); text-align: right; font-size: 12.5px; }
+  td.yes { color: var(--teal); font-weight: 500; }
+  td.no  { color: var(--accent); font-weight: 500; }
+  ol, ul { margin: 16px 0 24px 28px; }
+  li { margin-bottom: 10px; line-height: 1.78; padding-left: 4px; }
+  ul li::marker { color: var(--accent); }
+  ol li::marker { font-family: var(--mono); font-size: 13px; color: var(--ink-muted); font-weight: 500; }
+  .two-col {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin: 28px 0;
+  }
+  .col-card {
+    background: var(--paper-warm); border: 1px solid var(--rule);
+    border-radius: 4px; padding: 24px 26px;
+  }
+  .col-card h4 { margin-top: 0; color: var(--accent); }
+  .col-card.alt { background: var(--paper); border-color: var(--ink-soft); }
+  .col-card.alt h4 { color: var(--teal); }
+  .col-card li { font-size: 14px; line-height: 1.7; }
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 12px; margin: 28px 0;
+  }
+  .kpi {
+    background: var(--paper-warm); border-top: 3px solid var(--accent);
+    padding: 16px 18px; border-radius: 0 0 4px 4px;
+  }
+  .kpi.teal { border-top-color: var(--teal); }
+  .kpi.gold { border-top-color: var(--gold); }
+  .kpi-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink-muted); margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-family: var(--serif); font-size: 28px; font-weight: 400;
+    line-height: 1; letter-spacing: -0.015em; color: var(--ink);
+  }
+  .kpi-sub {
+    font-family: var(--sans); font-size: 11.5px; color: var(--ink-muted);
+    margin-top: 8px; line-height: 1.4;
+  }
+  .ladder { margin: 32px 0; }
+  .rung {
+    display: grid; grid-template-columns: 88px 1fr; gap: 24px;
+    padding: 16px 0; border-bottom: 1px solid var(--rule-soft);
+    align-items: start;
+  }
+  .rung:last-child { border-bottom: none; }
+  .rung-tag {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--accent); letter-spacing: 0.08em;
+    padding-top: 4px; font-weight: 500;
+  }
+  .rung-body { font-size: 15px; line-height: 1.7; color: var(--ink-soft); }
+  .rung-body strong { color: var(--ink); }
+  .math {
+    margin: 24px 0; font-size: 16px; line-height: 1.4;
+    padding: 0 0 0 20px; border-left: 2px solid var(--rule);
+  }
+  .math .where {
+    display: block; font-family: var(--sans); font-size: 13px;
+    color: var(--ink-muted); margin-top: 10px; line-height: 1.65;
+  }
+  .footer {
+    margin-top: 80px; padding-top: 28px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono); font-size: 11px; color: var(--ink-muted);
+    letter-spacing: 0.04em; line-height: 1.85;
+  }
+  .footer .accent { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<div class="container">
+
+<!-- ============================== 标题 ============================== -->
+<header class="title-block">
+  <div>
+    <div class="title-meta">第二阶段 · 项目愿景与路线图</div>
+    <h1>从<em>会写代码</em>的智能体<br>到<em>会沉淀因子</em>的研究体系</h1>
+    <p class="subtitle">第一阶段把 sealed-evaluation 协议建好了；现在主 H1 终于可以被计算。本阶段记录修订后的项目愿景、当前实现快照，以及把 H1 从"可计算"推到"非零"所需的具体工作。</p>
+  </div>
+  <div class="title-right">
+    <div>SPY · 2010 – 2024</div>
+    <div>Stage 2 · codexreview 分支</div>
+    <div><span class="v">v0.2.0</span> · 11 distinct factors</div>
+    <div>2026 · 05 · 26</div>
+    <div style="font-size: 10px; color: var(--ink-muted); margin-top: 4px;">v12→v26 旅程 · 多 agent 可视化 · 因子库 11 / 10</div>
+  </div>
+</header>
+
+<!-- ============================== § 0 TL;DR ============================== -->
+<section id="tldr">
+<div class="section-marker">
+  <span class="section-num">§ 0</span>
+  <h2>TL;DR · 现状一页纸</h2>
+</div>
+
+<p class="lede">LBG-Trader 的修订愿景是：让 LLM 在一个严格的沙箱里持续编辑一个<em>由 Python 因子函数构成的启发式系统</em>，并把"该系统在每次 Discovery 后新长出几条经过 sealed 验证的因子"作为主 H1。本报告记录 codexreview 分支上 v12 到 v26 的完整旅程：从首次 alpha card 产出（vol_regime_zscore，v12）到 11 个不同因子<em>都带 dossier 和源码</em>（v26，goal=10 MET）。中间路过 7 次 gate 演化，每次都为了堵掉 LLM 找到的<em>新</em>捷径——sizing 旋钮挤、rearm 旋钮挤、val 过拟合、Pareto-on-MDD 漏洞。当前的 gate 形态既能阻挡这些捷径，又能在 library &lt; goal 时给 add_indicator 一个"成长期"折扣，让因子库稳定累积。</p>
+
+<div class="kpi-grid">
+  <div class="kpi teal"><div class="kpi-label">/goal 状态</div><div class="kpi-value">11 / 10</div><div class="kpi-sub">distinct factor count · MET</div></div>
+  <div class="kpi gold"><div class="kpi-label">alpha cards in library</div><div class="kpi-value">11</div><div class="kpi-sub">每个含 .py + dossier + sealed CI</div></div>
+  <div class="kpi"><div class="kpi-label">campaign 序列</div><div class="kpi-value">v12 → v26</div><div class="kpi-sub">15 次实证 · ~3.5 小时 codex_cli</div></div>
+  <div class="kpi teal"><div class="kpi-label">测试基线</div><div class="kpi-value">606</div><div class="kpi-sub">pytest 全绿 · ruff 全过</div></div>
+</div>
+
+<h3>本阶段读者路径</h3>
+
+<ul>
+  <li>想看修订愿景：读 <strong>§ 1</strong>。</li>
+  <li>想看主 H1 怎么操作（pathwise incremental Sharpe）：读 <strong>§ 2</strong>。</li>
+  <li>想看四 agent 架构图：读 <strong>§ 5</strong>。</li>
+  <li>想看 HL 因子发现循环 + Python↔dossier round-trip：读 <strong>§ 6</strong>。</li>
+  <li>想看 v12→v26 的完整故事（每次 campaign 学到了什么、gate 怎么演化的）：读 <strong>§ 7</strong>。</li>
+  <li>想看当前 library 里都有哪 11 个因子：读 <strong>§ 8</strong>。</li>
+</ul>
+
+<p>本文档与 <code>PROPOSAL.html</code>（规范源头，最新 r4 已记录四角色与 pathwise H1）、<code>docs/STAGE1_REPORT.html</code>（main 分支状态对应的第一阶段 15 节实施回顾）协同阅读。STAGE1 报告记录的是 main 分支（提交 d77e5a2）截止时的状态——15 sections、3 LLM 角色、0 alpha cards；本 STAGE2 报告对应 codexreview 分支的<em>所有后续工作</em>：4 LLM 角色（含 Translator）、51 seed templates、11 distinct factors in library、完整的 gate 演化时间线。</p>
+
+</section>
+
+<!-- ============================== § 1 修订愿景 ============================== -->
+<section id="vision">
+<div class="section-marker">
+  <span class="section-num">§ 1</span>
+  <h2>修订愿景 · 启发式系统作为学习对象</h2>
+</div>
+
+<p>项目最初的描述是"用 LLM 提示工程跑 SPY 策略发现"。这套描述在 2026 年早春的方案里被改写过一次，又在 2026 年 5 月被改写过第二次。两次修订的方向都是<em>把学习的对象搬到代码而不是参数上</em>。</p>
+
+<p>对照 Jiayi Weng 的 Heuristic Learning：HL 的学习对象不是神经网络权重，而是一个由代码、状态表征、反馈通道、记忆、更新机制构成的<em>软件系统</em>。每一次反馈不是去调一个数值参数，而是去修改这套软件中的某一处——加一段判断、写一个新函数、整理一份记忆。LBG-Trader 把这个范式映射到量化研究上的对应物如下：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width: 30%;">Heuristic Learning 概念</th>
+      <th>LBG-Trader 对应物</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>policy / state representation</td>
+      <td><code>indicators/*.py</code>（智能体写的 Python 纯函数）+ <code>strategy.yaml</code>（声明式 DSL 把这些函数装配成策略）。这是核心学习对象。</td>
+    </tr>
+    <tr>
+      <td>feedback channels</td>
+      <td>train 窗口的数值 metrics（智能体看得到）；validation 窗口的<em>分类信号</em>（智能体只看到 accept / reject_drawdown / reject_turnover / reject_complexity / reject_no_significant_improvement，永远看不到具体数字）。</td>
+    </tr>
+    <tr>
+      <td>records / memory</td>
+      <td>四层记忆：<code>memory/trials.jsonl</code> 事件流；<code>memory/reflections.jsonl</code> Reflector 解释；四份语义 markdown（accepted_rules / failed_directions / open_questions / do_not_repeat）；append-only <code>memory/tried_factors.jsonl</code> 跨 iteration 的因子尝试记录。</td>
+    </tr>
+    <tr>
+      <td>update mechanism</td>
+      <td>四个 LLM 角色组合：Editor 提交一条结构化编辑、Reflector 机械解释结果并更新记忆、Curator 每 10 次接受后压缩记忆、Translator 把每个被接受的 <code>add_indicator</code> 翻译成 JSON 形式的 dossier。每次更新一次 git commit。</td>
+    </tr>
+    <tr>
+      <td>HL 的产出物</td>
+      <td>不是某个单次 sealed Sharpe 数字，而是经过 sealed 验证的因子函数<em>集合</em>。每张 alpha card 是一条这样的函数加上它的 sealed 证据。Stage 1 跑下来增长几条 card，Stage 2 forward 再验证一次，这才是积累。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>三个判断在第一阶段被反复确认</h3>
+
+<ol>
+  <li><strong>策略层 Sharpe 不是稳健的成功标志。</strong>v0–v7 八次 campaign 显示，单一 sealed 窗口的 ΔSharpe 可以因 baseline 选择翻转——v6 把 baseline 从 SMA-cross 换成 buyhold 后立刻出现"H1 weak True"，但这只是策略层的 supplementary 结果，不是修订后的主 H1。继续在策略层堆指标会回到 LLM-guided BO 的窠臼。</li>
+  <li><strong>因子数量是更可积累的单位。</strong>主 H1 现在改为"sealed-validated alpha card 数量"。<em>积累</em> 才是 HL 在长程上想体现的——一条新的、有 sealed 证据的因子是可持续的产出，下一次 Discovery 还能在它上面继续修改。一个翻一次符号就消失的 ΔSharpe 不是。</li>
+  <li><strong>code 与 dossier 的双向流通是这次特别想做对的事。</strong><code>knowledge/factors/</code> 里 564 份 dossier 是项目最初的<em>种子库</em>——Editor 通过 substring 检索拿到 hint；反向，每被接受一个 <code>add_indicator</code>，Translator 就把 Python 源代码翻译回 dossier JSON 写进 <code>alpha_cards/dossiers/</code>。这样一次完整的 Discovery run 既消费 dossier 也产出 dossier，库会真的"长大"。这是 PROPOSAL §6.7 的"round-trip 桥梁"。</li>
+</ol>
+
+<div class="aside">
+<span class="aside-label">为什么是因子数量而非平均 ΔS</span>
+平均一组 <code>ΔS_c</code> 容易被单条极端的 card 拉动。一个框架如果"只发现了一条非常好的因子"，平均统计量看起来很漂亮，但实际上没有积累。计数则天然抗这个：每张 card 贡献 0 或 1，门槛是"sealed 95% CI 下界 &gt; 0"。这与项目想表达的"HL 长出新东西"完全对应。
+</div>
+
+<p class="pullquote">第一阶段的工程胜利是建好了 sealed 协议；第二阶段的科学挑战是<em>真的让框架长出第一张可验证的 alpha card</em>。</p>
+
+</section>
+
+<!-- ============================== § 2 主 H1 计量学 ============================== -->
+<section id="h1-math">
+<div class="section-marker">
+  <span class="section-num">§ 2</span>
+  <h2>主 H1 计量学 · pathwise incremental Sharpe</h2>
+</div>
+
+<p>修订愿景需要一个能落到代码上的计量。<code>PROPOSAL.html</code> §10.5 Step 1 的数学描述是 leave-one-out：对每条接受的因子 \(c\)，对比包含与不包含 \(c\) 的策略在 sealed 窗口上的日收益差，做 moving block bootstrap，看 95% CI 下界是否大于 0。</p>
+
+<p>严格的 leave-one-out 在 LBG-Trader 的 DSL 上无法干净定义：当 \(c\) 是 <code>cross_above(fast, slow)</code> 里的两条 SMA 之一时，"去掉一个 indicator"会把入场规则破坏掉，剩下的策略不再可执行。所以实现采用<strong>路径式</strong>解读：</p>
+
+<div class="math">
+\[
+\text{"without } c\text{"} \;=\; \pi_{H_\text{at parent commit}}(D_\text{sealed}), \qquad
+\text{"with } c\text{"} \;=\; \pi_{H_\text{at trial commit}}(D_\text{sealed})
+\]
+\[
+\Delta r^{c}_t \;=\; r^{\text{with } c}_t \;-\; r^{\text{without } c}_t, \qquad
+\Delta S_c \;=\; \sqrt{252}\,\frac{\overline{\Delta r^{c}_t}}{\operatorname{std}(\Delta r^{c}_t)}
+\]
+<span class="where">这条定义对全部八种 edit type 都生效——把"去掉 \(c\) 的策略"定义为<em>这次 trial 之前的策略状态</em>，把"带上 \(c\) 的策略"定义为<em>这次 trial 接受之后的策略状态</em>。Pathwise 沿着构造轨迹去掉 \(c\)，而不是从最终复合策略里抽象地去掉。</span>
+</div>
+
+<h3>从 trial 到 sealed_summary 的实现路径</h3>
+
+<p>每张 alpha card 携带 <code>source_trial</code> 与 <code>source_commit</code>。后者是<em>父 commit</em>（在 trial 修改 strategy 之前的状态）。<code>compute_per_card_sealed_validation</code> 的步骤如下：</p>
+
+<ol>
+  <li>查找 subject 为 <code>trial NNNN:</code> 的 commit SHA（即<em>子 commit</em>，包含本次 trial 的修改）。</li>
+  <li>用 <code>git show &lt;parent&gt;:strategy.yaml</code> 与 <code>git show &lt;parent&gt;:indicators/&lt;fn&gt;.py</code> 把父状态物化到临时目录；同样物化子状态。</li>
+  <li>分别在 sealed 窗口（split_C，约 1006 个 bar）上跑 backtest，得到两组 paired daily returns。</li>
+  <li>对差值序列做 moving block bootstrap：<code>block_len=10, n_bootstrap=1000, α=0.05</code>。</li>
+  <li>把 <code>{incremental_sharpe_point, incremental_sharpe_ci_lower, incremental_sharpe_ci_upper, n_bootstrap, block_len, alpha}</code> 写回 <code>card.evidence.sealed_summary</code>。</li>
+  <li>找不到 trial commit 或者 sealed 窗口太短时，记一个 <code>validation_error</code>，但 <code>sealed_summary</code> 保留 <code>None</code>——这与"还没被验证"的语义一致，H1 计数器自然不会把它算进去。</li>
+</ol>
+
+<h3>消费端 · H1 verdict</h3>
+
+<div class="math">
+\[
+N^{\,\text{val}}_\text{LBG} \;=\; \#\bigl\{ c : \operatorname{lower bound}\bigl(\operatorname{CI}_{95}(\Delta S_c)\bigr) > 0 \bigr\}
+\]
+\[
+\textbf{H1 strong} \iff N^{\,\text{val}}_\text{LBG} > \max_B N^{\,\text{val}}_B \;\text{ and }\; N^{\,\text{val}}_\text{LBG} \ge \tau
+\]
+\[
+\textbf{H1 weak} \iff N^{\,\text{val}}_\text{LBG} \ge 1 \;\text{ and }\; N^{\,\text{val}}_\text{LBG} \ge N^{\,\text{val}}_{B^{*}}
+\]
+<span class="where">基线注册在 <code>analysis_plan.yaml</code>：<code>buy_and_hold</code>、<code>sixty_forty</code>，初始 <code>baseline_validated_counts: {}</code>。\(\tau\) 预注册为 3。所有 baseline 在 sealed 上自然不产 card，因此 \(N^{\,\text{val}}_B = 0\)。</span>
+</div>
+
+<h3>预注册文件</h3>
+
+<p>主 H1 与 supplementary strategy comparison 都已经在仓库根目录的 <code>analysis_plan.yaml</code> 里预注册，PROPOSAL §20 第 22 条要求该文件在任何 sealed 打开之前提交进 git。该文件的 schema 使用 Pydantic <code>extra="forbid"</code>，新增字段会立即触发校验失败，避免悄悄塞条件。</p>
+
+<span class="code-label">analysis_plan.yaml · 当前预注册内容</span>
+<pre>baselines:
+  - buy_and_hold
+  - sixty_forty
+
+per_card_validation:
+  # Pathwise: 每张 card 的评估对象是这次 trial 的接受动作在 trial 时刻
+  # 策略状态上的增量贡献。严格 LOO 对入场/出场 cross rule 上的因子没有
+  # 干净定义；pathwise 是覆盖全部八种 edit type 的唯一操作语义。
+  method: pathwise_incremental_sharpe
+  ci: 0.95
+  ci_method: moving_block_bootstrap
+  block_len: 10
+  n_bootstrap: 1000
+  threshold: lower_bound_gt_zero
+
+h1:
+  test: validated_factor_count
+  tau: 3
+  strong_criterion: N_val_lbg &gt; max_baseline_count and N_val_lbg &gt;= tau
+  weak_criterion: N_val_lbg &gt;= 1 and N_val_lbg &gt;= best_baseline_count
+  baseline_validated_counts: {}
+
+supplementary_strategy:
+  test: moving_block_bootstrap
+  metric: sealed_strategy_sharpe
+  reference: best_pre_registered_baseline
+  block_len: 10
+  n_bootstrap: 1000
+  alpha: 0.05
+  strong_criterion: ci_lower &gt; 0
+  weak_criterion: point_estimate &gt; 0
+</pre>
+
+</section>
+
+<!-- ============================== § 3 框架快照 ============================== -->
+<section id="snapshot">
+<div class="section-marker">
+  <span class="section-num">§ 3</span>
+  <h2>框架快照 · 第二阶段开局时 LBG-Trader 长什么样</h2>
+</div>
+
+<h3>四个 LLM 角色</h3>
+
+<table>
+  <thead>
+    <tr><th>角色</th><th>触发时机</th><th>输入</th><th>输出</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Editor</strong></td>
+      <td>每个 trial 开始</td>
+      <td>当前 <code>strategy.yaml</code>、当前指标源代码摘要、近期 trial 摘要（含 fallback_if_rejected）、四份语义记忆、active skills、来自 <code>knowledge/factors/</code> 的 dossier hint shortlist、禁用的 indicator 名单</td>
+      <td>一份 YAML 编辑提案：edit type + hypothesis + expected train/val 信号 + fallback_if_rejected + cited_factors</td>
+    </tr>
+    <tr>
+      <td><strong>Reflector</strong></td>
+      <td>每个 trial 的 gate 结果之后</td>
+      <td>编辑提案、机械计算出的 hypothesis_outcome、实际 validation_signal、train metrics</td>
+      <td>机械解释 + 对四份语义 markdown 的增量更新</td>
+    </tr>
+    <tr>
+      <td><strong>Curator</strong></td>
+      <td>每 10 次接受后（shadow mode）</td>
+      <td>四份语义 markdown 全文</td>
+      <td>压缩、去重后的重写</td>
+    </tr>
+    <tr>
+      <td><strong>Translator</strong></td>
+      <td>每次接受 <code>add_indicator</code> 后</td>
+      <td>智能体写的 .py 源代码 + alpha card 元数据 + 训练观测 + cited_factors</td>
+      <td>与种子库 schema 一致的 JSON dossier，写进 <code>alpha_cards/dossiers/&lt;name&gt;_trial_NNNN.txt</code>。这是 round-trip 的产出端。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>八种 edit type 与动作空间结构</h3>
+
+<table>
+  <thead>
+    <tr><th>edit type</th><th>动作空间</th><th>风险面</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>add_indicator</code></td><td>新写一个纯函数 Python 指标，并必须显式 attach 到 entry / exit / filters / exit_filters / sizing 中的一个</td><td>look-ahead、沙箱逃逸、unwired 指标</td></tr>
+    <tr><td><code>parameter_change</code></td><td>修改一个数值参数</td><td>低</td></tr>
+    <tr><td><code>add_filter</code></td><td>用既有指标增加一个入场或出场过滤器</td><td>低</td></tr>
+    <tr><td><code>remove_filter</code></td><td>移除一个过滤器</td><td>低</td></tr>
+    <tr><td><code>change_sizing_mode</code></td><td>切换仓位算法</td><td>隐式杠杆</td></tr>
+    <tr><td><code>change_exit_rule</code></td><td>修改止损或持仓周期</td><td>低</td></tr>
+    <tr><td><code>simplify</code></td><td>删除一个组件，预期会触发回归检查</td><td>能力损失</td></tr>
+    <tr><td><code>revert_to_trial_N</code></td><td>回滚到之前的 commit</td><td>无</td></tr>
+  </tbody>
+</table>
+
+<p>第一阶段实施过程中扩展过两次：(1) 加入 <code>exit_filters</code> 让 <code>add_indicator</code> 在 buyhold 这种入场事件极少的 baseline 上也有可达的 Pareto 路径；(2) 给 <code>add_indicator</code> 增加 <code>attach</code> + <code>attach_target</code> 字段，把"加一个指标但不接线"这种 noop 直接判为 invariant 失败。</p>
+
+<h3>不变量 · 五层防御</h3>
+
+<ol>
+  <li><strong>Pydantic schema</strong> · <code>extra=forbid</code>，DSL 不能塞未声明字段。</li>
+  <li><strong>AST 静态检查</strong> · <code>no_negative_indexing</code>、<code>no_future_shift</code>、<code>no_forward_fill_future</code>、<code>whitelisted_imports_only</code>（仅 numpy / pandas / math）、<code>pure_function</code>（无全局变量、无副作用、无 I/O）。</li>
+  <li><strong>受限沙箱</strong> · 受控的 globals + SIGALRM 超时；指标代码即使绕过 AST 检查也跑不出文件系统。</li>
+  <li><strong>prefix_stability</strong> · 动态扰动 \(D_{>t}\) 检查 \(f(D)[t]\) 是否真的不变。这是最严的一层，单点扰动可以抓到任何 rolling、whole-series normalisation、forward-fill 引入的未来信息。</li>
+  <li><strong>protocol 不变量</strong> · <code>no_python_edit</code>（智能体不得修改 <code>backtest.py</code> / <code>policy_interpreter.py</code>）、<code>no_forbidden_file_access</code>、<code>no_data_snooping</code>（年份、命名事件不得出现在任何会进 Editor prompt 的文件里）。</li>
+</ol>
+
+<h3>validation gate · 多目标，非"严格 CI &gt; 0"</h3>
+
+<p>每个 trial 的 gate 是多目标决策，<em>不</em>要求严格的 CI 下界 &gt; 0。组成项：最小成交次数、drawdown regression cap（验证窗最大回撤不能比当前增大 15% 以上）、turnover cap、complexity cap、单边 utility LCB（α 默认 0.20，permissive 配置下降到 0.40）、Pareto 改进、overfit gap cap。permissive 是给"探索阶段想真的产 card"用的；strict 留给最终发表。</p>
+
+<h3>sealed vault · 写一次</h3>
+
+<p><code>artifacts/sealed/sealed_test_final.json</code> 是写一次。<code>SealedVault</code> 在任何二次写入时直接抛错，无法覆盖。Stage 2 起，<code>scripts/campaign.py --seal-only-last</code> 提供"只在最终一次 iteration 打开 sealed 窗口"的发表模式；默认每次 iteration seal 是 dev 模式，用来给 dashboard 实时看进度，但不能作为独立 H1 evidence（有效样本量是 1）。</p>
+
+<h3>repo 结构 · 第二阶段开局</h3>
+
+<pre>backtest.py               # 向量化 SPY 日频 backtest, ~150 LOC, 锁定
+policy_interpreter.py     # 确定性策略引擎, 锁定
+strategy.yaml             # DSL 配置, 当前 baseline = sma_cross
+analysis_plan.yaml        # 预注册的 H1 + supplementary 评估方案
+
+indicators/               # 智能体写的纯函数指标
+baselines/                # buyhold 等可切换起点的 strategy + indicators 快照
+lbg/
+  alpha_cards.py          # AlphaCardWriter + dossier link 匹配 (§6.6)
+  builder/                # CandidateBuilder + 八种 edit type 应用器
+  data/                   # yfinance + Tiingo 交叉校验, split_A/B/C 别名
+  dsl/                    # strategy.yaml 的 Pydantic schema
+  gate/                   # ValidationGate, HypothesisScorer, complexity (strict / permissive)
+  git_manager.py          # 一 trial 一 commit, 一 Curator cycle 一 branch
+  invariants/             # AST + prefix_stability
+  knowledge/factors.py    # 564 dossier 检索 (search / get_dossier / load_index)
+  memory/                 # MemoryManager + tried_factors.jsonl 跨 iter 记录
+  orchestrator/           # ContextBuilder, RoleRunner (4 角色), Curator, Discovery, Campaign,
+                          # live_status, prompts/, templates/
+  parser/                 # ProposalParser + 八种 edit type payload
+  sandbox/                # 受限 exec + SIGALRM 超时
+  schemas.py              # EditProposal, TrialRecord, 6 StrEnums
+  sealed_vault.py         # 写一次的 sealed_test_final.json 容器
+  skills/                 # SkillManager
+  stage2/                 # forward validation 引擎
+  stage3/                 # PaperTradingEngine
+  translator.py           # 第四个 LLM 角色 · .py → JSON dossier
+  verdict/
+    analysis_plan.py      # AnalysisPlan Pydantic 模型
+    bootstrap.py          # moving_block_bootstrap_sharpe_diff
+    baselines.py          # baseline_buy_and_hold, baseline_sixty_forty
+    h1.py                 # AlphaCardH1Verdict + 策略层 supplementary
+    per_card.py           # 生产端 · 把 sealed_summary 写进 alpha card
+
+knowledge/factors/        # 564 份只读种子 dossier + index.jsonl
+scripts/
+  campaign.py             # 多轮 Discovery + 可选 seal_only_last
+  long_discovery.py       # 单次 Discovery
+  migrate_factors.py      # 因子库一次性导入
+  dashboard_demo.py       # 给 dashboard 喂合成事件 · 不需要 LLM
+  reshuffle_proposal.py   # PROPOSAL 章节调序
+
+tests/                    # 606 测试, pytest 驱动
+docs/                     # 人类视角报告
+  STAGE1_REPORT.html      # 第一阶段实施回顾 (15 节)
+  STAGE2_REPORT.html      # 本文档
+artifacts/                # 运行时: sealed/, reports/, live/
+alpha_cards/              # 运行时: 每张 card 的 yaml + 翻译过的 dossier txt
+memory/                   # 运行时: 每次运行的 jsonl + md + tried_factors.jsonl
+campaigns/                # 运行时: per-iter sealed vault + campaign_summary.json
+runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
+</pre>
+
+<h3>live dashboard · 第二阶段新增 H1 KPI 与 per-card CI 图</h3>
+
+<p><code>artifacts/live/dashboard.html</code> 是浏览器 2 秒轮询 <code>run_status.jsonl</code> 的静态页面（不需要服务端）。Stage 2 开局补了一个 KPI（"H1 · validated factor count" + "n / candidate cards · H1 weak/strong"）和一张图（"alpha card 增量 Sharpe · 95% 区间"——横向 floating bar 表示 CI，红点表示点估计，红色竖虚线为阈值 0）。<code>scripts/dashboard_demo.py</code> 可以喂合成事件给页面，方便在不跑 LLM 的情况下检视 UI。</p>
+
+</section>
+
+<!-- ============================== § 4 工件清单 ============================== -->
+<section id="ledger">
+<div class="section-marker">
+  <span class="section-num">§ 4</span>
+  <h2>当前工件清单 · v26 完成状态</h2>
+</div>
+
+<p>v12 之前（Stage 1）八次 campaign 没有产出任何 alpha card，原因总结在 STAGE1_REPORT 第 15 节：主 H1 计量端被补回前，<code>validated_factor_count</code> 在结构上永远等于 0。本 STAGE2 报告从 v12 起：第一次 add_indicator 接受、第一张 alpha card、第一份 Translator dossier。后续每一次 campaign 都在拓宽这个起点。</p>
+
+<table>
+  <thead>
+    <tr><th>工件</th><th>状态</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>四角色 LLM 调用基础设施</td><td class="yes">就绪</td><td>RoleRunner 支持 anthropic / mimo / claude_cli / codex_cli 四个 provider</td></tr>
+    <tr><td>八种 edit type 的 Builder + Parser</td><td class="yes">就绪</td><td>含 attach_target 路由 + rearm_threshold 支持</td></tr>
+    <tr><td>五层不变量</td><td class="yes">就绪</td><td>Pydantic + AST + sandbox + prefix_stability + protocol</td></tr>
+    <tr><td>多目标 validation gate (含 7 项 anti-exploit 规则)</td><td class="yes">就绪</td><td>v12→v26 演化结果。详见 § 7</td></tr>
+    <tr><td>主 H1 生产端 (pathwise 增量 Sharpe)</td><td class="yes">就绪</td><td><code>lbg/verdict/per_card.py</code></td></tr>
+    <tr><td>主 H1 消费端 (alpha card 计数)</td><td class="yes">就绪</td><td><code>lbg/verdict/h1.compute_alpha_card_h1_verdict</code></td></tr>
+    <tr><td>Translator 角色（第 4 个 LLM）</td><td class="yes">已触发 11 次</td><td>每个 add_indicator 接受都产出一份 JSON dossier</td></tr>
+    <tr><td>seed template 库（51 个 .py + 元数据 index）</td><td class="yes">就绪</td><td>v20 起从 20 扩到 51；7 个类别覆盖 trend / momentum / mean_rev / volatility / drawdown / regime / volume + microstructure</td></tr>
+    <tr><td>alpha_cards_library/ 持久化 + auto-inject</td><td class="yes">就绪</td><td>跨 campaign 累积；下一次 campaign 自动接入已验证因子</td></tr>
+    <tr><td>/goal 追踪 + 可配置目标</td><td class="yes">就绪</td><td><code>scripts/campaign.py --goal N</code>，写入 <code>goal_state.json</code>，gate 的 diversity discount 同步</td></tr>
+    <tr><td>live dashboard：trial chart + per-card CI + library 因子表</td><td class="yes">就绪</td><td>v26 新增 library 表，显示每个因子的 params / attach / sealed CI / dossier</td></tr>
+    <tr><td>SealedVault 写一次容器</td><td class="yes">就绪</td><td>二次写入抛 SealedVaultError</td></tr>
+    <tr><td>analysis_plan.yaml 预注册</td><td class="yes">已提交</td><td>主 H1 + supplementary 都注册了</td></tr>
+    <tr><td>Stage 2 forward validation 引擎</td><td class="yes">就绪</td><td><code>lbg.stage2.run_forward_validation</code>，无 LLM</td></tr>
+    <tr><td>Stage 3 PaperTradingEngine</td><td class="yes">就绪 (模拟)</td><td>逐 bar 流式回放</td></tr>
+    <tr><td>walk-forward sealed windows</td><td class="no">未做</td><td>当前 sealed 仍是单一窗口，effective n = 1</td></tr>
+    <tr><td>strict-gate 复检 11 个因子的个体 sealed CI</td><td class="no">未做</td><td>permissive 下点估计有正有负；下一阶段</td></tr>
+  </tbody>
+</table>
+
+</section>
+
+
+<!-- ============================== § 5 多 agent 架构 ============================== -->
+<section id="agents">
+<div class="section-marker">
+  <span class="section-num">§ 5</span>
+  <h2>多 agent 架构可视化</h2>
+</div>
+
+<p>四个 LLM 角色（Editor / Reflector / Curator / Translator）只在外圈调用；中间的 Orchestrator 全部是确定性 Python，从不调用 LLM。这条结构约束是整个实验的可信度来源——所有"接受 / 拒绝 / 衡量"决策都不经过 LLM 之手。</p>
+
+<div class="figure">
+<div class="chart-wrap" style="background: var(--paper-warm); padding: 36px 28px;">
+<svg viewBox="0 0 760 540" width="100%" role="img">
+<title>四个 LLM 角色围绕确定性 Orchestrator + Heuristic System</title>
+<defs>
+  <marker id="ar1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#1a1a1c" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+
+<!-- Editor (top-left) -->
+<rect x="40" y="40" width="180" height="78" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.5" rx="3"/>
+<text x="130" y="65" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">Editor</text>
+<text x="130" y="84" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">每个 trial：提议一个 edit</text>
+<text x="130" y="100" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">+ hypothesis + cited_factors</text>
+
+<!-- Reflector (top-right) -->
+<rect x="540" y="40" width="180" height="78" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1.5" rx="3"/>
+<text x="630" y="65" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">Reflector</text>
+<text x="630" y="84" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">gate 决议之后</text>
+<text x="630" y="100" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">机械解释 + 写记忆</text>
+
+<!-- Curator (bottom-left) -->
+<rect x="40" y="420" width="180" height="78" fill="#fbfaf6" stroke="#b88a2c" stroke-width="1.5" rx="3"/>
+<text x="130" y="445" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">Curator</text>
+<text x="130" y="464" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">每 10 次接受运行</text>
+<text x="130" y="480" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">压缩 4 份 .md（shadow）</text>
+
+<!-- Translator (bottom-right) -->
+<rect x="540" y="420" width="180" height="78" fill="#fbfaf6" stroke="#b76b5e" stroke-width="1.5" rx="3"/>
+<text x="630" y="445" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">Translator</text>
+<text x="630" y="464" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">每次 add_indicator 接受</text>
+<text x="630" y="480" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">.py 源码 → JSON dossier</text>
+
+<!-- Orchestrator (center, dark) -->
+<rect x="260" y="220" width="240" height="118" fill="#1a1a1c" stroke="#1a1a1c" stroke-width="1" rx="3"/>
+<text x="380" y="246" text-anchor="middle" font-family="Fraunces, serif" font-size="18" font-weight="500" fill="#fbfaf6">Orchestrator</text>
+<text x="380" y="270" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#a4a4a8">确定性 Python · 不调用 LLM</text>
+<text x="380" y="290" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#d6a26a">invariants · backtest · gate</text>
+<text x="380" y="306" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#d6a26a">per-card CI · git commit</text>
+<text x="380" y="322" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#d6a26a">library auto-inject</text>
+
+<!-- Heuristic System (below orchestrator) -->
+<rect x="40" y="200" width="200" height="180" fill="#f5f1e8" stroke="#8b3a2f" stroke-dasharray="3 2" stroke-width="1.2" rx="3"/>
+<text x="140" y="222" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" letter-spacing="1" fill="#6b6b70" text-transform="uppercase">Heuristic System</text>
+<text x="60" y="246" font-family="JetBrains Mono, monospace" font-size="10" fill="#1a1a1c">strategy.yaml</text>
+<text x="60" y="263" font-family="JetBrains Mono, monospace" font-size="10" fill="#1a1a1c">indicators/*.py</text>
+<text x="60" y="280" font-family="JetBrains Mono, monospace" font-size="10" fill="#1a1a1c">memory/trials.jsonl</text>
+<text x="60" y="297" font-family="JetBrains Mono, monospace" font-size="10" fill="#1a1a1c">memory/reflections.jsonl</text>
+<text x="60" y="314" font-family="JetBrains Mono, monospace" font-size="10" fill="#1a1a1c">memory/*.md  (4 份语义)</text>
+<text x="60" y="331" font-family="JetBrains Mono, monospace" font-size="10" fill="#1a1a1c">memory/tried_factors.jsonl</text>
+<text x="60" y="348" font-family="JetBrains Mono, monospace" font-size="10" fill="#1a1a1c">alpha_cards/*.yaml</text>
+<text x="60" y="365" font-family="JetBrains Mono, monospace" font-size="10" fill="#1a1a1c">git lineage (1 trial / 1 commit)</text>
+
+<!-- Library (right of orchestrator) -->
+<rect x="520" y="200" width="200" height="180" fill="#f5f1e8" stroke="#2d6a5c" stroke-dasharray="3 2" stroke-width="1.2" rx="3"/>
+<text x="620" y="222" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" letter-spacing="1" fill="#6b6b70" text-transform="uppercase">Persistent Library</text>
+<text x="540" y="246" font-family="JetBrains Mono, monospace" font-size="10" fill="#1a1a1c">alpha_cards_library/</text>
+<text x="540" y="263" font-family="JetBrains Mono, monospace" font-size="10" fill="#1a1a1c"> ├ cards/*.yaml</text>
+<text x="540" y="280" font-family="JetBrains Mono, monospace" font-size="10" fill="#1a1a1c"> ├ indicators/*.py</text>
+<text x="540" y="297" font-family="JetBrains Mono, monospace" font-size="10" fill="#1a1a1c"> ├ dossiers/*.txt</text>
+<text x="540" y="314" font-family="JetBrains Mono, monospace" font-size="10" fill="#1a1a1c"> └ index.jsonl</text>
+<text x="540" y="334" font-family="JetBrains Mono, monospace" font-size="10" fill="#6b6b70">跨 campaign 累积</text>
+<text x="540" y="349" font-family="JetBrains Mono, monospace" font-size="10" fill="#6b6b70">下次 campaign 启动时</text>
+<text x="540" y="364" font-family="JetBrains Mono, monospace" font-size="10" fill="#6b6b70">auto-inject 进 baseline</text>
+
+<!-- arrows: Editor -> Orchestrator -->
+<line x1="220" y1="98" x2="290" y2="225" stroke="#8b3a2f" stroke-width="1.2" marker-end="url(#ar1)"/>
+<text x="245" y="170" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">YAML 提案</text>
+
+<!-- Orchestrator -> Reflector (after trial decision) -->
+<line x1="470" y1="225" x2="540" y2="98" stroke="#2d6a5c" stroke-width="1.2" marker-end="url(#ar1)"/>
+<text x="510" y="170" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">机械 verdict</text>
+
+<!-- Orchestrator -> Curator (every 10 accepts) -->
+<line x1="290" y1="338" x2="220" y2="430" stroke="#b88a2c" stroke-width="1.2" marker-end="url(#ar1)"/>
+<text x="225" y="395" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">每 10 accepts</text>
+
+<!-- Orchestrator -> Translator (on add_indicator accept) -->
+<line x1="470" y1="338" x2="540" y2="430" stroke="#b76b5e" stroke-width="1.2" marker-end="url(#ar1)"/>
+<text x="500" y="395" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">add_indicator accept</text>
+
+<!-- Heuristic System &lt;-&gt; Orchestrator -->
+<line x1="240" y1="290" x2="260" y2="290" stroke="#1a1a1c" stroke-width="1"/>
+<line x1="500" y1="290" x2="520" y2="290" stroke="#1a1a1c" stroke-width="1"/>
+
+<!-- bottom legend -->
+<text x="380" y="528" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="12" fill="#6b6b70">
+  橙=propose · 青=evaluate · 金=compress · 红=translate · 黑=deterministic
+</text>
+</svg>
+</div>
+<div class="figure-caption"><strong>Figure A.</strong> 四个 LLM 角色加一个确定性 Orchestrator。Heuristic System（左）是被维护的代码 + 记忆系统；Persistent Library（右）跨 campaign 累积，新 campaign 启动时通过 auto-inject 把 library 因子写回 Heuristic System 的 strategy.yaml + indicators/。<strong>所有 accept/reject 决策都在 Orchestrator 的 gate 里，永远不经过 LLM。</strong></div>
+</div>
+
+<h3>每个 agent 的输入 / 输出</h3>
+
+<table>
+  <thead>
+    <tr><th>角色</th><th>何时被调用</th><th>输入</th><th>输出</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Editor</strong></td>
+      <td>每个 trial 开始</td>
+      <td>当前 <code>strategy.yaml</code>、当前 indicator 源码摘要、近期 trial 摘要（含 fallback_if_rejected）、四份语义记忆、active skills、来自 <code>knowledge/factors/</code> 的 dossier hint、来自 <code>indicators/seed_templates/</code> 的可执行模板、library 已有因子清单、banned indicator names 列表</td>
+      <td>一份 YAML 编辑提案：edit type + hypothesis + expected train/val 信号 + fallback + cited_factors</td>
+    </tr>
+    <tr>
+      <td><strong>Reflector</strong></td>
+      <td>每个 trial 的 gate 结果之后</td>
+      <td>提案、机械算的 hypothesis_outcome、实际 validation_signal、train metrics</td>
+      <td>机械解释 + 增量更新四份语义 .md</td>
+    </tr>
+    <tr>
+      <td><strong>Curator</strong></td>
+      <td>每 10 次接受（shadow mode）</td>
+      <td>四份语义 .md 全文</td>
+      <td>压缩、去重后的重写</td>
+    </tr>
+    <tr>
+      <td><strong>Translator</strong></td>
+      <td>每次接受 <code>add_indicator</code></td>
+      <td>智能体写的 .py 源码 + alpha card 元数据 + 训练观测 + cited_factors</td>
+      <td>与种子库 schema 一致的 JSON dossier，写到 <code>alpha_cards/dossiers/&lt;name&gt;_trial_NNNN.txt</code></td>
+    </tr>
+  </tbody>
+</table>
+
+</section>
+
+
+<!-- ============================== § 6 HL 因子发现循环 ============================== -->
+<section id="hl-loop">
+<div class="section-marker">
+  <span class="section-num">§ 6</span>
+  <h2>Heuristic Learning 因子发现循环 · Python ↔ dossier round-trip</h2>
+</div>
+
+<p>本节的图把"如何用 HL 范式发现因子"画出来。一个因子在 LBG-Trader 里存在<em>三种形式</em>——文字描述（dossier）、Python 函数（indicator）、metadata view（alpha card）——三者在 Discovery 循环里彼此转换、互相校验。</p>
+
+<div class="figure">
+<div class="chart-wrap" style="background: var(--paper-warm); padding: 36px 28px;">
+<svg viewBox="0 0 800 540" width="100%" role="img">
+<title>Heuristic Learning factor discovery loop with Python↔dossier round-trip</title>
+<defs>
+  <marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#1a1a1c" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+
+<!-- knowledge/factors (seed library, top-left) -->
+<rect x="30" y="40" width="220" height="100" fill="#f5f1e8" stroke="#8b3a2f" stroke-width="1.5" rx="3"/>
+<text x="140" y="65" text-anchor="middle" font-family="Fraunces, serif" font-size="14" font-weight="500" fill="#1a1a1c">knowledge/factors/</text>
+<text x="140" y="83" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">564 份只读 dossier（文字描述）</text>
+<text x="140" y="100" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">→ 通过 substring search</text>
+<text x="140" y="115" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">surface 给 Editor 当 hint</text>
+<text x="140" y="132" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#6b6b70">DOSSIER 形式</text>
+
+<!-- seed templates (top-center) -->
+<rect x="280" y="40" width="220" height="100" fill="#f5f1e8" stroke="#2d6a5c" stroke-width="1.5" rx="3"/>
+<text x="390" y="65" text-anchor="middle" font-family="Fraunces, serif" font-size="14" font-weight="500" fill="#1a1a1c">indicators/seed_templates/</text>
+<text x="390" y="83" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">51 个可执行 .py 模板 + 元数据</text>
+<text x="390" y="100" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">Editor 复制源码 verbatim 用作</text>
+<text x="390" y="115" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">add_indicator.change.source</text>
+<text x="390" y="132" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#6b6b70">PYTHON 形式（种子）</text>
+
+<!-- Editor (top-right) -->
+<rect x="540" y="40" width="220" height="100" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.5" rx="3"/>
+<text x="650" y="65" text-anchor="middle" font-family="Fraunces, serif" font-size="14" font-weight="500" fill="#1a1a1c">Editor (LLM)</text>
+<text x="650" y="83" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">提议 add_indicator</text>
+<text x="650" y="100" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">优先拷贝 seed 模板</text>
+<text x="650" y="115" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">cite_factors 链回 dossier</text>
+<text x="650" y="132" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#6b6b70">写出 .py + attach 配置</text>
+
+<!-- Orchestrator middle row -->
+<rect x="200" y="200" width="400" height="80" fill="#1a1a1c" stroke="#1a1a1c" stroke-width="1" rx="3"/>
+<text x="400" y="226" text-anchor="middle" font-family="Fraunces, serif" font-size="14" font-weight="500" fill="#fbfaf6">Orchestrator（确定性）</text>
+<text x="400" y="247" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#d6a26a">five-invariant 校验 + sandbox 跑 indicator + train/val backtest</text>
+<text x="400" y="263" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#d6a26a">multi-obj gate · diversity discount · prefix_stability 动态校验</text>
+
+<!-- alpha card (left bottom) -->
+<rect x="30" y="340" width="220" height="100" fill="#f5f1e8" stroke="#b88a2c" stroke-width="1.5" rx="3"/>
+<text x="140" y="365" text-anchor="middle" font-family="Fraunces, serif" font-size="14" font-weight="500" fill="#1a1a1c">alpha_cards/</text>
+<text x="140" y="383" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">trial_NNNN.yaml</text>
+<text x="140" y="400" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">signal + attach_config +</text>
+<text x="140" y="415" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">evidence.sealed_summary</text>
+<text x="140" y="432" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#6b6b70">METADATA 形式</text>
+
+<!-- Translator (center bottom) -->
+<rect x="280" y="340" width="220" height="100" fill="#fbfaf6" stroke="#b76b5e" stroke-width="1.5" rx="3"/>
+<text x="390" y="365" text-anchor="middle" font-family="Fraunces, serif" font-size="14" font-weight="500" fill="#1a1a1c">Translator (LLM)</text>
+<text x="390" y="383" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">读 accepted .py 源码</text>
+<text x="390" y="400" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">+ alpha card 元数据</text>
+<text x="390" y="415" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">→ 写 JSON dossier</text>
+<text x="390" y="432" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#6b6b70">PYTHON → DOSSIER</text>
+
+<!-- alpha cards dossiers (right bottom) -->
+<rect x="540" y="340" width="220" height="100" fill="#f5f1e8" stroke="#8b3a2f" stroke-width="1.5" rx="3"/>
+<text x="650" y="365" text-anchor="middle" font-family="Fraunces, serif" font-size="14" font-weight="500" fill="#1a1a1c">alpha_cards/dossiers/</text>
+<text x="650" y="383" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">&lt;fn&gt;_trial_NNNN.txt</text>
+<text x="650" y="400" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">和 knowledge/factors/ 同 schema</text>
+<text x="650" y="415" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">observation / inference 双标签</text>
+<text x="650" y="432" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#6b6b70">DOSSIER 形式（产出）</text>
+
+<!-- Persistent library (bottom row) -->
+<rect x="30" y="480" width="730" height="40" fill="#1a1a1c" stroke="#1a1a1c" rx="3"/>
+<text x="50" y="505" font-family="Inter, sans-serif" font-size="12" font-weight="500" fill="#fbfaf6">alpha_cards_library/</text>
+<text x="395" y="505" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#d6a26a">三种形式同时持久化：cards/  +  indicators/  +  dossiers/  +  index.jsonl</text>
+
+<!-- arrows -->
+<line x1="250" y1="90" x2="280" y2="90" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#ar2)"/>
+<line x1="500" y1="90" x2="540" y2="90" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+<line x1="650" y1="140" x2="500" y2="200" stroke="#8b3a2f" stroke-width="1.2" marker-end="url(#ar2)"/>
+<line x1="390" y1="140" x2="390" y2="200" stroke="#2d6a5c" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+<line x1="280" y1="280" x2="140" y2="340" stroke="#b88a2c" stroke-width="1.2" marker-end="url(#ar2)"/>
+<line x1="400" y1="280" x2="400" y2="340" stroke="#b76b5e" stroke-width="1.2" marker-end="url(#ar2)"/>
+<line x1="250" y1="390" x2="280" y2="390" stroke="#b76b5e" stroke-width="1.2" marker-end="url(#ar2)"/>
+<line x1="500" y1="390" x2="540" y2="390" stroke="#8b3a2f" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+<line x1="140" y1="440" x2="140" y2="480" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#ar2)"/>
+<line x1="390" y1="440" x2="390" y2="480" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#ar2)"/>
+<line x1="650" y1="440" x2="650" y2="480" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+<!-- annotations -->
+<text x="170" y="180" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70" font-style="italic">accepted</text>
+<text x="170" y="195" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70" font-style="italic">trial</text>
+
+</svg>
+</div>
+<div class="figure-caption"><strong>Figure B.</strong> 因子的三种形式 + 一次 HL 反馈循环。<br>
+<strong>上行（输入端）</strong>：knowledge/factors（dossier 形式，564 份只读）通过 substring search 提示给 Editor；indicators/seed_templates（Python 形式，51 个可执行模板）提供 verbatim 拷贝模板；Editor 用这两个为材料写出 add_indicator 提案。<br>
+<strong>中行（Orchestrator）</strong>：执行 5 层 invariants + sandbox + train/val backtest + multi-obj gate（含 diversity discount）。<br>
+<strong>下行（产出端）</strong>：accept 时同时产出 alpha card（metadata）、Translator 把 Python 翻成 dossier（DOSSIER 形式 #2）。三种形式都进入 alpha_cards_library/ 持久化，下一次 campaign 启动时通过 auto-inject 把 library 中已有因子接回 strategy.yaml。<strong>这就是 Jiayi Weng 的 HL 在量化研究上的具体形态——learning 的对象是 软件系统 = 代码 + 文档 + 元数据，三者必须同步生长。</strong></div>
+</div>
+
+<h3>每个因子的三种形式 · 三个不变量</h3>
+
+<ol>
+  <li><strong>语义一致性</strong>：alpha_cards_library/cards/&lt;alpha_id&gt;.yaml 的 signal.fn 必须和 indicators/&lt;fn&gt;.py 的函数名一致；dossiers/&lt;alpha_id&gt;.txt 的 lbg_provenance.source_path 必须指回同一个 .py。</li>
+  <li><strong>可执行性</strong>：indicators/&lt;fn&gt;.py 通过 sandbox 加载、prefix_stability 校验、cost-aware backtest，全部成功。dossier 里所有 observation: 段都对应可在源码中验证的事实；inference: 段标记为 Editor / Translator 的推测，<em>不可</em>当作经验事实。</li>
+  <li><strong>round-trip 完整性</strong>：把 alpha_cards_library/dossiers/&lt;name&gt;.txt 当作 knowledge/factors/ 的新条目放进去，下次 Editor 检索时能搜到——种子库和产出库 schema 一致是这个 round-trip 的硬约束。</li>
+</ol>
+
+</section>
+
+
+<!-- ============================== § 7 v12-v26 旅程 ============================== -->
+<section id="journey">
+<div class="section-marker">
+  <span class="section-num">§ 7</span>
+  <h2>v12 → v26 旅程 · 15 次 campaign + 7 次 gate 演化</h2>
+</div>
+
+<p>Stage 1 收尾时，主 H1 计量端刚补回（STAGE1 § 15）。本 STAGE2 报告记录从那一刻起的 15 次 campaign：每一次跑出来的<em>新</em>问题被定位、写成 gate 规则、加测试、再跑——直到 library 长到 11 个不同因子。这一节按时间顺序列出每次 campaign 的关键发现 + 触发的修补。</p>
+
+<h3>campaign 时间线</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width: 6%;">ver</th>
+      <th style="width: 12%;">配置</th>
+      <th style="width: 10%;">trials</th>
+      <th style="width: 12%;">accepted</th>
+      <th style="width: 12%;">new cards</th>
+      <th style="width: 16%;">/goal 状态</th>
+      <th style="width: 32%;">触发的修补</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>v12</strong></td>
+      <td>buyhold · permissive · sonnet · 5 templates</td>
+      <td>5</td>
+      <td>2</td>
+      <td class="num"><strong>1</strong></td>
+      <td>—</td>
+      <td>第一张 alpha card！<code>vol_regime_zscore</code> 接受。Translator 第一次触发，dossier 写出</td>
+    </tr>
+    <tr>
+      <td>v13</td>
+      <td>sma_cross · permissive</td>
+      <td>15</td>
+      <td>5</td>
+      <td class="num">3</td>
+      <td>—</td>
+      <td>注意到同一 card 在多 iter 的 CI 漂移（pathwise 父 commit 不同导致）</td>
+    </tr>
+    <tr>
+      <td>v14</td>
+      <td>+ carry-strategy + library auto-inject</td>
+      <td>20</td>
+      <td>0</td>
+      <td class="num">0</td>
+      <td>—</td>
+      <td>auto-inject 但 legacy cards 没 attach_config → 跳过；Editor 全 reject</td>
+    </tr>
+    <tr>
+      <td>v15-v16</td>
+      <td>backfill attach_config</td>
+      <td>2 × 18</td>
+      <td>3</td>
+      <td class="num">0</td>
+      <td>—</td>
+      <td>library auto-inject 成功；<em>新</em> bug 出现：rearm 旋钮挤——<strong>strict_sharpe_for_parameter_change</strong></td>
+    </tr>
+    <tr>
+      <td>v17</td>
+      <td>+ strict-sharpe-param</td>
+      <td>24</td>
+      <td>4</td>
+      <td class="num">0</td>
+      <td>1/5</td>
+      <td>val-overfit 发现：train 跌 + val 涨 + sealed 崩——<strong>max_val_train_gap_widening</strong>（delta-based）+ <strong>max_filter_tweaks_per_campaign</strong></td>
+    </tr>
+    <tr>
+      <td>v18</td>
+      <td>+ absolute overfit gap (over-corrected)</td>
+      <td>24</td>
+      <td>0</td>
+      <td class="num">0</td>
+      <td>1/5</td>
+      <td>绝对 gap 检查太严，baseline 自身就被打死——改回 delta-based</td>
+    </tr>
+    <tr>
+      <td>v19</td>
+      <td>delta-based overfit</td>
+      <td>24</td>
+      <td>1</td>
+      <td class="num">0</td>
+      <td>1/5</td>
+      <td>规则全部按设计触发；但<em>仍找不到</em>互补因子——动作空间稀疏</td>
+    </tr>
+    <tr style="background: rgba(45, 106, 92, 0.08);">
+      <td><strong>v20</strong></td>
+      <td>+ 30 new seed templates（51 总数）</td>
+      <td>24</td>
+      <td>4</td>
+      <td class="num"><strong>2</strong></td>
+      <td>2/5</td>
+      <td><strong>library 跳到 2</strong>：vol_regime_zscore + body_to_range（新加 microstructure 类）</td>
+    </tr>
+    <tr>
+      <td>v21-v22</td>
+      <td>continuing</td>
+      <td>2 × 24</td>
+      <td>3</td>
+      <td class="num">0</td>
+      <td>2/5</td>
+      <td>2-因子 baseline 后 saturation；要给 library &lt; goal 的 add_indicator 让路——<strong>library_diversity_discount</strong>（sharpe slack）</td>
+    </tr>
+    <tr style="background: rgba(45, 106, 92, 0.08);">
+      <td><strong>v23</strong></td>
+      <td>+ diversity discount 0.05/missing</td>
+      <td>24</td>
+      <td>2</td>
+      <td class="num"><strong>1</strong></td>
+      <td>3/5</td>
+      <td>velocity_zscore 通过 discount 接入。仍卡 3/5：Pareto-on-other-dim 还要求严格改进</td>
+    </tr>
+    <tr>
+      <td>v24</td>
+      <td>continuing</td>
+      <td>24</td>
+      <td>1</td>
+      <td class="num">0</td>
+      <td>3/5</td>
+      <td>add_indicator 提复杂度，Pareto-on-other 永远不满足——<strong>growth-phase Pareto</strong>：library &lt; goal 时只看 sharpe-not-worse</td>
+    </tr>
+    <tr style="background: rgba(45, 106, 92, 0.08);">
+      <td><strong>v25</strong></td>
+      <td>+ growth-phase Pareto</td>
+      <td>24</td>
+      <td>3</td>
+      <td class="num"><strong>2</strong></td>
+      <td><strong>5/5 MET</strong></td>
+      <td>roc_n + macd_histogram。<strong>/goal 第一次达成</strong></td>
+    </tr>
+    <tr style="background: rgba(184, 138, 44, 0.08);">
+      <td><strong>v26</strong></td>
+      <td>+ <code>--goal</code> 可配置 (= 10)</td>
+      <td>24</td>
+      <td>7</td>
+      <td class="num"><strong>6</strong></td>
+      <td><strong>11/10 MET</strong></td>
+      <td>aroon, kama, upper_wick, ema_above_sma, donchian, fractal_efficiency。<strong>11 个不同因子</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>gate 演化时间线（v12 → v26）</h3>
+
+<div class="ladder">
+<div class="rung">
+  <div class="rung-tag">v12 +1</div>
+  <div class="rung-body">基线 permissive：<code>min_trades=5, utility_lcb_alpha=0.40, drawdown_regression_factor=1.30</code>。每次 trial 走 multi-objective utility LCB + Pareto-on-MDD。<strong>足够产出第一张 card。</strong></div>
+</div>
+<div class="rung">
+  <div class="rung-tag">v17 +1</div>
+  <div class="rung-body"><strong>strict_sharpe_for_sizing</strong> + <strong>max_consecutive_sizing_edits=2</strong>：sizing-only edits 必须严格改 sharpe，连续 2 次 sizing 接受后强制 exploration。</div>
+</div>
+<div class="rung">
+  <div class="rung-tag">v17 +2</div>
+  <div class="rung-body"><strong>strict_sharpe_for_parameter_change</strong>：所有 parameter_change（含 filter threshold / rearm_threshold）都必须严格改 sharpe，<em>不</em>能再靠 Pareto-on-MDD 蒙混。</div>
+</div>
+<div class="rung">
+  <div class="rung-tag">v17 +3</div>
+  <div class="rung-body"><strong>max_filter_tweaks_per_campaign=1</strong>：一个 campaign 内 filter 旋钮（threshold / rearm_threshold）总共只能调一次——之后强制 exploration。</div>
+</div>
+<div class="rung">
+  <div class="rung-tag">v17 +4</div>
+  <div class="rung-body"><strong>max_val_train_gap_widening=0.20</strong>（delta-based）：candidate 拉大 val-train Sharpe gap 超过 0.20 vs incumbent，判 overfit reject。<em>不</em>看绝对 gap 大小，只看 widening。</div>
+</div>
+<div class="rung">
+  <div class="rung-tag">v23 +1</div>
+  <div class="rung-body"><strong>library_diversity_discount_per_missing_factor=0.05</strong>：library 还没满 goal 时，给 add_indicator 在 Pareto 上 sharpe-not-worse 一个 (goal - current) × 0.05 的容忍空间。容忍只作用在 sharpe-not-worse 那一支，不放宽"better-on-other-dim"的 eps。</div>
+</div>
+<div class="rung">
+  <div class="rung-tag">v25 +1</div>
+  <div class="rung-body"><strong>growth-phase Pareto</strong>：当 library &lt; goal 时，add_indicator 的 Pareto 支只要求 sharpe-not-worse（含 diversity slack），<em>不</em>要求 better-on-MDD/turnover/complexity。max_complexity_delta 仍然在外部 hard cap 限制 complexity 增长。library 满 goal 时这一支自动关掉。</div>
+</div>
+<div class="rung">
+  <div class="rung-tag">v26 +1</div>
+  <div class="rung-body"><strong>library_diversity_goal</strong> 通过 <code>--goal N</code> + <code>dataclasses.replace</code> 可配置：discount 的"工作区间"由用户控制；strict gate 保持 <code>library_diversity_goal=0</code>（discount 关闭，PROPOSAL §9 行为不变）。</div>
+</div>
+</div>
+
+<h3>每一条规则的提示：模式识别清单</h3>
+
+<table>
+  <thead>
+    <tr><th>看到的现象</th><th>真正发生的事</th><th>对应规则</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Editor 连续接受 sizing.fraction 微调，sealed sharpe 走低</td>
+      <td>Pareto-on-MDD 让"任何减仓"都过 gate（仓位缩小 → MDD 减小，sharpe 不变）</td>
+      <td>strict_sharpe_for_sizing + max_consecutive_sizing_edits</td>
+    </tr>
+    <tr>
+      <td>train sharpe 单调下降，val sharpe 单调上升，sealed sharpe 突然崩</td>
+      <td>Editor 在 val 上反复调旋钮，把 val 调成了一个 over-fit 局部最大</td>
+      <td>max_val_train_gap_widening（delta-based）</td>
+    </tr>
+    <tr>
+      <td>一个 filter 的 rearm_threshold 在一个 campaign 内被反复微调</td>
+      <td>parameter_change 的 Pareto 漏洞（同 sizing 那个，换了旋钮）</td>
+      <td>strict_sharpe_for_parameter_change + max_filter_tweaks_per_campaign</td>
+    </tr>
+    <tr>
+      <td>library 长到 2-3 个因子后再无 add_indicator 能过 gate</td>
+      <td>新因子机械上 raise complexity → Pareto-on-other-dim 永远不满足</td>
+      <td>growth-phase Pareto（library &lt; goal 时只看 sharpe-not-worse）</td>
+    </tr>
+    <tr>
+      <td>library 达 5 之后又卡住</td>
+      <td>discount 在 goal=5 时归零；想推到 10 需要 goal 可调</td>
+      <td>--goal CLI flag + dataclasses.replace</td>
+    </tr>
+  </tbody>
+</table>
+
+</section>
+
+
+<!-- ============================== § 8 当前 library 快照 ============================== -->
+<section id="library-snapshot">
+<div class="section-marker">
+  <span class="section-num">§ 8</span>
+  <h2>当前 library 快照 · 11 个不同因子</h2>
+</div>
+
+<p>截至 v26 (2026-05-26)，<code>alpha_cards_library/</code> 里有 11 个不同 fn 的因子，每个都带 dossier、Python 源码、attach_config、sealed_summary。下表是 dashboard library panel 渲染的同一张表，按入库顺序列。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>fn / indicator</th>
+      <th>category</th>
+      <th>role</th>
+      <th>关键 params</th>
+      <th>入库</th>
+      <th>train Sharpe</th>
+      <th>sealed 增量 Sharpe · 95% CI</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td><code>vol_regime_zscore</code></td><td>regime</td><td class="yes">exit</td><td>vol_period=20, zscore_lookback=252</td><td>v12</td><td class="num"><strong>0.897</strong></td><td class="num">pt <strong>+0.249</strong> · [-0.091, +0.685]</td></tr>
+    <tr><td>2</td><td><code>body_to_range</code></td><td>microstructure</td><td class="yes">exit</td><td>period=10</td><td>v20</td><td class="num">0.879</td><td class="num">pt +0.024 · [-0.037, +0.121]</td></tr>
+    <tr><td>3</td><td><code>velocity_zscore</code></td><td>momentum</td><td class="yes">exit</td><td>lookback=60</td><td>v23</td><td class="num">0.800</td><td class="num">—</td></tr>
+    <tr><td>4</td><td><code>roc_n</code></td><td>momentum</td><td>entry</td><td>period=20</td><td>v25</td><td class="num">0.806</td><td class="num">—</td></tr>
+    <tr><td>5</td><td><code>macd_histogram</code></td><td>momentum</td><td>entry</td><td>fast=12, slow=26, signal=9</td><td>v25</td><td class="num">0.878</td><td class="num">—</td></tr>
+    <tr><td>6</td><td><code>ema_above_sma</code></td><td>trend</td><td>entry</td><td>fast_period=20, slow_period=100</td><td>v26</td><td class="num">0.870</td><td class="num">—</td></tr>
+    <tr><td>7</td><td><code>donchian_position</code></td><td>trend</td><td>entry</td><td>period=55</td><td>v26</td><td class="num">0.870</td><td class="num">—</td></tr>
+    <tr><td>8</td><td><code>fractal_efficiency</code></td><td>regime</td><td>entry</td><td>(Editor 自造)</td><td>v26</td><td class="num">0.677</td><td class="num">—</td></tr>
+    <tr><td>9</td><td><code>aroon_up_minus_down</code></td><td>trend</td><td>entry</td><td>period=25</td><td>v26</td><td class="num">0.677</td><td class="num">—</td></tr>
+    <tr><td>10</td><td><code>kama_ratio</code></td><td>trend</td><td>entry</td><td>period=10, fast=2, slow=30</td><td>v26</td><td class="num">0.615</td><td class="num">—</td></tr>
+    <tr><td>11</td><td><code>upper_wick_ratio</code></td><td>microstructure</td><td class="yes">exit</td><td>period=10</td><td>v26</td><td class="num">0.615</td><td class="num">—</td></tr>
+  </tbody>
+</table>
+
+<p><strong>读表说明</strong>：
+<br><em>train Sharpe</em> 是该因子被接受时<em>整个策略</em>在 split_A 上的实测 Sharpe（incumbent + 这张 card 起作用），不是因子单独贡献。
+<br><em>sealed 增量 Sharpe (pathwise CI)</em> 只在该 card 是<em>当次 campaign 接受</em>时计量（同一 run 内 per-card validation 跑过）；之后再被 auto-inject 进 baseline 的卡片不重复计量。当前只有 v12 接受的 <code>vol_regime_zscore</code> 和 v20 接受的 <code>body_to_range</code> 有 sealed 数据。剩下 9 个是后续 campaign 接受、本 run 之外的 sealed CI 还没回填——下一阶段的 strict 复检会把它们都补齐（见 § 10 路线图 ①）。
+<br>所有 11 个因子的<em>sealed CI lower 都未严格大于 0</em>。最接近的是 <code>vol_regime_zscore</code>（lower -0.091，点估计 +0.249）。这是 permissive gate growth-phase 路径的预期产物——sharpe 不显著下降即可入库，意在<em>多样性</em>而非<em>每张都严格显著</em>。</p>
+
+<p>类别分布：trend × 5、momentum × 3、microstructure × 2、regime × 2（vol_regime_zscore + fractal_efficiency）。覆盖 7 类 seed template 中的 4 类——剩下 mean_reversion / volatility / drawdown / volume 类还没被接受过任何 add_indicator，是下一阶段探索的重点方向。</p>
+
+<h3>每个因子的三种形式 · 都在文件系统里</h3>
+
+<pre>alpha_cards_library/
+├── cards/                                          # metadata 形式
+│   ├── vol_regime_zscore_trial_0001.yaml
+│   ├── body_to_range_trial_0005.yaml
+│   ├── velocity_zscore_trial_0005.yaml
+│   ├── roc_n_trial_0000.yaml
+│   ├── macd_histogram_trial_0002.yaml
+│   ├── ema_above_sma_trial_0000.yaml
+│   ├── donchian_position_trial_0001.yaml
+│   ├── fractal_efficiency_trial_0004.yaml
+│   ├── aroon_up_minus_down_trial_0001.yaml
+│   ├── kama_ratio_trial_0003.yaml
+│   └── upper_wick_ratio_trial_0004.yaml
+├── indicators/                                     # Python 形式
+│   ├── vol_regime_zscore.py    ...  (11 files)
+├── dossiers/                                       # DOSSIER 形式（产出）
+│   ├── vol_regime_zscore_trial_0001.txt
+│   ├── body_to_range_trial_0005.txt   ...  (11 files)
+├── index.jsonl                                     # 一行一 card，append-only
+└── sync_log.jsonl                                  # 同步审计</pre>
+
+<p>每个 dossier 都遵循 <code>knowledge/factors/dossiers/</code> 的 schema：严密的因子定义、金融学意义阐释、参数化实现方式、实测训练表现、数据预处理与清洗要求、稳健性与过拟合检验、因子衰减速度与最优持有期、可与哪些因子概念组合融合、适用市场与品种范围、因子逻辑分类体系——每段都用 <code>observation:</code> 或 <code>inference:</code> 标签区分实证与推测。这套 schema 与 <code>knowledge/factors/</code> 同构是<em>对 Editor 而言透明</em>的——Editor 不知道一个 dossier 是种子还是产出，只看它能搜到的因子描述。</p>
+
+</section>
+
+<!-- ============================== § 9 Stage 2 入口 ============================== -->
+<section id="stage2">
+<div class="section-marker">
+  <span class="section-num">§ 9</span>
+  <h2>Stage 2 入口 · forward validation 协议</h2>
+</div>
+
+<p>当 Discovery 产出一个 frozen 策略 artifact，PROPOSAL §16 的 Stage 2 forward validation 就接管。这一阶段没有 LLM 参与，仅运行一个确定性 backtest，并对 sealed-之后的、Discovery 不可见的数据做一次 go/no-go 评估。</p>
+
+<h3>数据切分</h3>
+
+<table>
+  <thead>
+    <tr><th>窗口</th><th>来源</th><th>用途</th><th>LLM 可见</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>split_A · train</td><td>SPY 2010-2018</td><td>Editor 看到数值 metrics 反馈</td><td>是 (metrics)</td></tr>
+    <tr><td>split_B · validation</td><td>SPY 2019-2020</td><td>Editor 只看分类信号</td><td>只 5 种分类</td></tr>
+    <tr><td>split_C · sealed</td><td>SPY 2021-2024</td><td>主 H1 / supplementary 评估</td><td class="no">否</td></tr>
+    <tr><td>split_D · forward (Stage 2)</td><td>SPY 2025-（每次 Discovery 关闭后才获取）</td><td>forward validation 的实证窗口</td><td class="no">否</td></tr>
+  </tbody>
+</table>
+
+<h3>Stage 2 gate 条件</h3>
+
+<p><code>lbg.stage2.run_forward_validation</code> 在 split_D 上跑 deterministic backtest，用一组宽松的 go/no-go 条件：</p>
+
+<ol>
+  <li>最小成交次数（避免无成交的 noisy "fit"）</li>
+  <li>最大回撤地板（明显爆仓直接拦）</li>
+  <li>最小 Sharpe（与 split_C 上的 sealed_summary 相对比，看 forward 是否塌缩）</li>
+</ol>
+
+<p>Stage 2 通过即可进入 Stage 3 paper trading；不通过就是 backtest-to-live gap 的早期预警，触发 re-discovery（PROPOSAL §17）。Stage 4 live capital 默认<em>不在本项目作用域</em>。</p>
+
+<h3>re-discovery 协议</h3>
+
+<p>每次 re-discovery 必须使用一个<em>新的、不重叠的</em> sealed 窗口（PROPOSAL §17）。旧 sealed 窗口被该次 Discovery 用过一次就永久作废——不允许复用。这是为什么 Stage 2 开局新增了 <code>scripts/campaign.py --seal-only-last</code>：development 模式（每轮 seal）只用于 dashboard 调试，发表 evidence 需要明示 publication 模式（一轮一 sealed）。下一步规划里会再加 walk-forward K 个不重叠子窗口，给主 H1 一个有效样本量 &gt; 1 的版本。</p>
+
+<h3>所有 stage 不变量</h3>
+
+<ol>
+  <li>策略 artifact 在 Stage 2/3/4 期间<em>不修改</em>。改策略的唯一方式是触发一次新的 Discovery（带新 sealed 窗口）。</li>
+  <li>因子库 (<code>knowledge/factors/</code>) + 已验证 card 库 (<code>alpha_cards/</code>) 在 stage 之间共享，但只读。</li>
+  <li>cost 模型在所有 stage 一致：5.5 bps 每边（5.0 基础 + 0.5 滑点 proxy）。</li>
+  <li>任何 stage 的 bug fix 都视为<em>重置当前 milestone</em>——不能"修了 bug 重跑 Stage 2"假装这是同一次 evidence。</li>
+</ol>
+
+</section>
+
+<!-- ============================== § 10 路线图 ============================== -->
+<section id="roadmap">
+<div class="section-marker">
+  <span class="section-num">§ 10</span>
+  <h2>路线图 · 从 11 个因子到 strict-H1 验证</h2>
+</div>
+
+<p>v26 把因子库累积到了 11 个不同因子，但截至本报告：每张 card 在<em>permissive gate 的成长期</em>下被接受，sealed CI 严格 &gt; 0 的还是 0 张（最强的 vol_regime_zscore 点估计 +0.27，CI lower 约 -0.09 仍跨过零）。下面四项按优先级排列，每项独立。</p>
+
+<div class="ladder">
+
+<div class="rung">
+  <div class="rung-tag">① strict 复检</div>
+  <div class="rung-body">
+    <strong>用 strict gate 把 11 个因子各自重新评估个体 sealed CI</strong>。permissive gate 的 growth-phase Pareto 让 sharpe 微跌也能通过，因此 library 长得快但每个个体不一定贡献正信号。strict 复检：取 v26 期末的 strategy（带 11 因子），逐个对每个 indicator 做 pathwise sealed CI，挑 CI lower &gt; 0 的子集组成"strict-validated subset"。这才是 PROPOSAL §10.5 意义下的 H1 比较对象。
+  </div>
+</div>
+
+<div class="rung">
+  <div class="rung-tag">② walk-forward sealed</div>
+  <div class="rung-body">
+    <strong>K 个不重叠 sealed 子窗口</strong>。当前 sealed 是 2021-2024 单一窗口，主 H1 有效样本量是 1。把 split_C 切成 K=4 子窗口（2021、2022、2023、2024 各一年），对每张 alpha card 在 4 个子窗口上分别跑 pathwise CI，按多重比较的 Benjamini-Hochberg FDR=0.10 校正后再计数。这把 H1 strong 从一次单点 evidence 升级为 K 次独立 evidence。<code>scripts/campaign.py --seal-only-last</code> 是这条路径的 v1，walk-forward 是 v2。
+  </div>
+</div>
+
+<div class="rung">
+  <div class="rung-tag">③ 因子互补性度量</div>
+  <div class="rung-body">
+    <strong>给 library 加 covariance / rank correlation 指标</strong>。当前 11 个因子里多个分类是 trend 类（ema_above_sma, donchian_position, aroon, kama_ratio）。如果它们之间高度相关，等效维度 &lt; 11。给 library 中每对因子在 train 窗口算 rank correlation，可视化成热力图，下一次 Editor 给"低相关补充"信号——把 dashboard 的 library 表加一列"该因子和现有因子的最大相关系数"。
+  </div>
+</div>
+
+<div class="rung">
+  <div class="rung-tag">④ 类别覆盖度</div>
+  <div class="rung-body">
+    <strong>主动诱导未触达类别</strong>。v26 期末仍有 4 类 seed template 从未产出 card：mean_reversion、volatility、drawdown、volume。在 Editor system prompt 里加一句"library 已有 X 类 N 个因子，建议探索：Y、Z 这两个还未触达的类别"，把覆盖度推到 7 类全占。
+  </div>
+</div>
+
+</div>
+
+<h3>不会做的事 · 排除项</h3>
+
+<ul>
+  <li><strong>不在 Stage 2/3 期间编辑策略。</strong>改策略的唯一方法是新一轮 Discovery + 新 sealed 窗口。</li>
+  <li><strong>不打开 online 学习。</strong>PROPOSAL §15 已明示这是另一个研究问题。</li>
+  <li><strong>不引入多资产 universe。</strong>SPY 单资产锁定，<code>universe_filter</code> 留给未来里程碑。</li>
+  <li><strong>不绕开任何 invariant。</strong>library 里的 dossier 也走 prefix_stability、no_data_snooping、sandbox 全套校验，下一次 campaign 重新 ingest 时同样校验。</li>
+  <li><strong>不把 permissive 下产出的 library card 当作 H1 evidence。</strong>permissive 下的 card 是"探索阶段的候选"。要进入 H1 evidence 需要走 strict gate 复检 + walk-forward。</li>
+</ul>
+
+<h3>验收信号</h3>
+
+<p>下面三条同时出现，视为第二阶段最终成功（即"library accumulation → H1 evidence"路径走通）：</p>
+
+<ol>
+  <li>strict gate 复检后 library 里至少 <strong>τ=3</strong> 个因子的个体 sealed CI lower &gt; 0（PROPOSAL §10.5 的 H1 strong 标准）。</li>
+  <li>这 ≥ 3 个因子在 K=4 walk-forward 子窗口里至少 K' ≥ 2 个子窗口都给出正 CI（多窗口稳健性）。</li>
+  <li>这些 alpha card 对应的 Translator dossier 经人工抽样审阅，<code>observation:</code> 段都对应得上源代码事实。</li>
+</ol>
+
+<p>三条中任一条不满足，本阶段 H1 视为 inconclusive（既不 strong 也不 weak），但 library 累积 + Python↔dossier round-trip 已经验证 LBG 的工程闭环。</p>
+
+</section>
+
+<!-- ============================== § 11 联调 ============================== -->
+<section id="cross-ref">
+<div class="section-marker">
+  <span class="section-num">§ 11</span>
+  <h2>对照阅读 · 文档之间的关系</h2>
+</div>
+
+<table>
+  <thead>
+    <tr><th>文档</th><th>角色</th><th>谁应该读</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>PROPOSAL.html</code> (r4)</td>
+      <td>规范源头。架构、协议、不变量、统计学定义、锁定决策。</td>
+      <td>任何要做非平凡设计判断的人。</td>
+    </tr>
+    <tr>
+      <td><code>docs/STAGE1_REPORT.html</code> (v1.0.0)</td>
+      <td>第一阶段实施回顾。从空仓库到 sealed-evaluation 协议落地的 15 节叙事 + 八次 campaign 的诚实账单。</td>
+      <td>想理解"我们造了什么、它发现了什么"的读者。</td>
+    </tr>
+    <tr>
+      <td><code>docs/STAGE2_REPORT.html</code> (v0.1.0 · 本文档)</td>
+      <td>项目愿景的修订版 + 第二阶段路线图。不复述 Stage 1 内容，只承接它的尾声。</td>
+      <td>想知道修订后的项目目标、当前实现快照、下一步具体动作的读者。</td>
+    </tr>
+    <tr>
+      <td><code>CLAUDE.md</code></td>
+      <td>给 Claude Code session 的工作守则。约束智能体在仓库内的行为（不改 backtest、不动 invariant 阈值、不复用 sealed 窗口）。</td>
+      <td>所有要在这个仓库里写代码的智能体。</td>
+    </tr>
+    <tr>
+      <td><code>analysis_plan.yaml</code></td>
+      <td>预注册的评估方案。主 H1 + supplementary 都在里面；任何 sealed 打开前已 commit 进 git。</td>
+      <td>评审。</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>推荐阅读顺序：先 <code>PROPOSAL.html</code> §1-§7（论点）→ STAGE1_REPORT §0 + §14（main 分支收尾时的状态，0 alpha cards）→ 本文档 §0 + §5 + §6 + §7 + §8（codexreview 分支的旅程 + 多 agent 架构图 + HL round-trip 图 + v12→v26 时间线 + 当前 11 个因子）→ 需要细节时回到 PROPOSAL §6.5-§10.5 与本报告 §1 / §2。</p>
+
+</section>
+
+<!-- ============================== § 12 收尾 ============================== -->
+<section id="closing">
+<div class="section-marker">
+  <span class="section-num">§ 12</span>
+  <h2>结语</h2>
+</div>
+
+<p class="lede">第一阶段证明了<em>可信的实验协议是可以建出来的</em>；codexreview 分支证明了<em>建好的协议里能稳定长出可记录的因子</em>。15 次 campaign 从 0 alpha cards 推到 11 个不同因子（每个含 Python 源码 + JSON dossier + sealed CI 记录）。中间 7 次 gate 演化，每一次都为了堵住 LLM 找到的新捷径——这本身是 HL 范式的活体演示：被维护的<em>软件系统</em>每一轮都比上一轮聪明一点点。</p>
+
+<p>诚实地说：到本报告定稿为止，主 H1（strict gate 下严格 sealed CI &gt; 0 的 card 数）尚未在 11 个因子上系统复检。permissive 下点估计有正有负，CI lower 还跨着零。下一阶段要做的是 strict 复检 + walk-forward 多窗口，把"library accumulation"路径推到"H1 evidence"路径。<em>这是科学验证；之前 codexreview 分支做完的是工程闭环。</em>两件事不能互相替代——但工程闭环已经牢固，科学验证有清晰的起点。</p>
+
+<p style="font-family: var(--serif); font-style: italic; font-size: 18px; color: var(--ink-soft); text-align: center; max-width: 580px; margin: 32px auto 0;">
+The library grew from 0 to 11 factors,<br>
+each with code, evidence, and dossier in lockstep.<br>
+What was missing — "we cannot tell what we have measured" — is now closed.<br>
+What remains — "are these factors really valid?" — is the next chapter.
+</p>
+
+</section>
+
+<!-- ============================== 页脚 ============================== -->
+<footer class="footer">
+<div>LBG-Trader · 第二阶段进展报告 · v0.2.0 · 2026-05-26</div>
+<div>12 sections · 606 tests · 11 distinct factors in library · /goal MET 11/10</div>
+<div>对照阅读 · <span class="accent">PROPOSAL.html</span> (r4) · <span class="accent">STAGE1_REPORT.html</span> (v1.0.0)</div>
+</footer>
+
+</div>
+</body>
+</html>

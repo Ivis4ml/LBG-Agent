@@ -1,0 +1,670 @@
+# Seed-template index.
+#
+# ContextBuilder reads this to surface a shortlist of executable factor
+# templates to the Editor. Each entry pairs a Python file with structured
+# metadata so the Editor can pick a template, copy its source, and wire
+# it into the strategy via `add_indicator.attach` without authoring
+# anything from scratch.
+#
+# Fields:
+#   fn                          basename of the .py file under this dir
+#   category                    one of: trend, momentum, mean_reversion,
+#                               volatility, drawdown, regime
+#   role                        typical wiring slot: entry | exit | sizing
+#                               (an indicator can be wired elsewhere; this
+#                               is just the suggested default)
+#   inputs                      list of OHLCV columns the function reads
+#   default_params              parameter dict the editor is encouraged
+#                               to start with (override in add_indicator)
+#   suggested_threshold         a sensible threshold to start tuning at
+#   suggested_rearm_threshold   only meaningful when role=exit; the safe
+#                               rearm value to attach alongside threshold
+#   one_line                    short factor description shown to Editor
+
+templates:
+  # ---- trend (5) ----
+  - fn: sma_slope
+    category: trend
+    role: entry
+    inputs: [close]
+    default_params: {period: 50}
+    suggested_threshold: 0.0
+    suggested_rearm_threshold: null
+    one_line: >
+      Annualised slope of the trailing SMA: positive => trend up.
+      Wire as entry filter `indicator_above 0.0` to require uptrend.
+
+  - fn: ema_above_sma
+    category: trend
+    role: entry
+    inputs: [close]
+    default_params: {fast_period: 20, slow_period: 100}
+    suggested_threshold: 0.0
+    suggested_rearm_threshold: null
+    one_line: >
+      EMA(fast) - SMA(slow): positive when fast EMA above the long SMA.
+      Classic trend-up regime indicator.
+
+  - fn: donchian_position
+    category: trend
+    role: entry
+    inputs: [high, low, close]
+    default_params: {period: 55}
+    suggested_threshold: 0.5
+    suggested_rearm_threshold: null
+    one_line: >
+      Where close sits inside the trailing N-bar high/low channel,
+      normalised to [0,1]. > 0.5 = in the upper half (relative strength).
+
+  - fn: adx_trend_strength
+    category: trend
+    role: entry
+    inputs: [high, low, close]
+    default_params: {period: 14}
+    suggested_threshold: 20.0
+    suggested_rearm_threshold: null
+    one_line: >
+      Average Directional Index (Wilder 1978). Trend strength only, no
+      direction. > 20 ≈ trending market. Use to gate trend strategies.
+
+  - fn: aroon_up_minus_down
+    category: trend
+    role: entry
+    inputs: [high, low]
+    default_params: {period: 25}
+    suggested_threshold: 0.0
+    suggested_rearm_threshold: null
+    one_line: >
+      Aroon Up - Aroon Down. Positive => recent highs newer than recent
+      lows (up-trend). Cleaner than ADX for short-history detection.
+
+  # ---- momentum (4) ----
+  - fn: rsi
+    category: momentum
+    role: entry
+    inputs: [close]
+    default_params: {period: 14}
+    suggested_threshold: 30.0
+    suggested_rearm_threshold: null
+    one_line: >
+      Relative Strength Index. Classic overbought/oversold momentum.
+      > 30 as entry filter avoids deeply-oversold breakdowns;
+      > 70 sometimes used as exit signal.
+
+  - fn: roc_n
+    category: momentum
+    role: entry
+    inputs: [close]
+    default_params: {period: 20}
+    suggested_threshold: 0.0
+    suggested_rearm_threshold: null
+    one_line: >
+      Rate of change over N bars (percentage). Positive => price higher
+      than N bars ago. Simple momentum confirmation.
+
+  - fn: macd_histogram
+    category: momentum
+    role: entry
+    inputs: [close]
+    default_params: {fast: 12, slow: 26, signal: 9}
+    suggested_threshold: 0.0
+    suggested_rearm_threshold: null
+    one_line: >
+      MACD histogram = (EMA_fast - EMA_slow) - signal. Positive => fast
+      momentum accelerating relative to baseline. Crossing zero is a
+      common entry trigger.
+
+  - fn: momentum_zscore
+    category: momentum
+    role: entry
+    inputs: [close]
+    default_params: {momentum_period: 20, zscore_lookback: 252}
+    suggested_threshold: 0.5
+    suggested_rearm_threshold: null
+    one_line: >
+      Z-score of N-bar momentum vs its own long-history distribution.
+      Standardised, comparable across regimes. > 0.5 = above-average
+      momentum, > 1.0 = unusually strong.
+
+  # ---- mean reversion (3) ----
+  - fn: bb_zscore
+    category: mean_reversion
+    role: entry
+    inputs: [close]
+    default_params: {period: 20, n_std: 2.0}
+    suggested_threshold: -1.5
+    suggested_rearm_threshold: null
+    one_line: >
+      Bollinger Band z-score: (close - SMA) / std. Negative = below the
+      mean (oversold). Mean-reversion entry filter `indicator_below -1.5`
+      catches deeper-than-usual dips.
+
+  - fn: close_to_sma_ratio
+    category: mean_reversion
+    role: entry
+    inputs: [close]
+    default_params: {period: 50}
+    suggested_threshold: 1.0
+    suggested_rearm_threshold: null
+    one_line: >
+      close / SMA(period). Above 1 = price above moving average.
+      Useful both as trend filter (> 1) and reversion zone (e.g. > 1.1
+      as "too extended").
+
+  - fn: deviation_from_mean
+    category: mean_reversion
+    role: entry
+    inputs: [close]
+    default_params: {period: 20}
+    suggested_threshold: 0.0
+    suggested_rearm_threshold: null
+    one_line: >
+      (close - SMA) as a raw spread. Like bb_zscore but unnormalised --
+      useful when a stable price level matters more than vol scaling.
+
+  # ---- volatility (3) ----
+  - fn: parkinson_vol
+    category: volatility
+    role: sizing
+    inputs: [high, low]
+    default_params: {period: 20}
+    suggested_threshold: 0.20
+    suggested_rearm_threshold: null
+    one_line: >
+      Parkinson high-low volatility estimator (annualised). Tighter than
+      close-to-close vol. Use to gate sizing or as an exit filter when
+      vol spikes; pair with rearm_threshold below the spike level.
+
+  - fn: garman_klass_vol
+    category: volatility
+    role: sizing
+    inputs: [open, high, low, close]
+    default_params: {period: 20}
+    suggested_threshold: 0.20
+    suggested_rearm_threshold: null
+    one_line: >
+      Garman-Klass OHLC volatility estimator. Uses all four prices,
+      lower variance than Parkinson. Annualised return space.
+
+  - fn: atr_pct
+    category: volatility
+    role: exit
+    inputs: [high, low, close]
+    default_params: {period: 14}
+    suggested_threshold: 0.025
+    suggested_rearm_threshold: 0.018
+    one_line: >
+      Average True Range as a fraction of close. > 2.5% ≈ unusually
+      volatile bar. As exit filter with rearm 1.8% it suspends position
+      during shock periods and re-arms when vol normalises.
+
+  # ---- drawdown (2) ----
+  - fn: rolling_drawdown_pct
+    category: drawdown
+    role: exit
+    inputs: [close]
+    default_params: {lookback: 60}
+    suggested_threshold: 0.10
+    suggested_rearm_threshold: 0.04
+    one_line: >
+      Current drawdown from the rolling-window peak, expressed as
+      positive percentage. As exit filter with rearm 4%, it exits when
+      drawdown exceeds 10% and re-enters after price recovers to within
+      4% of the new peak.
+
+  - fn: underwater_duration
+    category: drawdown
+    role: exit
+    inputs: [close]
+    default_params: {lookback: 252}
+    suggested_threshold: 30.0
+    suggested_rearm_threshold: 5.0
+    one_line: >
+      Bars since the trailing-window peak. Persistent underwater
+      duration (>30 bars) indicates a prolonged drawdown; rearm at 5
+      bars means a fresh local high resets the mute.
+
+  # ---- regime (3) ----
+  - fn: vol_regime_zscore
+    category: regime
+    role: exit
+    inputs: [close]
+    default_params: {vol_period: 20, zscore_lookback: 252}
+    suggested_threshold: 1.5
+    suggested_rearm_threshold: 0.5
+    one_line: >
+      Z-score of realised vol vs its own one-year distribution.
+      > 1.5 = high-vol regime (sit out); rearm at 0.5 means re-enter
+      when vol returns to roughly normal.
+
+  - fn: trend_regime_sma_long
+    category: regime
+    role: entry
+    inputs: [close]
+    default_params: {period: 200}
+    suggested_threshold: 1.0
+    suggested_rearm_threshold: null
+    one_line: >
+      close / SMA(200). > 1 = long-term uptrend regime. Classic
+      "stay long only above 200-day SMA" filter; very stable, low
+      false-positive rate compared to short-window trend signals.
+
+  - fn: dispersion_regime
+    category: regime
+    role: exit
+    inputs: [high, low, close]
+    default_params: {period: 20, zscore_lookback: 252}
+    suggested_threshold: 1.0
+    suggested_rearm_threshold: 0.0
+    one_line: >
+      Z-score of intra-bar dispersion ((high-low)/close). High
+      dispersion is associated with confused / chop regimes. Use as
+      exit filter to step aside during dispersion spikes.
+
+  # ============================================================
+  # ---- 2026-05-25 expansion: volume + microstructure + tail risk ----
+  # 30+ new templates added when v17/v18/v19 showed the Editor
+  # exhausting the original 20-template space without finding
+  # complements to vol_regime_zscore on SMA / buyhold baselines.
+  # ============================================================
+
+  # ---- volume (5) ----
+  - fn: obv_zscore
+    category: volume
+    role: entry
+    inputs: [close, volume]
+    default_params: {lookback: 60}
+    suggested_threshold: 0.0
+    suggested_rearm_threshold: null
+    one_line: >
+      On-Balance Volume z-score. OBV is signed volume's running sum;
+      its z-score reveals accumulation / distribution regimes that
+      are invisible in price alone.
+
+  - fn: volume_zscore
+    category: volume
+    role: exit
+    inputs: [volume]
+    default_params: {lookback: 60}
+    suggested_threshold: 2.0
+    suggested_rearm_threshold: 0.5
+    one_line: >
+      Volume z-score. Spikes (>2 sigma) often coincide with capitulation
+      or breakout events. Use as exit filter to step aside on shock
+      participation; rearm when volume normalises.
+
+  - fn: volume_ma_ratio
+    category: volume
+    role: entry
+    inputs: [volume]
+    default_params: {period: 20}
+    suggested_threshold: 1.0
+    suggested_rearm_threshold: null
+    one_line: >
+      volume / SMA(volume). > 1 = above-average participation; classic
+      breakout confirmation. Often paired with a directional indicator.
+
+  - fn: close_volume_corr
+    category: volume
+    role: exit
+    inputs: [close, volume]
+    default_params: {lookback: 30}
+    suggested_threshold: -0.3
+    suggested_rearm_threshold: 0.0
+    one_line: >
+      Rolling correlation between returns and log-volume. Negative
+      means volume rises on declines = distribution / stress regime.
+      Use as exit filter when it goes meaningfully negative.
+
+  - fn: vwap_deviation
+    category: volume
+    role: entry
+    inputs: [high, low, close, volume]
+    default_params: {period: 20}
+    suggested_threshold: 0.0
+    suggested_rearm_threshold: null
+    one_line: >
+      Close minus rolling VWAP, normalised by close std. Positive =
+      trading above fair value. Useful as mean-reversion entry
+      (indicator_below to fade richness).
+
+  # ---- microstructure / bar shape (5) ----
+  - fn: body_to_range
+    category: regime
+    role: exit
+    inputs: [open, high, low, close]
+    default_params: {period: 10}
+    suggested_threshold: 0.25
+    suggested_rearm_threshold: 0.5
+    one_line: >
+      Rolling mean of body/range ratio. Low values = sustained doji /
+      indecision = chop regime. Pair with rearm threshold to wait for
+      decisive bars to resume.
+
+  - fn: upper_wick_ratio
+    category: regime
+    role: exit
+    inputs: [open, high, low, close]
+    default_params: {period: 10}
+    suggested_threshold: 0.5
+    suggested_rearm_threshold: 0.25
+    one_line: >
+      Average upper-wick fraction. Large means upside is being rejected
+      repeatedly (supply pressure). Use as exit filter on persistent
+      rejection of higher prices.
+
+  - fn: lower_wick_ratio
+    category: regime
+    role: entry
+    inputs: [open, high, low, close]
+    default_params: {period: 10}
+    suggested_threshold: 0.4
+    suggested_rearm_threshold: null
+    one_line: >
+      Average lower-wick fraction. Large means buyers are defending
+      the lows (hammer-like behaviour). Useful as entry confirmation
+      after a pullback.
+
+  - fn: intraday_range_zscore
+    category: volatility
+    role: exit
+    inputs: [high, low, close]
+    default_params: {lookback: 60}
+    suggested_threshold: 1.5
+    suggested_rearm_threshold: 0.5
+    one_line: >
+      Z-score of (high - low) / close. Captures intraday range
+      expansion (shock days) vs normal. Alternative regime filter to
+      vol_regime_zscore that uses bar geometry instead of returns.
+
+  - fn: close_position_in_range
+    category: momentum
+    role: entry
+    inputs: [high, low, close]
+    default_params: {period: 10}
+    suggested_threshold: 0.6
+    suggested_rearm_threshold: null
+    one_line: >
+      Rolling mean of (close - low) / (high - low). > 0.5 = closes
+      tend to land in upper half of bars (buying pressure); < 0.5 =
+      lower half (selling pressure).
+
+  # ---- gap / overnight (3) ----
+  - fn: overnight_gap_zscore
+    category: regime
+    role: exit
+    inputs: [open, close]
+    default_params: {lookback: 60}
+    suggested_threshold: 2.0
+    suggested_rearm_threshold: 0.5
+    one_line: >
+      Z-score of overnight gap (open / prev_close - 1). Extreme values
+      mark news / overnight shocks. Use as exit filter on large
+      gap-down events; rearm once subsequent gaps normalise.
+
+  - fn: intraday_return
+    category: momentum
+    role: entry
+    inputs: [open, close]
+    default_params: {period: 5}
+    suggested_threshold: 0.0
+    suggested_rearm_threshold: null
+    one_line: >
+      Smoothed intraday return (close/open - 1). Decomposes total
+      return into the day-session component; complement to overnight.
+
+  - fn: prev_day_range_ratio
+    category: volatility
+    role: entry
+    inputs: [high, low]
+    default_params: {period: 10}
+    suggested_threshold: 1.0
+    suggested_rearm_threshold: null
+    one_line: >
+      Yesterday's range / today's range. > 1 = ranges contracting
+      (consolidation); < 1 = expanding (breakout phase). Use as
+      entry filter for breakout strategies.
+
+  # ---- return distribution / tail risk (4) ----
+  - fn: realized_skewness
+    category: regime
+    role: exit
+    inputs: [close]
+    default_params: {lookback: 60}
+    suggested_threshold: -1.0
+    suggested_rearm_threshold: 0.0
+    one_line: >
+      Realised skewness of log returns over a trailing window. Very
+      negative skew = fat left tail = crash-risk regime. Use as exit
+      filter (indicator_below) to step aside when skew turns sharply
+      negative.
+
+  - fn: realized_kurtosis
+    category: regime
+    role: exit
+    inputs: [close]
+    default_params: {lookback: 60}
+    suggested_threshold: 3.0
+    suggested_rearm_threshold: 1.0
+    one_line: >
+      Excess kurtosis of log returns. High = fat tails / jumpy regime.
+      Pairs with realised_skewness for tail-risk detection.
+
+  - fn: downside_volatility
+    category: volatility
+    role: exit
+    inputs: [close]
+    default_params: {lookback: 20}
+    suggested_threshold: 0.30
+    suggested_rearm_threshold: 0.18
+    one_line: >
+      Annualised standard deviation of NEGATIVE-only returns. Captures
+      left-tail volatility specifically (Sortino-style). Use as exit
+      filter when downside vol spikes.
+
+  - fn: upside_downside_ratio
+    category: regime
+    role: entry
+    inputs: [close]
+    default_params: {lookback: 20}
+    suggested_threshold: 1.0
+    suggested_rearm_threshold: null
+    one_line: >
+      upside_vol / downside_vol. > 1 = upside dominates (bullish
+      asymmetry); < 1 = bearish asymmetry. Slow-moving regime signal.
+
+  # ---- momentum variants (5) ----
+  - fn: kama_ratio
+    category: trend
+    role: entry
+    inputs: [close]
+    default_params: {period: 10, fast: 2, slow: 30}
+    suggested_threshold: 1.0
+    suggested_rearm_threshold: null
+    one_line: >
+      Kaufman Adaptive Moving Average ratio (close / KAMA). KAMA
+      smooths heavily in chop and reacts quickly in trends. > 1 =
+      price above adaptive baseline.
+
+  - fn: tsi
+    category: momentum
+    role: entry
+    inputs: [close]
+    default_params: {fast: 13, slow: 25}
+    suggested_threshold: 0.0
+    suggested_rearm_threshold: null
+    one_line: >
+      True Strength Index, double-smoothed momentum. Range ~ [-100,
+      +100]. Less noisy than RSI. Sign change = momentum regime
+      change.
+
+  - fn: ema_slope_diff
+    category: trend
+    role: entry
+    inputs: [close]
+    default_params: {fast_period: 20, slow_period: 60}
+    suggested_threshold: 0.0
+    suggested_rearm_threshold: null
+    one_line: >
+      Fast EMA annualised slope minus slow SMA annualised slope.
+      Captures trend acceleration / deceleration. Different signal
+      from ema_above_sma which is level-based.
+
+  - fn: triple_momentum_avg
+    category: momentum
+    role: entry
+    inputs: [close]
+    default_params: {short: 20, medium: 60, long: 120}
+    suggested_threshold: 0.0
+    suggested_rearm_threshold: null
+    one_line: >
+      Average of momentum at three horizons. Robust to single-horizon
+      noise; aligns with how multi-timeframe trend-followers actually
+      think.
+
+  - fn: velocity_zscore
+    category: momentum
+    role: exit
+    inputs: [close]
+    default_params: {lookback: 60}
+    suggested_threshold: 2.0
+    suggested_rearm_threshold: 0.5
+    one_line: >
+      Z-score of 1-bar log return vs its trailing distribution. Large
+      symmetric moves both directions get flagged. Use as exit filter
+      on outlier-day shocks.
+
+  # ---- drawdown / risk variants (3) ----
+  - fn: pain_index
+    category: drawdown
+    role: exit
+    inputs: [close]
+    default_params: {lookback: 60}
+    suggested_threshold: 0.05
+    suggested_rearm_threshold: 0.02
+    one_line: >
+      Average drawdown across the trailing window (the "pain index").
+      More predictive of chronic underperformance than max-drawdown
+      alone. Use as exit filter on sustained dips.
+
+  - fn: mar_ratio_rolling
+    category: regime
+    role: entry
+    inputs: [close]
+    default_params: {lookback: 252}
+    suggested_threshold: 0.5
+    suggested_rearm_threshold: null
+    one_line: >
+      Rolling MAR ratio (CAGR / |max drawdown|). Low values mark
+      structurally bad regimes for any strategy. Use as entry filter
+      (only trade when long-term risk-adjusted return is healthy).
+
+  - fn: downside_run_length
+    category: drawdown
+    role: exit
+    inputs: [close]
+    default_params: {}
+    suggested_threshold: 5.0
+    suggested_rearm_threshold: 1.0
+    one_line: >
+      Consecutive down-bars count. Resets on any up bar. 5+
+      consecutive = sustained selling pressure. Cheap regime signal
+      with sharp recovery (rearm at 1 down-bar).
+
+  # ---- regime variants (3) ----
+  - fn: vol_regime_persistence
+    category: regime
+    role: exit
+    inputs: [close]
+    default_params: {vol_period: 20, lookback: 120, baseline_lookback: 252}
+    suggested_threshold: 0.7
+    suggested_rearm_threshold: 0.3
+    one_line: >
+      Fraction of bars in the trailing window where realised vol
+      exceeds its long-run median. Smooth high-vol-regime signal,
+      different timescale from vol_regime_zscore.
+
+  - fn: trend_persistence_runlength
+    category: regime
+    role: entry
+    inputs: [close]
+    default_params: {period: 20}
+    suggested_threshold: 5.0
+    suggested_rearm_threshold: null
+    one_line: >
+      Run-length of consecutive bars closing above the SMA. Captures
+      "how long has the short-term trend held" -- useful gate for
+      trend-following systems.
+
+  - fn: vol_jump_indicator
+    category: regime
+    role: exit
+    inputs: [close]
+    default_params: {short_period: 10, long_period: 60}
+    suggested_threshold: 1.5
+    suggested_rearm_threshold: 1.0
+    one_line: >
+      short_vol / long_vol. > 1.5 = sudden vol expansion = regime
+      break. Different timescale from vol_regime_zscore (which uses
+      a rolling z); this is a ratio of two windows.
+
+  # ---- mean reversion variants (2) ----
+  - fn: detrended_price_oscillator
+    category: mean_reversion
+    role: entry
+    inputs: [close]
+    default_params: {period: 20}
+    suggested_threshold: 0.0
+    suggested_rearm_threshold: null
+    one_line: >
+      DPO: close minus SMA shifted backwards by period/2+1 (kept
+      prefix-stable). Captures cycle phase relative to trend. Use
+      as mean-reversion entry indicator.
+
+  - fn: return_zscore
+    category: mean_reversion
+    role: entry
+    inputs: [close]
+    default_params: {window: 10, zscore_lookback: 120}
+    suggested_threshold: -1.5
+    suggested_rearm_threshold: null
+    one_line: >
+      Z-score of N-bar cumulative log return. Symmetric mean-rev
+      signal. Use indicator_below -1.5 as oversold entry.
+
+  # ---- additional momentum / mean reversion (3) ----
+  - fn: efficiency_ratio
+    category: regime
+    role: entry
+    inputs: [close]
+    default_params: {period: 20}
+    suggested_threshold: 0.3
+    suggested_rearm_threshold: null
+    one_line: >
+      Kaufman's Efficiency Ratio. Near 1 = clean trend, near 0 =
+      chop. Cheap regime filter for "only trade when there's a
+      trend to follow".
+
+  - fn: cci
+    category: mean_reversion
+    role: entry
+    inputs: [high, low, close]
+    default_params: {period: 20, constant: 0.015}
+    suggested_threshold: -100.0
+    suggested_rearm_threshold: null
+    one_line: >
+      Commodity Channel Index. < -100 = oversold; > +100 = overbought.
+      Uses mean absolute deviation (different normalisation from
+      RSI / BB-zscore).
+
+  - fn: ulcer_index
+    category: drawdown
+    role: exit
+    inputs: [close]
+    default_params: {lookback: 60}
+    suggested_threshold: 5.0
+    suggested_rearm_threshold: 2.0
+    one_line: >
+      Root-mean-square of percentage drawdowns. Penalises sustained
+      dips more than max-drawdown does. Distinct from pain_index
+      (arithmetic mean of drawdowns).

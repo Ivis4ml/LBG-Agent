@@ -1,0 +1,34 @@
+baselines:
+  - buy_and_hold
+  - sixty_forty
+
+per_card_validation:
+  # Pathwise: each card is evaluated as the Sharpe contribution of
+  # this trial's accepted edit, computed on the strategy state at the
+  # trial's parent commit vs. the trial commit. Strict LOO is not
+  # defined for cards whose indicator wires into entry/exit cross
+  # rules; pathwise is the only operationalization that covers all
+  # eight edit types without ad-hoc semantics.
+  method: pathwise_incremental_sharpe
+  ci: 0.95
+  ci_method: moving_block_bootstrap
+  block_len: 10
+  n_bootstrap: 1000
+  threshold: lower_bound_gt_zero
+
+h1:
+  test: validated_factor_count
+  tau: 3
+  strong_criterion: N_val_lbg > max_baseline_count and N_val_lbg >= tau
+  weak_criterion: N_val_lbg >= 1 and N_val_lbg >= best_baseline_count
+  baseline_validated_counts: {}
+
+supplementary_strategy:
+  test: moving_block_bootstrap
+  metric: sealed_strategy_sharpe
+  reference: best_pre_registered_baseline
+  block_len: 10
+  n_bootstrap: 1000
+  alpha: 0.05
+  strong_criterion: ci_lower > 0
+  weak_criterion: point_estimate > 0

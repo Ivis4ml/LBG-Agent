@@ -15,12 +15,45 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class PerCardValidationCriterion(BaseModel):
+    """How one alpha card earns a validated-factor count."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    # `pathwise_incremental_sharpe`: backtest the strategy at the parent
+    # commit vs the trial commit on the sealed window, take paired daily
+    # returns, and bootstrap the Sharpe difference. This is the only
+    # operationalization that covers every edit type — strict LOO has no
+    # clean definition for cards whose indicator sits in entry/exit
+    # cross rules.
+    method: Literal["pathwise_incremental_sharpe"]
+    ci: float = Field(gt=0.0, lt=1.0)
+    ci_method: Literal["moving_block_bootstrap"]
+    block_len: int = Field(ge=2)
+    n_bootstrap: int = Field(ge=100)
+    threshold: Literal["lower_bound_gt_zero"]
+
+
 class H1Criterion(BaseModel):
-    """The H1 strong-and-weak verdict definition (PROPOSAL.html §10.5)."""
+    """Primary H1: count sealed-validated alpha cards (PROPOSAL §10.5)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    test: Literal["validated_factor_count"]
+    tau: int = Field(ge=1)
+    strong_criterion: Literal["N_val_lbg > max_baseline_count and N_val_lbg >= tau"]
+    weak_criterion: Literal["N_val_lbg >= 1 and N_val_lbg >= best_baseline_count"]
+    baseline_validated_counts: dict[str, int] = Field(default_factory=dict)
+
+
+class StrategySharpeCriterion(BaseModel):
+    """Supplementary strategy-level comparison, not the primary H1."""
 
     model_config = ConfigDict(extra="forbid")
 
     test: Literal["moving_block_bootstrap"]
+    metric: Literal["sealed_strategy_sharpe"]
+    reference: Literal["best_pre_registered_baseline"]
     block_len: int = Field(ge=2)
     n_bootstrap: int = Field(ge=100)
     alpha: float = Field(gt=0.0, lt=0.5)
@@ -34,13 +67,32 @@ class AnalysisPlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     baselines: list[str] = Field(min_length=1)
+    per_card_validation: PerCardValidationCriterion
     h1: H1Criterion
+    supplementary_strategy: StrategySharpeCriterion
 
 
 DEFAULT_ANALYSIS_PLAN: AnalysisPlan = AnalysisPlan(
     baselines=["buy_and_hold", "sixty_forty"],
+    per_card_validation=PerCardValidationCriterion(
+        method="pathwise_incremental_sharpe",
+        ci=0.95,
+        ci_method="moving_block_bootstrap",
+        block_len=10,
+        n_bootstrap=1000,
+        threshold="lower_bound_gt_zero",
+    ),
     h1=H1Criterion(
+        test="validated_factor_count",
+        tau=3,
+        strong_criterion="N_val_lbg > max_baseline_count and N_val_lbg >= tau",
+        weak_criterion="N_val_lbg >= 1 and N_val_lbg >= best_baseline_count",
+        baseline_validated_counts={},
+    ),
+    supplementary_strategy=StrategySharpeCriterion(
         test="moving_block_bootstrap",
+        metric="sealed_strategy_sharpe",
+        reference="best_pre_registered_baseline",
         block_len=10,
         n_bootstrap=1000,
         alpha=0.05,

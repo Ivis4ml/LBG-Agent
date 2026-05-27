@@ -1,0 +1,28 @@
+{
+  "factor_name": "velocity_zscore",
+  "lbg_provenance": {
+    "kind": "lbg_emitted",
+    "trial_id": 5,
+    "source_commit": "77d52f6",
+    "source_commit_full": "77d52f6e1667abd6b112ff20753a182658410a4c",
+    "source_path": "indicators/velocity_zscore.py",
+    "cited_factors": []
+  },
+  "严密的因子定义": "observation: 对每个 bar t，先定义单期对数收益 r_t = log(close_t / close_{t-1})。在 lookback=60 的滚动窗口内计算均值 mu_t = rolling_mean(r, 60)_t 与样本标准差 sigma_t = rolling_std(r, 60)_t。因子值 z_t = (r_t - mu_t) / sigma_t，并命名为 velocity_zscore。滚动窗口包含当前 bar 的 r_t，不使用未来数据。",
+  "金融学意义阐释": "inference: 该因子衡量当日 1-bar 价格速度相对于最近收益分布的异常程度。负值较大表示下行冲击相对近期日常波动更异常，可作为快速风险退出信号；正值较大表示上行冲击异常。它与累计动量不同，也与仅度量幅度的波动率因子不同。",
+  "参数化实现方式": "observation: 参数 lookback 默认值为 60，且源码要求 lookback >= 5，否则抛出 ValueError。输入字段仅使用 df['close']。滚动均值和滚动标准差均直接来自 r.rolling(lookback)，未设置 min_periods，未做 shift，未做 fillna。",
+  "实测训练表现": {
+    "sharpe": 0.7996,
+    "max_drawdown": -0.12,
+    "turnover": 13.586,
+    "num_trades": 122,
+    "window": "split_A (LBG 训练窗口，约 2266 个 bar)",
+    "notes": "observation: validation_signal 为 accepted。除上述训练窗口指标外，IC、ICIR、Rank IC、月度 alpha 未测量。"
+  },
+  "数据预处理与清洗要求": "observation: 需要 close 序列可用于计算相邻 bar 的对数收益。首个收益为 NaN，滚动窗口未满足 lookback 个有效收益前输出 NaN。若滚动标准差为 0，除法结果可能为 NaN 或无穷值，源码未额外清洗。prefix_stability 不变式成立：每个 t 的输出只依赖 t 及之前的 close。",
+  "稳健性与过拟合检验": "observation: 该 trial 在 split_A 训练窗口上 Sharpe 为 0.7996，validation_signal 为 accepted。inference: accepted 只说明该因子通过本次 LBG 协议筛选，不能推出其在其他样本、其他品种或其他频率上稳健。hypothesis_outcome 未提供，因此不能声明 partially_confirmed 或 disconfirmed。",
+  "因子衰减速度与最优持有期": "inference: split_A 约 2266 个 bar、num_trades 为 122，隐含平均每约 18.6 个 bar 发生一次交易事件。该统计只反映触发频率，不等同于已实测的最优持有期；最优持有期未测量。",
+  "可与哪些因子概念组合融合": "observation: Editor 未引用 seed-library 近邻因子。inference: 由于该因子描述单日收益相对自身近期分布的异常程度，可与慢速趋势、均线再入场、实现波动率或下行风险过滤概念组合，用于区分短期冲击与持续趋势。但这些组合未在本 dossier 所见数据中测量。",
+  "适用市场与品种范围": "observation: 本因子仅在 SPY 日频 split_A 训练窗口上经过 LBG 协议验证。inference: 其他市场、品种、频率或交易成本假设下的有效性未知。",
+  "因子逻辑分类体系": "inference: 可归入短周期价格冲击、收益标准化异常值、对称速度 z-score 类因子。它不是累计动量因子，也不是纯波动率大小因子；其核心结构是单期收益相对滚动收益分布的标准化偏离。"
+}

@@ -334,6 +334,11 @@ window.MathJax = {
 
 <p class="lede">LBG-Trader 是一个把 LLM 当作<em>策略改写者</em>的发现框架：让 LLM 在严格的沙箱与 sealed-evaluation 协议里逐步提出 SPY 日频交易策略的小改动，由一个确定性的 Python 控制平面（Orchestrator）负责判别、记录、提交。所有 LLM 调用集中在三个明确的角色上，整个系统的可信度来自<em>Orchestrator 自身从不调用 LLM</em>。</p>
 
+<div class="aside note">
+<span class="aside-label">2026-05-25 H1 口径修订</span>
+本报告早期章节把 sealed 窗口上的策略层 ΔSharpe bootstrap 称为 H1 verdict。按当前 <code>PROPOSAL.html</code> §10.5 与代码实现，主 H1 已改为 <strong>sealed-validated alpha card 数量</strong>：只有 accepted <code>add_indicator</code> 产生的 card，在 sealed leave-one-out incremental Sharpe 的 CI 下界大于 0 时才计数。本文中的 ΔSharpe 图和区间现在只作为 supplementary strategy diagnostic 解读；本阶段主 H1 为 False 的直接原因是 <code>add_indicator=0</code>，因此 <code>alpha_cards=0</code>。
+</div>
+
 <h3>三个 LLM 角色 · 各自的输入与产出</h3>
 
 <table>
@@ -724,8 +729,9 @@ H1 verdict、per-trial gate、不变式套件，这三项都与提案来自哪�
 
 </span><span class="c"># 循环结束</span><span class="n">
 sealed_metrics = BacktestRunner.run(incumbent, df_sealed)
-h1_verdict     = compute_h1_verdict(sealed.returns, df_sealed)
-SealedVault.open_and_write({..., h1_verdict})         </span><span class="c"># 一次性写入</span><span class="n">
+h1_verdict     = compute_alpha_card_h1_verdict(alpha_cards)
+strategy_diag  = compute_strategy_sharpe_verdict(sealed.returns, df_sealed)
+SealedVault.open_and_write({..., h1_verdict, strategy_diag}) </span><span class="c"># 一次性写入</span><span class="n">
 ReportBuilder.build()                                  </span><span class="c"># 最终 HTML</span><span class="n"></span></pre>
 
 <p>每个 trial 两次 LLM 调用（Editor + Reflector）。每 10 个 accepted trial 触发第三次（Curator）。在一次 20 trial、0 accepted 的运行中，整个循环消耗 40 次 LLM 调用。</p>
@@ -1020,7 +1026,7 @@ f\!\left(D_{1:T}\right)\!\bigl[t\bigr] \;=\; f\!\left(D_{1:t}\right)\!\bigl[t\bi
 
 <h3>H1 检验</h3>
 
-<p>最终判别是对 LBG-Trader 与最强 pre-registered baseline 之间 sealed Sharpe 的<em>配对差</em>做 moving block bootstrap 置信区间：</p>
+<p>当前主 H1 是 sealed-validated alpha card 的计数：accepted <code>add_indicator</code> 产生 card，sealed leave-one-out incremental Sharpe 的 CI 下界大于 0 才计为一个 validated factor。本阶段没有 accepted <code>add_indicator</code>，所以主 H1 直接为 0。下式保留为补充性的策略层诊断：对 LBG-Trader 与最强 pre-registered baseline 之间 sealed Sharpe 的<em>配对差</em>做 moving block bootstrap 置信区间。</p>
 
 <div class="math">
 \[
@@ -1031,7 +1037,7 @@ f\!\left(D_{1:T}\right)\!\bigl[t\bigr] \;=\; f\!\left(D_{1:t}\right)\!\bigl[t\bi
 <span class="where">百分位 <em>q̂</em> 在 1000 次 bootstrap 重采样上取得。每次重采样从配对日收益序列里有放回地抽 ⌈n / block_len⌉ 个长度为 10 的重叠 block，重新计算两侧 Sharpe。<em>B</em>* 取两个 pre-registered baseline（buy-and-hold、sixty-forty）在 split_C 上点 Sharpe 较高者。</span>
 </div>
 
-<p><em>强</em>判据是 <code>CI.lower &gt; 0</code>；<em>弱</em>判据是 <code>ΔS&#770; &gt; 0</code>。两者都报告，但 verdict 取决于强判据。</p>
+<p>这项 supplementary strategy diagnostic 的<em>强</em>判据是 <code>CI.lower &gt; 0</code>；<em>弱</em>判据是 <code>ΔS&#770; &gt; 0</code>。两者都报告，但不再作为主 H1 verdict。</p>
 
 <h3>为什么用 block bootstrap</h3>
 
@@ -1047,6 +1053,15 @@ f\!\left(D_{1:T}\right)\!\bigl[t\bigr] \;=\; f\!\left(D_{1:t}\right)\!\bigl[t\bi
   "num_trades": 17, "cagr": 0.0059, "final_equity": 1.024,
   "complexity": 2.405,
   "h1_verdict": {
+    "candidate_card_count": 0,
+    "validated_factor_count": 0,
+    "validated_alpha_ids": [],
+    "best_baseline_count": 0,
+    "tau": 3,
+    "h1_strong": false,
+    "h1_weak": false
+  },
+  "supplementary_strategy_verdict": {
     "strategy_sharpe":     0.108,
     "best_baseline_name":  "buy_and_hold",
     "best_baseline_sharpe": 0.861,
@@ -1054,8 +1069,8 @@ f\!\left(D_{1:T}\right)\!\bigl[t\bigr] \;=\; f\!\left(D_{1:t}\right)\!\bigl[t\bi
     "ci_lower":           -1.440,
     "ci_upper":            0.003,
     "alpha": 0.05, "n_bootstrap": 1000, "block_len": 10,
-    "h1_strong": false,
-    "h1_weak":   false
+    "supplementary_strong": false,
+    "supplementary_weak":   false
   }
 }</span></pre>
 
@@ -2051,10 +2066,66 @@ baselines/buyhold/strategy.yaml
 
 </section>
 
+<!-- ============================== § 15 H1 metric becomes computable ============================== -->
+<section id="h1-metric-computable">
+<h2 class="section-title">
+  <span class="section-num">§ 15</span>
+  <h2>主 H1 指标变为可计算 · pathwise 增量 Sharpe 生产端补全</h2>
+</h2>
+
+<p class="lede">§ 14 收尾时记录的一个隐性缺陷：PROPOSAL §10.5 把主 H1 重新定义为"sealed-validated alpha card 数量"后，<code>compute_alpha_card_h1_verdict</code> 读 <code>card.evidence.sealed_summary['incremental_sharpe_ci_lower']</code>，但仓库里没有任何代码<em>写入</em>这个键。也就是说，无论 campaign 跑多久，<code>validated_factor_count</code> 在结构上永远等于 0。</p>
+
+<h3>诊断流程</h3>
+<p>外部分析（GPT/codex）指出该缺陷，advisor 二次确认。<code>rg -n "incremental_sharpe_ci_lower"</code> 在生产代码里只有读取端命中一个、写入端命中零个，剩下一个是 <code>tests/test_verdict.py</code> 的 mock fixture。换言之，先前的 v6 / v7 campaign 报告里 "H1 weak True" 的提法实际上等同 supplementary strategy Sharpe；主 H1 一直是 trivially False，并非框架本应表达的内容。</p>
+
+<h3>解决方案 · pathwise incremental Sharpe</h3>
+<p>严格的 leave-one-out 在当前 DSL 下没有干净定义——<code>cross_above(fast, slow)</code> 不能"去掉一个 indicator"，会破坏入场规则。所以采用<strong>路径式增量</strong>：对每张已接受的 alpha card C，</p>
+<ul>
+  <li>读 <code>card.source_commit</code> 对应的 strategy.yaml + 引用 indicators/（即 trial 之前的状态）；</li>
+  <li>查找 subject 形如 <code>trial NNNN:</code> 的 commit 对应的状态（即 trial 之后的状态）；</li>
+  <li>分别在 sealed 窗口上 backtest，得到两组 paired daily returns；</li>
+  <li>对差值做 moving-block bootstrap（block_len=10、n_bootstrap=1000、α=0.05）；</li>
+  <li>把 <code>{incremental_sharpe_point, incremental_sharpe_ci_lower, incremental_sharpe_ci_upper, n_bootstrap, block_len, alpha}</code> 写回 card YAML 的 <code>evidence.sealed_summary</code>。</li>
+</ul>
+
+<p><code>analysis_plan.yaml</code> 与 <code>lbg/verdict/analysis_plan.py</code> 中 <code>per_card_validation.method</code> 已由 <code>leave_one_out_incremental_sharpe</code> 显式改名为 <code>pathwise_incremental_sharpe</code>，配以注释说明操作语义。这一改动发生在任何 sealed 窗口对该指标开启之前，因此符合 PROPOSAL §20 的预注册约束。</p>
+
+<h3>新增/修改文件</h3>
+<table class="data-table">
+  <thead><tr><th>文件</th><th>角色</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>lbg/verdict/per_card.py</code></td><td>新增 · 生产端</td><td><code>compute_per_card_sealed_validation()</code>：遍历 <code>alpha_cards/trial_*.yaml</code>，每张 accepted card 算一次 pathwise CI，回写 sealed_summary。错误（找不到 trial commit / sealed 太短）记到 <code>PerCardValidationResult.error</code>，sealed_summary 保持 None（诚实的"未验证"）。</td></tr>
+    <tr><td><code>lbg/orchestrator/discovery.py</code></td><td>修改 · 接线</td><td><code>_seal()</code> 先调用 per-card 生产端，再调用 <code>compute_alpha_card_h1_verdict</code>。结果同时写进 sealed payload 的 <code>per_card_validation</code> 字段，供 dashboard 与 report 读取。</td></tr>
+    <tr><td><code>lbg/orchestrator/live_status.py</code></td><td>新增事件</td><td><code>alpha_card_summary</code> 事件：包含 <code>validated_factor_count</code>、<code>candidate_card_count</code>、<code>h1_strong/h1_weak</code>、每张 card 的 <code>{ci_lower, ci_upper, point, validated}</code> 或 <code>error</code>。</td></tr>
+    <tr><td><code>lbg/orchestrator/templates/live_dashboard.html</code></td><td>修改 · 可视化</td><td>新增 KPI "H1 · validated factor count"；新增"alpha card 增量 Sharpe · 95% 区间"图表（横向 floating bar 表示 CI，红点表示点估计，红色竖虚线为阈值 0）；event log 把 H1 进度作为高亮行展示。</td></tr>
+    <tr><td><code>lbg/orchestrator/campaign.py</code> + <code>scripts/campaign.py</code></td><td>修改 · 政策</td><td>新增 <code>--seal-only-last</code> 命令行标志 (<code>seal_only_last_iteration</code>)。默认仍每轮 seal（dev 模式，给 dashboard 看 H1 进度），开关一开就只在最后一次 iteration 开 sealed 窗口（publication 模式，给独立 H1 evidence）。</td></tr>
+    <tr><td><code>analysis_plan.yaml</code></td><td>预注册</td><td>per_card_validation.method = pathwise_incremental_sharpe；带注释说明为什么严格 LOO 不可行。</td></tr>
+    <tr><td><code>tests/test_per_card_sealed_validation.py</code></td><td>新增 · smoke test</td><td>构造孤立 tmp 仓库（baseline commit + trial 0001 commit + 一张 alpha card），调用生产端，断言 (a) sealed_summary 出现 <code>incremental_sharpe_ci_lower</code> 等键，(b) 点估计落在 CI 区间内，(c) <code>compute_alpha_card_h1_verdict</code> 能消费生产端写出的字段，(d) 找不到 trial commit 时记错误而非崩。</td></tr>
+  </tbody>
+</table>
+
+<h3>sealed 重用政策</h3>
+<p>当前 CampaignRunner 默认每轮 iteration 都打开同一 sealed 窗口。这对 dashboard 调试有用，但<strong>不能</strong>作为正式 H1 evidence——有效样本量是 1。新加的 <code>--seal-only-last</code> 标志显式提供两种模式：</p>
+<ul>
+  <li><strong>dev 模式（默认）</strong> · 每轮 seal，方便 dashboard 实时画 H1 进度，但 sealed 数字不应解读为独立证据。</li>
+  <li><strong>publication 模式</strong> · <code>--seal-only-last</code>：只在最后一次 iteration 打开 sealed 窗口，给一份诚实的单点 H1 evidence。下一阶段实现 walk-forward K 子窗口后会再升级。</li>
+</ul>
+
+<h3>本次未完成 · 留给下阶段</h3>
+<ol>
+  <li>action-space 还没动。这次补的是计量基础设施；让 H1 在数值上 &gt; 0 仍然需要一次能产出 ≥1 张 accepted add_indicator 的 campaign。advisor 已点名这是不同维度的工作。</li>
+  <li>walk-forward 子窗口尚未实现；现在 <code>--seal-only-last</code> 只是把"effective n=1"从默认行为变成"显式选择"。</li>
+  <li>STAGE1_REPORT 旧节里若干处把"H1 weak True"等同 supplementary strategy verdict 的表述（§ 12、§ 13），未逐条改写；当前 § 11 与 § 15 的语义边界已经清楚——读者按 § 15 的定义解读主 H1，按 § 12-14 的定义解读 supplementary。</li>
+</ol>
+
+<p>第 15 节的输出是把主 H1 从"读端有定义、写端为空"补回为"生产端 + 消费端闭合"。改动量：新增 <code>lbg/verdict/per_card.py</code>、<code>scripts/dashboard_demo.py</code> 与两份 smoke test 文件；修改 <code>analysis_plan.yaml</code>、<code>lbg/verdict/analysis_plan.py</code>、<code>lbg/verdict/__init__.py</code>、<code>lbg/orchestrator/discovery.py</code>、<code>lbg/orchestrator/live_status.py</code>、<code>lbg/orchestrator/campaign.py</code>、<code>lbg/orchestrator/templates/live_dashboard.html</code>、<code>scripts/campaign.py</code>、<code>tests/test_campaign.py</code>、<code>tests/test_live_status.py</code>、<code>README.md</code>。Smoke test 共 6 个（3 在 <code>test_per_card_sealed_validation.py</code>、1 在 <code>test_live_status.py</code>、2 在 <code>test_campaign.py</code>）。479 → 485 tests green、ruff 检查通过。这次的所有改动都在没有运行任何 LLM campaign 的情况下完成。</p>
+
+</section>
+
 <!-- ============================== 页脚 ============================== -->
 <footer class="footer">
-<div>LBG-Trader · 第一阶段工作报告 · v1.0.0 · 2026-05-24 closed</div>
-<div>14 sections · 458 tests · 8 campaigns · 120 trials · 1 H1 weak True · 0 alpha cards</div>
+<div>LBG-Trader · 第一阶段工作报告 · v1.1.0 · 2026-05-24 closed (§ 15 H1 producer added)</div>
+<div>15 sections · 485 tests · 8 campaigns · 120 trials · 1 H1 weak True · 0 alpha cards · primary H1 now computable</div>
 <div>对照阅读 · <span class="accent">PROPOSAL.html</span> · 所有 § 1-7 引用的源头规范</div>
 </footer>
 

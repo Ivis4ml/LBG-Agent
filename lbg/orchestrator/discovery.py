@@ -30,6 +30,7 @@ from lbg.gate import (
     redact,
     score_hypothesis,
 )
+from lbg.gate.decision import edit_category as _gate_edit_category
 from lbg.git_manager import GitCommandError, GitManager
 from lbg.invariants import check_prefix_stability, run_ast_checks
 from lbg.memory import MemoryManager
@@ -85,6 +86,7 @@ class Discovery:
         prefix_stability_n_samples: int = 12,
         prefix_stability_n_perturbations: int = 2,
         live: LiveStatusWriter | None = None,
+        library_dir: str | Path | None = None,
     ) -> None:
         self.repo_root = Path(repo_root).resolve()
         self.runner = runner or RoleRunner()
@@ -95,6 +97,7 @@ class Discovery:
             self.memory,
             repo_root=self.repo_root,
             recent_trials_limit=recent_trials_limit,
+            library_dir=library_dir,
         )
         self.curator = Curator(self.runner, self.memory, git=self.git)
         self.alpha_writer = AlphaCardWriter(self.repo_root)
@@ -217,6 +220,18 @@ class Discovery:
         if seal_at_end:
             sealed_metrics = self._seal(incumbent_strategy, sealed_split, vault)
             result.sealed_metrics = sealed_metrics
+            # Surface the primary H1 + per-card CI bounds to the dashboard.
+            h1 = (sealed_metrics or {}).get("h1_verdict") or {}
+            per_card = (sealed_metrics or {}).get("per_card_validation") or []
+            if h1 and not h1.get("error"):
+                try:
+                    self.live.alpha_card_summary(
+                        iter_id=self.iter_id,
+                        h1_verdict=h1,
+                        per_card_results=list(per_card),
+                    )
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("live alpha_card_summary failed: %s", e)
 
         self.live.iter_end(
             self.iter_id,
@@ -324,7 +339,35 @@ class Discovery:
             self._record_invariant_failure(trial_id, "backtest_error", str(e), "<backtest>")
             return None
 
-        gate_decision = decide(incumbent_outcome, candidate_outcome, self.gate_config)
+        # Anti-sizing-exploitation inputs to the gate. `edit_category`
+        # is "sizing" iff the proposed edit mutates sizing (mode switch
+        # or sizing.* parameter); `sizing_streak` is the run-length of
+        # accepted sizing edits immediately preceding this trial.
+        etype = editor_result.proposal.proposed_edit.type.value
+        echange = editor_result.proposal.proposed_edit.change
+        ecat = _gate_edit_category(etype, echange)
+        epath = None
+        if isinstance(echange, dict):
+            p = echange.get("path")
+            if isinstance(p, str):
+                epath = p
+        sizing_streak = self._recent_accepted_sizing_streak()
+        filter_tweak_count = self._recent_accepted_filter_tweak_count()
+        # For the library-diversity discount: count distinct fns already
+        # in the campaign library. When library < goal, the gate gives
+        # add_indicator a val_sharpe slack proportional to (goal - current).
+        lib_distinct = self._library_distinct_fn_count()
+        gate_decision = decide(
+            incumbent_outcome,
+            candidate_outcome,
+            self.gate_config,
+            edit_category=ecat,
+            edit_type=etype,
+            edit_change_path=epath,
+            recent_accepted_sizing_streak=sizing_streak,
+            recent_accepted_filter_tweak_count=filter_tweak_count,
+            current_library_distinct_fns=lib_distinct,
+        )
         signal = redact(gate_decision)
 
         delta_sharpe = candidate_outcome.train.sharpe - incumbent_outcome.train.sharpe
@@ -479,6 +522,25 @@ class Discovery:
                     dossier_link = match_dossier_from_citation(
                         editor_result.proposal.cited_factors
                     ) or match_dossier_by_name(indicator_fn or indicator_name)
+                    # Capture the attach config the Editor used. Future
+                    # campaigns can replay this to wire the factor back
+                    # into a fresh baseline (library auto-inject).
+                    attach = getattr(payload, "attach", None)
+                    attach_target = getattr(payload, "attach_target", "entry")
+                    attach_config = None
+                    if attach is not None:
+                        from lbg.alpha_cards import AlphaCardAttach
+
+                        attach_config = AlphaCardAttach(
+                            rule=getattr(attach, "rule", "indicator_above"),
+                            threshold=float(getattr(attach, "threshold", 0.0)),
+                            rearm_threshold=(
+                                float(attach.rearm_threshold)
+                                if getattr(attach, "rearm_threshold", None) is not None
+                                else None
+                            ),
+                            target=str(attach_target),
+                        )
                     alpha_card_path = self.alpha_writer.write_for_added_indicator(
                         trial_id=trial_id,
                         source_commit=parent_commit,
@@ -488,6 +550,7 @@ class Discovery:
                         validation_signal=record.validation_signal,
                         hypothesis_outcome=record.hypothesis_outcome,
                         dossier_link=dossier_link,
+                        attach_config=attach_config,
                     )
                 except (ValueError, OSError) as e:
                     logger.warning("trial %d alpha card emit failed: %s", trial_id, e)
@@ -563,6 +626,78 @@ class Discovery:
             cited_factors=tuple(cited),
         )
 
+    def _library_distinct_fn_count(self) -> int:
+        """Count of distinct factor `fn` names already in the alpha-card
+        library. Used by the gate's library-diversity discount to widen
+        the Pareto branch's val_sharpe tolerance when library < goal.
+
+        Reads via `lbg.alpha_card_library.AlphaCardLibrary` if a library
+        is configured on this Discovery instance; returns 0 otherwise.
+        """
+        library_dir = self.context_builder.library_dir
+        if library_dir is None:
+            return 0
+        try:
+            from lbg.alpha_card_library import AlphaCardLibrary
+
+            cards = AlphaCardLibrary(library_dir).load_cards()
+        except Exception:  # noqa: BLE001
+            return 0
+        seen: set[str] = set()
+        for c in cards:
+            if c.status.value == "accepted" and c.signal.fn:
+                seen.add(c.signal.fn)
+        return len(seen)
+
+    def _recent_accepted_filter_tweak_count(self) -> int:
+        """Total accepted `parameter_change` trials whose path targets a
+        filter threshold or rearm_threshold. Used by the permissive
+        gate's cap that forces Editor off knob-tuning after N tweaks.
+
+        Walks `memory/trials.jsonl`. Detection is on the summary string
+        because EditSummary doesn't carry the raw `change` dict; the
+        summary for parameter_change is `"<path>: X -> Y"` so a substring
+        match on the canonical path fragments is sufficient.
+        """
+        n = 0
+        for record in self.memory.read_trials():
+            if record.decision != Decision.ACCEPT:
+                continue
+            if record.edit.type != EditType.PARAMETER_CHANGE:
+                continue
+            summary = record.edit.summary or ""
+            if "filters[" not in summary:
+                continue
+            if ".threshold" in summary or ".rearm_threshold" in summary:
+                n += 1
+        return n
+
+    def _recent_accepted_sizing_streak(self) -> int:
+        """Walk back through `memory/trials.jsonl` and return the run-length
+        of consecutive accepted sizing edits immediately preceding this
+        trial. A non-sizing accept (or any reject) resets the count to 0.
+
+        Used by the permissive gate's anti-sizing-exploitation rule: when
+        the streak >= `max_consecutive_sizing_edits`, the next sizing edit
+        is rejected with `reject_exploration_required` to force the Editor
+        to diversify into add_indicator / filter changes.
+        """
+        streak = 0
+        for record in reversed(self.memory.read_trials()):
+            if record.decision != Decision.ACCEPT:
+                # A reject doesn't reset (it wasn't applied), but it also
+                # doesn't count. Skip it and keep walking.
+                continue
+            # EditSummary persists `type + target + summary` but not the
+            # raw change dict; pass `summary=` so the helper can use the
+            # canonical "sizing.<field>: X -> Y" form for parameter_change.
+            cat = _gate_edit_category(record.edit.type.value, summary=record.edit.summary)
+            if cat == "sizing":
+                streak += 1
+            else:
+                break
+        return streak
+
     def _evaluate(self, strategy: Strategy, df_train, df_val) -> TrialOutcome:
         positions_t = compute_positions(
             strategy, df_train, indicators_dir=self.indicators_dir, timeout_sec=self.timeout_sec
@@ -626,7 +761,12 @@ class Discovery:
         *,
         analysis_plan=None,
     ) -> dict:
-        from lbg.verdict import DEFAULT_ANALYSIS_PLAN, compute_h1_verdict
+        from lbg.verdict import (
+            DEFAULT_ANALYSIS_PLAN,
+            compute_alpha_card_h1_verdict,
+            compute_per_card_sealed_validation,
+            compute_strategy_sharpe_verdict,
+        )
 
         plan = analysis_plan or DEFAULT_ANALYSIS_PLAN
 
@@ -636,13 +776,36 @@ class Discovery:
         )
         sealed = run_backtest(positions, df_sealed)
 
-        # H1 verdict: pre-registered moving block bootstrap vs best baseline.
+        # Producer for primary H1: populate each accepted card's sealed_summary
+        # with pathwise incremental Sharpe + bootstrap CI before counting.
+        # Failures per card are recorded as `validation_error` in sealed_summary,
+        # not propagated -- the seal step must still produce a verdict payload.
+        per_card_results: list = []
         try:
-            verdict = compute_h1_verdict(sealed.returns, df_sealed, plan=plan)
-            h1 = verdict.to_dict()
+            per_card_results = compute_per_card_sealed_validation(
+                self.repo_root,
+                df_sealed,
+                plan=plan,
+                timeout_sec=self.timeout_sec,
+                git=self.git,
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.warning("per-card sealed validation failed: %s", e)
+
+        # Primary H1: sealed-validated alpha-card count. The strategy-level
+        # Sharpe bootstrap is reported separately as a supplementary diagnostic.
+        try:
+            h1 = compute_alpha_card_h1_verdict(self.repo_root, plan=plan).to_dict()
         except Exception as e:  # noqa: BLE001
             logger.warning("H1 verdict computation failed: %s", e)
             h1 = {"error": str(e)}
+        try:
+            strategy_verdict = compute_strategy_sharpe_verdict(
+                sealed.returns, df_sealed, plan=plan
+            ).to_dict()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("supplementary strategy verdict computation failed: %s", e)
+            strategy_verdict = {"error": str(e)}
 
         payload = {
             "strategy_name": incumbent.name,
@@ -655,6 +818,15 @@ class Discovery:
             "final_equity": sealed.final_equity,
             "complexity": complexity_score(incumbent, indicators_dir=self.indicators_dir),
             "h1_verdict": h1,
+            "supplementary_strategy_verdict": strategy_verdict,
+            "per_card_validation": [
+                {
+                    "alpha_id": r.alpha_id,
+                    "source_trial": r.source_trial,
+                    **r.to_summary(),
+                }
+                for r in per_card_results
+            ],
         }
         if vault is not None:
             try:

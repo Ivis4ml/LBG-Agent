@@ -1,0 +1,31 @@
+{
+  "factor_name": "roc_n",
+  "lbg_provenance": {
+    "evidence": "observation",
+    "kind": "lbg_emitted",
+    "trial_id": 0,
+    "source_commit": "33cfbd8",
+    "source_path": "indicators/roc_n.py",
+    "cited_factors": [
+      "ROC"
+    ]
+  },
+  "严密的因子定义": "observation: 对每个时点 t，令 C_t 为 close，N=period。因子值 roc_n_t = (C_t - C_{t-N}) / C_{t-N}。源码用 df[\"close\"].shift(period) 取得 C_{t-N}，再返回上述比率并命名为 roc_n。period < 1 时抛出 ValueError。前 N 个 bar 因 shift 产生 NaN。",
+  "金融学意义阐释": "observation: Editor hypothesis 将 roc_n 定义为动量确认项，用于过滤价格尚未取得正向尾随进展的弱 SMA cross 入场信号，并在不改变 sizing 的前提下提升入场选择性。inference: 正值表示过去 N 个 bar 的收盘价相对上涨，负值表示相对下跌；它更接近简单价格动量过滤，而不是波动率、成交量或风险压力过滤。",
+  "参数化实现方式": "observation: 参数 period 默认值为 20，对应 close.shift(20)。没有平滑、标准化、截尾、阈值或 winsorize。函数签名接受 **_，但源码未使用额外参数。",
+  "实测训练表现": {
+    "evidence": "observation",
+    "sharpe": 0.8063,
+    "max_drawdown": -0.12,
+    "turnover": 13.363,
+    "num_trades": 120,
+    "window": "split_A (LBG 训练窗口，约 2266 个 bar)",
+    "notes": "validation_signal 为 accepted；未提供 baseline 数值，因此不写 Sharpe 提升幅度或相对排名。"
+  },
+  "数据预处理与清洗要求": "observation: 输入必须包含 close 列。源码仅使用 shift(period)，不使用 rolling，不使用 fillna，不删除 NaN。前 period 个样本自然为 NaN，下游需要能处理这些缺失值。prefix_stability 不变式来自单次 shift：任意前缀数据上的历史因子值不依赖未来 bar。",
+  "稳健性与过拟合检验": "observation: split_A 训练窗口 Sharpe 为 0.8063，validation_signal 为 accepted。未提供独立测试集、walk-forward、参数扰动、IC、ICIR、Rank IC 或月度 alpha 结果，因此这些稳健性证据均为未测量。",
+  "因子衰减速度与最优持有期": "inference: split_A 约 2266 个 bar 内有 120 次交易，平均每笔交易间隔约 18.9 个 bar。该数值只是由 num_trades 和窗口长度推导的隐含交易频率，不等同于实测最优持有期。period=20 说明该因子观察约 20 bar 的尾随价格变化。",
+  "可与哪些因子概念组合融合": "observation: cited_factors 包含 ROC。inference: 可与 SMA cross 入场逻辑组合为动量确认，也可与已有 exit-side stress filters 形成入场动量与退出压力的分工；这些组合假设仅来自 Editor hypothesis 和源码结构，未在其他市场或频率上测量。",
+  "适用市场与品种范围": "observation: 本因子仅在 SPY 日频 split_A 训练窗口上经过 LBG 协议验证。inference: 其他市场、品种、频率或多资产横截面应用均未测量。",
+  "因子逻辑分类体系": "inference: 依据 cited_factors=ROC 与源码结构，本因子属于价格动量 / rate-of-change / trailing return 类因子。它不属于均值回复、波动率、成交量、基本面或横截面排序因子。"
+}

@@ -7,13 +7,16 @@ import pandas as pd
 import pytest
 
 from backtest import run_backtest
+from lbg.alpha_cards import AlphaCard, AlphaCardEvidence, AlphaCardSignal, AlphaCardStatus
+from lbg.schemas import HypothesisOutcome, ValidationSignal
 from lbg.verdict import (
     DEFAULT_ANALYSIS_PLAN,
     AnalysisPlan,
     H1Criterion,
     baseline_buy_and_hold,
     baseline_sixty_forty,
-    compute_h1_verdict,
+    compute_alpha_card_h1_verdict,
+    compute_strategy_sharpe_verdict,
     moving_block_bootstrap_sharpe_diff,
 )
 
@@ -131,9 +134,14 @@ def test_bootstrap_seed_determinism():
 
 def test_default_analysis_plan_matches_proposal():
     plan = DEFAULT_ANALYSIS_PLAN
-    assert plan.h1.block_len == 10
-    assert plan.h1.n_bootstrap == 1000
-    assert plan.h1.alpha == 0.05
+    assert plan.h1.test == "validated_factor_count"
+    assert plan.h1.tau == 3
+    assert plan.per_card_validation.block_len == 10
+    assert plan.per_card_validation.n_bootstrap == 1000
+    assert plan.per_card_validation.threshold == "lower_bound_gt_zero"
+    assert plan.supplementary_strategy.block_len == 10
+    assert plan.supplementary_strategy.n_bootstrap == 1000
+    assert plan.supplementary_strategy.alpha == 0.05
     assert "buy_and_hold" in plan.baselines
     assert "sixty_forty" in plan.baselines
 
@@ -145,8 +153,25 @@ def test_analysis_plan_rejects_extra_fields():
         AnalysisPlan.model_validate(
             {
                 "baselines": ["buy_and_hold"],
+                "per_card_validation": {
+                    "method": "leave_one_out_incremental_sharpe",
+                    "ci": 0.95,
+                    "ci_method": "moving_block_bootstrap",
+                    "block_len": 10,
+                    "n_bootstrap": 1000,
+                    "threshold": "lower_bound_gt_zero",
+                },
                 "h1": {
+                    "test": "validated_factor_count",
+                    "tau": 3,
+                    "strong_criterion": "N_val_lbg > max_baseline_count and N_val_lbg >= tau",
+                    "weak_criterion": "N_val_lbg >= 1 and N_val_lbg >= best_baseline_count",
+                    "baseline_validated_counts": {},
+                },
+                "supplementary_strategy": {
                     "test": "moving_block_bootstrap",
+                    "metric": "sealed_strategy_sharpe",
+                    "reference": "best_pre_registered_baseline",
                     "block_len": 10,
                     "n_bootstrap": 1000,
                     "alpha": 0.05,
@@ -163,16 +188,65 @@ def test_h1_criterion_strict_literal():
 
     with pytest.raises(ValidationError):
         H1Criterion(
-            test="t_test",  # not allowed
-            block_len=10,
-            n_bootstrap=1000,
-            alpha=0.05,
-            strong_criterion="ci_lower > 0",
-            weak_criterion="point_estimate > 0",
+            test="moving_block_bootstrap",  # not the primary H1 anymore
+            tau=3,
+            strong_criterion="N_val_lbg > max_baseline_count and N_val_lbg >= tau",
+            weak_criterion="N_val_lbg >= 1 and N_val_lbg >= best_baseline_count",
+            baseline_validated_counts={},
         )
 
 
-# -------- H1 verdict --------
+# -------- primary H1 verdict --------
+
+
+def _alpha_card(alpha_id: str, ci_lower: float | None) -> AlphaCard:
+    sealed_summary = None if ci_lower is None else {"incremental_sharpe_ci_lower": ci_lower}
+    return AlphaCard(
+        alpha_id=alpha_id,
+        source_trial=1,
+        source_commit="abc123",
+        status=AlphaCardStatus.ACCEPTED,
+        signal=AlphaCardSignal(
+            indicator=alpha_id, fn=alpha_id, source_path=f"indicators/{alpha_id}.py"
+        ),
+        evidence=AlphaCardEvidence(
+            train_summary={
+                "sharpe": 0.1,
+                "max_drawdown": -0.1,
+                "turnover": 1.0,
+                "num_trades": 20.0,
+            },
+            validation_signal=ValidationSignal.ACCEPTED,
+            hypothesis_outcome=HypothesisOutcome.CONFIRMED,
+            sealed_summary=sealed_summary,
+        ),
+    )
+
+
+def test_alpha_card_h1_counts_only_positive_sealed_ci():
+    verdict = compute_alpha_card_h1_verdict(
+        [
+            _alpha_card("good", 0.01),
+            _alpha_card("bad", -0.01),
+            _alpha_card("pending", None),
+        ]
+    )
+    assert verdict.candidate_card_count == 3
+    assert verdict.validated_factor_count == 1
+    assert verdict.validated_alpha_ids == ("good",)
+    assert verdict.weak
+    assert not verdict.strong
+
+
+def test_alpha_card_h1_strong_requires_tau():
+    verdict = compute_alpha_card_h1_verdict(
+        [_alpha_card("a", 0.01), _alpha_card("b", 0.02), _alpha_card("c", 0.03)]
+    )
+    assert verdict.validated_factor_count == 3
+    assert verdict.strong
+
+
+# -------- supplementary strategy verdict --------
 
 
 def test_compute_h1_verdict_returns_full_record():
@@ -180,7 +254,7 @@ def test_compute_h1_verdict_returns_full_record():
     # Strategy = constant long with a tiny additional edge (use 1.0).
     positions = pd.Series(np.ones(len(df)), index=df.index)
     bt = run_backtest(positions, df)
-    verdict = compute_h1_verdict(bt.returns, df)
+    verdict = compute_strategy_sharpe_verdict(bt.returns, df)
     assert verdict.best_baseline_name in {"buy_and_hold", "sixty_forty"}
     assert verdict.n_bootstrap == 1000
     assert verdict.block_len == 10
@@ -200,7 +274,7 @@ def test_h1_strong_when_strategy_beats_baselines():
     rolling = df["close"].diff().rolling(3).sum().fillna(0)
     positions[rolling > 0] = 1.0
     bt = run_backtest(positions, df)
-    verdict = compute_h1_verdict(bt.returns, df)
+    verdict = compute_strategy_sharpe_verdict(bt.returns, df)
     # Don't assert strong (it depends on synthetic data), just structural integrity.
     assert verdict.delta_sharpe == verdict.strategy_sharpe - verdict.best_baseline_sharpe
     assert verdict.ci_lower <= verdict.ci_upper
@@ -212,9 +286,9 @@ def test_h1_verdict_to_dict_is_json_safe():
     df = _synth_ohlcv(n=300)
     positions = pd.Series(np.ones(len(df)), index=df.index)
     bt = run_backtest(positions, df)
-    verdict = compute_h1_verdict(bt.returns, df)
+    verdict = compute_strategy_sharpe_verdict(bt.returns, df)
     d = verdict.to_dict()
     # Round-trip through JSON works (no numpy floats or enum objects).
     s = json.dumps(d)
-    assert "h1_strong" in s
-    assert "h1_weak" in s
+    assert "supplementary_strong" in s
+    assert "supplementary_weak" in s

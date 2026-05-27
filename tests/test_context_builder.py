@@ -87,6 +87,17 @@ def test_editor_view_returns_strategy_yaml(tmp_path):
     assert "sma_slow" in ctx.strategy_yaml
 
 
+def test_editor_view_includes_current_indicator_source(tmp_path):
+    mm = MemoryManager(tmp_path / "memory")
+    builder = ContextBuilder(mm, repo_root=REPO)
+    strategy = load_strategy(REPO / "strategy.yaml")
+    ctx = builder.editor_view(strategy)
+    assert ctx.indicator_code
+    assert ctx.indicator_code[0].fn == "sma"
+    assert "def sma" in ctx.indicator_code[0].source_excerpt
+    assert scan_for_leaks(ctx.indicator_code[0].source_excerpt) == []
+
+
 def test_editor_view_pulls_recent_trials(tmp_path):
     mm = MemoryManager(tmp_path / "memory")
     mm.append_trial(_trial(0, ValidationSignal.ACCEPTED, HypothesisOutcome.CONFIRMED))

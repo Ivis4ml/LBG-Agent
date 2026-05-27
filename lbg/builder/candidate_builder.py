@@ -45,7 +45,9 @@ class CandidateApplyResult:
 _INDICATOR_PATH_RE = re.compile(
     r"^indicators\[(?P<name>[A-Za-z_][A-Za-z0-9_]*)\]\.params\.(?P<key>[A-Za-z_][A-Za-z0-9_]*)$"
 )
-_FILTER_PATH_RE = re.compile(r"^(?P<list>filters|exit_filters)\[(?P<idx>\d+)\]\.threshold$")
+_FILTER_PATH_RE = re.compile(
+    r"^(?P<list>filters|exit_filters)\[(?P<idx>\d+)\]\.(?P<field>threshold|rearm_threshold)$"
+)
 
 
 class CandidateBuilder:
@@ -463,6 +465,7 @@ def _set_path(data: dict, path: str, value):
     if fm:
         list_name = fm.group("list")
         idx = int(fm.group("idx"))
+        field = fm.group("field")
         filters = data.get(list_name) or []
         if idx < 0 or idx >= len(filters):
             raise CandidateBuildError(
@@ -470,10 +473,10 @@ def _set_path(data: dict, path: str, value):
             )
         if not isinstance(value, (int, float)) or isinstance(value, bool):
             raise CandidateBuildError(
-                f"filter threshold must be a number; got {type(value).__name__}"
+                f"filter {field} must be a number; got {type(value).__name__}"
             )
-        before = filters[idx].get("threshold")
-        filters[idx]["threshold"] = float(value)
+        before = filters[idx].get(field)
+        filters[idx][field] = float(value)
         return before, float(value)
 
     m = _INDICATOR_PATH_RE.match(path)
@@ -481,7 +484,8 @@ def _set_path(data: dict, path: str, value):
         raise CandidateBuildError(
             f"unsupported parameter_change path: {path!r}; "
             "expected `sizing.<field>`, `indicators[<name>].params.<key>`, "
-            "`filters[<idx>].threshold`, or `exit_filters[<idx>].threshold`"
+            "`filters[<idx>].threshold`, `exit_filters[<idx>].threshold`, "
+            "or `exit_filters[<idx>].rearm_threshold`"
         )
     name, key = m.group("name"), m.group("key")
     for spec in data["indicators"]:

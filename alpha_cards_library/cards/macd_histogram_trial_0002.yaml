@@ -1,0 +1,27 @@
+alpha_id: macd_histogram_trial_0002
+source_trial: 2
+source_commit: 8e759fec8d1042b3dea6b5f477b7fa992e6f7353
+status: accepted
+signal:
+  indicator: macd_histogram
+  fn: macd_histogram
+  params:
+    fast: 12
+    slow: 26
+    signal: 9
+  source_path: indicators/macd_histogram.py
+evidence:
+  train_summary:
+    sharpe: 0.8778011363896675
+    max_drawdown: -0.11996868427075713
+    turnover: 12.249226690234204
+    num_trades: 110.0
+  validation_signal: accepted
+  hypothesis_outcome: confirmed
+  sealed_summary: null
+dossier_link: null
+attach_config:
+  rule: indicator_above
+  threshold: 0.0
+  target: entry
+  rearm_threshold: null

@@ -1,0 +1,32 @@
+alpha_id: vol_regime_zscore_trial_0001
+source_trial: 1
+source_commit: 3937ced1be038c7349f698424f653ab73510e979
+status: accepted
+signal:
+  indicator: vol_regime_zscore
+  fn: vol_regime_zscore
+  params:
+    vol_period: 20
+    zscore_lookback: 252
+  source_path: indicators/vol_regime_zscore.py
+evidence:
+  train_summary:
+    sharpe: 0.8966110706834598
+    max_drawdown: -0.1356182544929585
+    turnover: 4.899690676093681
+    num_trades: 44.0
+  validation_signal: accepted
+  hypothesis_outcome: confirmed
+  sealed_summary:
+    incremental_sharpe_point: 0.24857491071796647
+    incremental_sharpe_ci_lower: -0.09134602973349187
+    incremental_sharpe_ci_upper: 0.6851976911226308
+    n_bootstrap: 1000.0
+    block_len: 10.0
+    alpha: 0.050000000000000044
+dossier_link: null
+attach_config:
+  rule: indicator_above
+  threshold: 1.5
+  target: exit
+  rearm_threshold: 0.5

@@ -1,0 +1,50 @@
+{
+  "factor_name": "donchian_position",
+  "lbg_provenance": {
+    "kind": "lbg_emitted",
+    "trial_id": 1,
+    "source_commit": "0e85b214",
+    "source_path": "indicators/donchian_position.py",
+    "cited_factors": []
+  },
+  "严密的因子定义": "[observation] 对每个日频 bar，计算过去 period 个 bar 的最高价上界 high_n = rolling_max(high, period)，最低价下界 low_n = rolling_min(low, period)，通道宽度 width = high_n - low_n。因子值为 (close - low_n) / width，并截断到 [0, 1]。若 width 为 0，则替换为缺失值后输出浮点序列。period=55 时，0 表示收盘价位于 55-bar 通道低点，1 表示位于 55-bar 通道高点，0.5 表示位于通道中部。",
+  "金融学意义阐释": "[inference] 该因子度量收盘价在追踪 Donchian 高低价通道内的相对位置。Editor hypothesis 认为它可作为上通道入场确认，要求价格相对自身近期高低区间表现出强势，从而过滤较弱的 SMA 交叉入场，同时尽量保留趋势跟随机会。",
+  "参数化实现方式": "[observation] 参数 period 默认值为 55，且必须 >= 2。源码实际使用 df['high'].rolling(period).max()、df['low'].rolling(period).min()、(df['close'] - low_n) / width、clip(lower=0.0, upper=1.0)。未使用 shift，未使用额外平滑参数，未使用成交量或收益率输入。",
+  "实测训练表现": {
+    "sharpe": 0.8702,
+    "max_drawdown": -0.1219,
+    "turnover": 10.69,
+    "num_trades": 96,
+    "window": "split_A (LBG 训练窗口，约 2266 个 bar)",
+    "notes": "[observation] validation_signal 为 accepted。未测量 IC、ICIR、Rank IC、月度 alpha 或样本外表现。"
+  },
+  "数据预处理与清洗要求": "[observation] 输入需包含 high、low、close 三列。rolling(period) 在前 period-1 个 bar 产生缺失值。若 trailing high 等于 trailing low，width 被替换为 pd.NA，输出对应缺失值。输出强制转换为 float，并截断到 [0, 1]。prefix_stability 不变式来自 trailing rolling max/min：任一时间点的因子只依赖该点及其之前 period-1 个 bar，不依赖未来数据。",
+  "稳健性与过拟合检验": "[observation] 在 SPY 日频 split_A 训练窗口上，Sharpe=0.8702，validation_signal=accepted。[inference] 该结果支持 Editor hypothesis 在训练窗口内至少未被协议拒绝，但不能证明样本外稳健性，也不能证明在其他市场、品种或频率上有效。",
+  "因子衰减速度与最优持有期": "[inference] split_A 约 2266 个 bar 内发生 96 次交易，隐含平均约 23.6 个 bar/交易事件。该数值只用于描述训练窗口交易频率，不等同于已测得的最优持有期；最优持有期未测量。",
+  "可与哪些因子概念组合融合": "[observation] Editor 未引用 seed-library factors，cited_factors 为空。[inference] 从源码结构看，它可与 close-only 动量、SMA 交叉、突破过滤或波动率约束类概念组合：donchian_position 提供区间内相对强弱确认，其他因子可提供方向、趋势持续性或风险过滤。",
+  "适用市场与品种范围": "本因子仅在 SPY 日频上经过 LBG 协议验证。其他市场/品种/频率为 inference。",
+  "因子逻辑分类体系": "[inference] 价格通道位置因子；趋势跟随确认；Donchian channel 相对位置；高低价区间归一化动量过滤。分类依据为源码使用 trailing high/low 通道与 close 在通道内的位置。",
+  "未测量项目": {
+    "ic": "未测量",
+    "icir": "未测量",
+    "rank_ic": "未测量",
+    "monthly_alpha": "未测量",
+    "out_of_sample": "未测量",
+    "cross_sectional_performance": "未测量"
+  },
+  "字段证据标注": {
+    "factor_name": "observation",
+    "lbg_provenance": "observation",
+    "严密的因子定义": "observation",
+    "金融学意义阐释": "inference",
+    "参数化实现方式": "observation",
+    "实测训练表现": "observation",
+    "数据预处理与清洗要求": "observation",
+    "稳健性与过拟合检验": "observation + inference",
+    "因子衰减速度与最优持有期": "inference",
+    "可与哪些因子概念组合融合": "observation + inference",
+    "适用市场与品种范围": "observation + inference",
+    "因子逻辑分类体系": "inference",
+    "未测量项目": "observation"
+  }
+}

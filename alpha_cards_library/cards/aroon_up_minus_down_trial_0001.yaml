@@ -1,0 +1,25 @@
+alpha_id: aroon_up_minus_down_trial_0001
+source_trial: 1
+source_commit: e4f7e0df9bf1e15a7c7ea1f1edd3be9a1390d6b4
+status: accepted
+signal:
+  indicator: aroon_up_minus_down
+  fn: aroon_up_minus_down
+  params:
+    period: 25
+  source_path: indicators/aroon_up_minus_down.py
+evidence:
+  train_summary:
+    sharpe: 0.6772193359258031
+    max_drawdown: -0.10594866060947827
+    turnover: 7.349536014140522
+    num_trades: 66.0
+  validation_signal: accepted
+  hypothesis_outcome: partially_confirmed
+  sealed_summary: null
+dossier_link: null
+attach_config:
+  rule: indicator_above
+  threshold: 0.0
+  target: entry
+  rearm_threshold: null

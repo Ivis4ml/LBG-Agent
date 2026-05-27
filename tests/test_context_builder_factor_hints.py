@@ -14,10 +14,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from lbg.dsl import load_strategy
+from lbg.knowledge.factors import search as factor_search
 from lbg.memory import MemoryManager
 from lbg.orchestrator.context_builder import (
     ContextBuilder,
-    FactorHint,
     PastTrialSummary,
     _scrub_years,
     _truncate,
@@ -169,6 +169,14 @@ def test_derive_search_terms_skips_complexity_rejection(tmp_path):
     assert not (set(terms) & rejection_zh)
 
 
+def test_buyhold_cold_start_gets_risk_off_search_terms(tmp_path):
+    mm = MemoryManager(tmp_path / "memory")
+    cb = ContextBuilder(mm, repo_root=tmp_path)
+    strategy = load_strategy(REPO / "baselines" / "buyhold" / "strategy.yaml")
+    terms = cb._derive_search_terms(strategy, recent=[])
+    assert terms[:4] == ["回撤", "波动率", "趋势强度", "状态识别"]
+
+
 # -------- shortlist properties --------
 
 
@@ -209,6 +217,11 @@ def test_factor_hints_capped_and_deduplicated(tmp_path):
     assert len(hints) <= 5
     names = [h.name for h in hints]
     assert len(set(names)) == len(names)  # deduped
+
+
+def test_factor_search_prioritizes_exact_name_over_substring_noise():
+    names = [hit["factor_name"] for hit in factor_search("sma", top_k=3)]
+    assert names[0] == "SMA"
 
 
 def test_factor_hints_returned_via_editor_view(tmp_path):

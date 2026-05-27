@@ -1,0 +1,27 @@
+alpha_id: kama_ratio_trial_0003
+source_trial: 3
+source_commit: 3a6d78c01bc0032e38ee2b4516c12aa01e249d63
+status: accepted
+signal:
+  indicator: kama_ratio
+  fn: kama_ratio
+  params:
+    period: 10
+    fast: 2
+    slow: 30
+  source_path: indicators/kama_ratio.py
+evidence:
+  train_summary:
+    sharpe: 0.615282330198553
+    max_drawdown: -0.1177100283502015
+    turnover: 6.681396376491383
+    num_trades: 60.0
+  validation_signal: accepted
+  hypothesis_outcome: partially_confirmed
+  sealed_summary: null
+dossier_link: null
+attach_config:
+  rule: indicator_above
+  threshold: 1.0
+  target: entry
+  rearm_threshold: null

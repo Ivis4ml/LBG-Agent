@@ -1,0 +1,31 @@
+{
+  "factor_name": "macd_histogram",
+  "lbg_provenance": {
+    "kind": "lbg_emitted",
+    "trial_id": 2,
+    "source_commit": "8e759fe",
+    "source_path": "indicators/macd_histogram.py",
+    "cited_factors": [
+      "Histogram",
+      "MACD"
+    ],
+    "evidence": "observation"
+  },
+  "严密的因子定义": "observation: 给定收盘价序列 close_t，计算 EMA_fast_t = EWM(close, span=12, adjust=False, min_periods=12)，EMA_slow_t = EWM(close, span=26, adjust=False, min_periods=26)，MACD_t = EMA_fast_t - EMA_slow_t，signal_t = EWM(MACD, span=9, adjust=False, min_periods=9)。因子值为 histogram_t = MACD_t - signal_t，并命名为 macd_histogram。若 fast、slow 或 signal 小于 1，函数抛出 ValueError。",
+  "金融学意义阐释": "observation: Editor hypothesis 表示，该因子用于在已接受的正 ROC 入场门槛之外，增加动量加速条件，以过滤较弱的 SMA 交叉入场，同时不改变既有出场侧压力控制。inference: 当 MACD 高于自身信号线时，该定义可被解释为短中期趋势差相对其自身平滑基准的正向扩张；低于信号线时则表示扩张减弱或转负。",
+  "参数化实现方式": "observation: 参数 fast=12、slow=26、signal=9。fast 控制快速 EMA 的 span；slow 控制慢速 EMA 的 span；signal 控制 MACD 信号线 EMA 的 span。三者均要求 >= 1。所有 EMA 均使用 adjust=False 的尾随递推形式，并分别设置 min_periods 为对应窗口。",
+  "实测训练表现": {
+    "sharpe": 0.8778,
+    "max_drawdown": -0.12,
+    "turnover": 12.249,
+    "num_trades": 110,
+    "window": "split_A (LBG 训练窗口，约 2266 个 bar；该窗口长度为协议描述，非本因子额外测量指标)",
+    "notes": "observation: validation_signal 为 accepted。未测量 IC、ICIR、Rank IC、月度 alpha 或跨品种表现。"
+  },
+  "数据预处理与清洗要求": "observation: 输入数据必须包含 close 列。源码未显式填充缺失值，未调用 fillna，未对价格做截尾或标准化。由于 EMA 使用 min_periods，前 fast、slow 和 signal 相关的早期样本会自然产生缺失。prefix_stability 不变式来自源码注释与实现：三条 EMA 均为 adjust=False 的 trailing 递推形式，不依赖未来数据。",
+  "稳健性与过拟合检验": "observation: split_A 训练窗口 Sharpe 为 0.8778，validation_signal 为 accepted。observation: 未提供独立测试集、滚动窗口、跨市场或参数扰动结果。inference: accepted 只说明该 trial 在 LBG 当前验证规则下通过，不能推出样本外稳健性。",
+  "因子衰减速度与最优持有期": "inference: split_A 约 2266 个 bar 与 num_trades=110 隐含平均每笔交易间隔约 20.6 个 bar。该数值由协议窗口长度和实测交易次数推算，不是直接测得的最优持有期。实际最优持有期未测量。",
+  "可与哪些因子概念组合融合": "observation: Editor-cited seed-library factors 为 Histogram 与 MACD。inference: 可与趋势方向、价格动量、均线交叉、波动压力控制或成交过滤概念组合，用 macd_histogram 作为动量加速确认层。该组合假设仅来自源码结构与 Editor hypothesis，未被本 dossier 额外验证。",
+  "适用市场与品种范围": "observation: 本因子仅在 SPY 日频 split_A 训练窗口上经过 LBG 协议验证。inference: 其他市场、品种、频率和交易成本设定下的有效性未知。",
+  "因子逻辑分类体系": "inference: 源码结构属于 MACD 派生的趋势动量类因子，具体为动量加速度或趋势差分相对平滑基准的 histogram 因子。与 cited_factors 中的 Histogram、MACD 概念一致。"
+}

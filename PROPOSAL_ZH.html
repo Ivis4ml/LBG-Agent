@@ -765,7 +765,7 @@ window.MathJax = {
   <a href="#thesis">§4 论点与假设</a>
   <a href="#formal">§4.5 形式化定义</a>
   <a href="#twoaction">§5 两个动作空间</a>
-  <a href="#agent">§6 三类 LLM 角色</a>
+  <a href="#agent">§6 四类 LLM 角色</a>
   <a href="#orchestrator">§6.5 编排器</a>
   <a href="#memory">§6.6 记忆与技能档</a>
   <a href="#factorlib">§6.7 因子库作为原材料</a>
@@ -840,10 +840,10 @@ window.MathJax = {
 
 <h3>重构二：这是一个智能体，还是一个框架？</h3>
 
-<p>把三个角色称作"智能体"是一种重要的措辞错误。<em>编辑器</em>、<em>反思器</em>、<em>策展器</em> 并非自主、面向目标的循环。每一个都是一次结构化的 LLM 调用，输入和输出均带类型。整个系统是一个 <em>确定性的编排框架</em>，负责调度这些调用，并在调用之间维护持久的启发式系统。这一区分将本项目与 TradingAgents 类工作（每根 K 线都调用 LLM 决定交易）拉开距离，并将其归入 LangProp 类工作（LLM 作为代码空间的优化器）。</p>
+<p>把四个角色称作"智能体"是一种重要的措辞错误。<em>编辑器</em>、<em>反思器</em>、<em>策展器</em>、<em>翻译器</em> 并非自主、面向目标的循环。每一个都是一次结构化的 LLM 调用，输入和输出均带类型。整个系统是一个 <em>确定性的编排框架</em>，负责调度这些调用，并在调用之间维护持久的启发式系统。这一区分将本项目与 TradingAgents 类工作（每根 K 线都调用 LLM 决定交易）拉开距离，并将其归入 LangProp 类工作（LLM 作为代码空间的优化器）。</p>
 
 <div class="pullquote">
-  "LBG-Trader 不是一个智能体。它是一个利用三类 LLM 角色维护启发式系统的框架。"
+  "LBG-Trader 不是一个智能体。它是一个利用四类 LLM 角色维护启发式系统的框架。"
 </div>
 
 <h3>重构三：这是研究产物，还是产品？</h3>
@@ -871,7 +871,7 @@ window.MathJax = {
 </div>
 
 <p class="lede">
-LBG-Trader 是一个框架，它调度三类结构化的 LLM 角色（编辑器、反思器、策展器）在交易场景下完成 Weng 所说的 HL：<em>通过直接编辑代码来维护一个启发式系统</em>。本项目中的启发式系统是 <code>indicators/*.py</code>（智能体编写的 Python 因子函数）、<code>strategy.yaml</code>（组合它们的 DSL 配置）、固定引擎 <code>policy_interpreter.py</code>，以及若干显式记忆层的并集。在这一系统内，<strong>一次发现运行的核心产出，是智能体编写且通过密封测试的 Python 因子函数集合</strong>。每个这样的函数 <em>就是</em> 一个因子的可执行形态，与既有文献在 <code>knowledge/factors/dossiers/</code> 中以声明式描述的对象，是同一对象的两种翻译形态（声明式 dossier ↔ 可执行 Python）。框架维持这一双向往返：以 dossier 为输入假设，以 Python 代码为输出，并附带密封测试证据。同时也产出一个组合后的冻结策略（第二至四阶段消费它），并为每个函数导出一份因子卡片元数据视图（便于计数、跨运行重组、并反向翻译回 dossier 形式）；但二者都不是被学习的对象。代码才是。
+LBG-Trader 是一个框架，它调度四类结构化的 LLM 角色（编辑器、反思器、策展器、翻译器）在交易场景下完成 Weng 所说的 HL：<em>通过直接编辑代码来维护一个启发式系统</em>。本项目中的启发式系统是 <code>indicators/*.py</code>（智能体编写的 Python 因子函数）、<code>strategy.yaml</code>（组合它们的 DSL 配置）、固定引擎 <code>policy_interpreter.py</code>，以及若干显式记忆层的并集。在这一系统内，<strong>一次发现运行的核心产出，是智能体编写且通过密封测试的 Python 因子函数集合</strong>。每个这样的函数 <em>就是</em> 一个因子的可执行形态，与既有文献在 <code>knowledge/factors/dossiers/</code> 中以声明式描述的对象，是同一对象的两种翻译形态（声明式 dossier ↔ 可执行 Python）。框架维持这一双向往返：以 dossier 为输入假设，以 Python 代码为输出，并附带密封测试证据。同时也产出一个组合后的冻结策略（第二至四阶段消费它），并为每个函数导出一份因子卡片元数据视图（便于计数、跨运行重组、并反向翻译回 dossier 形式）；但二者都不是被学习的对象。代码才是。
 </p>
 </section>
 
@@ -920,8 +920,8 @@ LBG-Trader 是一个框架，它调度三类结构化的 LLM 角色（编辑器�
     <tr><td><em>LBG</em></td><td>Learning Beyond Gradients。智能体通过 <em>编辑源代码</em> 而非梯度下降更新权重来进行学习的范式。被维护的代码是"学习对象"。</td></tr>
     <tr><td><em>启发式系统</em>（heuristic system）</td><td>智能体所维护的代码、配置与笔记的集合。本项目中即 <code>strategy.yaml</code>、<code>indicators/*.py</code> 以及记忆文件。在试验 \(k\) 时记作 \(H_k\)。</td></tr>
     <tr><td><em>试验</em>（trial）</td><td>发现循环的一次迭代：编辑器提议 → 不变量检查 → 回测 → 门控判定 → 反思器解释 → 记忆更新 → 通过则 git 提交。每次发现运行预算 50 次试验。</td></tr>
-    <tr><td><em>编辑器 / 反思器 / 策展器</em>（Editor / Reflector / Curator）</td><td>三类 LLM 角色。编辑器每次试验提议一次编辑；反思器解释结果发生的原因；策展器周期性压缩记忆并抽取可复用技能。每一个都是一次结构化调用，不是自主循环。</td></tr>
-    <tr><td><em>编排器</em>（Orchestrator）</td><td>按顺序调用三类 LLM 角色、运行不变量与回测、应用门控、写入记忆、提交 git 的确定性 Python 控制平面。其自身不含任何 LLM 调用。</td></tr>
+    <tr><td><em>编辑器 / 反思器 / 策展器 / 翻译器</em>（Editor / Reflector / Curator / Translator）</td><td>四类 LLM 角色。编辑器每次试验提议一次编辑；反思器解释结果发生的原因；策展器周期性压缩记忆并抽取可复用技能；翻译器在每一次 <code>add_indicator</code> 被接受后把 Python 源码翻译为声明式 dossier。每一个都是一次结构化调用，不是自主循环。</td></tr>
+    <tr><td><em>编排器</em>（Orchestrator）</td><td>按顺序调用四类 LLM 角色、运行不变量与回测、应用门控、写入记忆、提交 git 的确定性 Python 控制平面。其自身不含任何 LLM 调用。</td></tr>
     <tr><td><em>结构化输出</em>（structured output）</td><td>要求 LLM 返回带类型的对象（本项目用符合 schema 的 YAML），而非自由文本。若输出解析失败，该次试验直接拒绝，不会触发回测。</td></tr>
     <tr><td><em>DSL</em></td><td>领域专用语言。本项目指 <code>strategy.yaml</code> 中策略解释器能识别的小型 YAML 语法（过滤条件、仓位算法、出场规则）。编辑 DSL 是两个动作空间之一，另一个是编写新的 Python 指标。</td></tr>
     <tr><td><em>密封评测</em>（sealed evaluation）</td><td>一种协议：把一段数据（本项目为 2021–2024）从智能体和任何中间决策中锁开，仅在运行末尾揭开一次作为最终裁定。借自临床试验方法学。</td></tr>
@@ -979,7 +979,7 @@ LBG-Trader 是一个框架，它调度三类结构化的 LLM 角色（编辑器�
 
 <h3>Hermes 脉络（持续学习、持久记忆）</h3>
 
-<p><a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/curator">Hermes Agent</a> 的三层认知架构（<code>run_conversation</code> 处理单次任务，<code>maybe_extract</code> 将有用的模式提交到技能档，<code>curator_cycle</code> 周期性打分、合并、裁剪）是构造持久学习的工作蓝图。我们直接借用这一架构，将三层重命名为编辑器、反思器、策展器，并专门针对交易作特化。</p>
+<p><a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/curator">Hermes Agent</a> 的三层认知架构（<code>run_conversation</code> 处理单次任务，<code>maybe_extract</code> 将有用的模式提交到技能档，<code>curator_cycle</code> 周期性打分、合并、裁剪）是构造持久学习的工作蓝图。我们直接借用这一架构，将三层重命名为编辑器、反思器、策展器，并新增第四类角色翻译器以承担 Python 源码 ↔ 声明式 dossier 的双向往返，整体面向交易场景特化。</p>
 </section>
 
 
@@ -1286,15 +1286,15 @@ hypothesis: |
 <section id="agent">
 <div class="section-marker">
   <span class="section-num">§ 6</span>
-  <h2>三类 LLM 角色</h2>
+  <h2>四类 LLM 角色</h2>
 </div>
 
-<p>框架把 LLM 的使用分解为三个结构化角色。每一个都是一次类型化输入、类型化输出的 LLM 调用，而非自主循环。这种分解是按职责进行的：将 <em>提议</em>、<em>评估</em>、<em>压缩</em> 三件事彼此分开，能够阻断 LLM 在被要求评估自身过往提案时所表现出的奉承偏倚。</p>
+<p>框架把 LLM 的使用分解为四个结构化角色。每一个都是一次类型化输入、类型化输出的 LLM 调用，而非自主循环。这种分解是按职责进行的：将 <em>提议</em>、<em>评估</em>、<em>压缩</em>、<em>翻译</em> 四件事彼此分开，能够阻断 LLM 在被要求评估自身过往提案时所表现出的奉承偏倚，同时使可执行代码与声明式 dossier 之间的双向转换得到明确的承担者。</p>
 
 <div class="figure">
 <div class="chart-wrap" style="background: var(--paper-warm); padding: 32px 28px;">
-<svg viewBox="0 0 700 420" width="100%" role="img">
-<title>三类 LLM 角色：编辑器、反思器、策展器，围绕一个持久的启发式系统</title>
+<svg viewBox="0 0 880 480" width="100%" role="img">
+<title>四类 LLM 角色：编辑器、反思器、策展器、翻译器，围绕一个持久的启发式系统</title>
 
 <defs>
   <marker id="arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -1302,51 +1302,67 @@ hypothesis: |
   </marker>
 </defs>
 
-<rect x="40" y="30" width="180" height="80" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.5" rx="3"/>
-<text x="130" y="56" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">编辑器</text>
-<text x="130" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">提出单次编辑</text>
-<text x="130" y="92" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">附带假设</text>
+<rect x="20" y="30" width="180" height="80" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.5" rx="3"/>
+<text x="110" y="56" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">编辑器</text>
+<text x="110" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">提出单次编辑</text>
+<text x="110" y="92" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">附带假设</text>
 
-<rect x="260" y="30" width="180" height="80" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1.5" rx="3"/>
-<text x="350" y="56" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">反思器</text>
-<text x="350" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">解释结果</text>
-<text x="350" y="92" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">更新记忆</text>
+<rect x="240" y="30" width="180" height="80" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1.5" rx="3"/>
+<text x="330" y="56" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">反思器</text>
+<text x="330" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">解释结果</text>
+<text x="330" y="92" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">更新记忆</text>
 
-<rect x="480" y="30" width="180" height="80" fill="#fbfaf6" stroke="#b88a2c" stroke-width="1.5" rx="3"/>
-<text x="570" y="56" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">策展器</text>
-<text x="570" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">压缩记忆</text>
-<text x="570" y="92" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">每接受 10 次触发</text>
+<rect x="460" y="30" width="180" height="80" fill="#fbfaf6" stroke="#b88a2c" stroke-width="1.5" rx="3"/>
+<text x="550" y="56" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">策展器</text>
+<text x="550" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">压缩记忆</text>
+<text x="550" y="92" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">每接受 10 次触发</text>
 
-<line x1="220" y1="70" x2="256" y2="70" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arr3)"/>
-<line x1="440" y1="70" x2="476" y2="70" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arr3)"/>
+<rect x="680" y="30" width="180" height="80" fill="#fbfaf6" stroke="#b76b5e" stroke-width="1.5" rx="3"/>
+<text x="770" y="56" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#1a1a1c">翻译器</text>
+<text x="770" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">每次 add_indicator 接受</text>
+<text x="770" y="92" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">.py 源码 → JSON dossier</text>
 
-<text x="240" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#6b6b70">试验结束</text>
-<text x="460" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#6b6b70">N 次接受后</text>
+<line x1="200" y1="70" x2="236" y2="70" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arr3)"/>
+<line x1="420" y1="70" x2="456" y2="70" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arr3)"/>
+<line x1="640" y1="70" x2="676" y2="70" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arr3)"/>
 
-<rect x="40" y="160" width="620" height="80" fill="#fbfaf6" stroke="#d8d4c8" stroke-width="1" rx="3"/>
-<text x="60" y="184" font-family="Inter, sans-serif" font-size="11" letter-spacing="1" fill="#6b6b70">启发式系统（持久）</text>
-<text x="60" y="208" font-family="JetBrains Mono, monospace" font-size="11" fill="#1a1a1c">strategy.yaml · indicators/*.py · trials.jsonl</text>
-<text x="60" y="224" font-family="JetBrains Mono, monospace" font-size="11" fill="#1a1a1c">accepted_rules.md · failed_directions.md · reflections.jsonl</text>
+<text x="220" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#6b6b70">试验结束</text>
+<text x="440" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#6b6b70">N 次接受后</text>
+<text x="660" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#6b6b70">add_indicator</text>
 
-<line x1="130" y1="110" x2="130" y2="156" stroke="#8b3a2f" stroke-width="1.2" marker-end="url(#arr3)"/>
-<line x1="350" y1="110" x2="350" y2="156" stroke="#2d6a5c" stroke-width="1.2" marker-end="url(#arr3)"/>
-<line x1="570" y1="110" x2="570" y2="156" stroke="#b88a2c" stroke-width="1.2" marker-end="url(#arr3)"/>
+<rect x="20" y="160" width="840" height="92" fill="#fbfaf6" stroke="#d8d4c8" stroke-width="1" rx="3"/>
+<text x="40" y="184" font-family="Inter, sans-serif" font-size="11" letter-spacing="1" fill="#6b6b70">启发式系统（持久）</text>
+<text x="40" y="208" font-family="JetBrains Mono, monospace" font-size="11" fill="#1a1a1c">strategy.yaml · indicators/*.py · trials.jsonl</text>
+<text x="40" y="224" font-family="JetBrains Mono, monospace" font-size="11" fill="#1a1a1c">accepted_rules.md · failed_directions.md · reflections.jsonl</text>
+<text x="40" y="240" font-family="JetBrains Mono, monospace" font-size="11" fill="#1a1a1c">alpha_cards/*.yaml · alpha_cards/dossiers/*.txt  ← 翻译器产出</text>
 
-<text x="245" y="270" text-anchor="end" font-family="Inter, sans-serif" font-size="11" letter-spacing="1" fill="#6b6b70">外层循环 · git</text>
-<rect x="260" y="260" width="180" height="80" fill="#1a1a1c" stroke="#1a1a1c" stroke-width="1" rx="3"/>
-<text x="350" y="286" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#fbfaf6">外层循环</text>
-<text x="350" y="306" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#a4a4a8">不变量 · 回测</text>
-<text x="350" y="322" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#a4a4a8">门控 · 提交</text>
+<line x1="110" y1="110" x2="110" y2="156" stroke="#8b3a2f" stroke-width="1.2" marker-end="url(#arr3)"/>
+<line x1="330" y1="110" x2="330" y2="156" stroke="#2d6a5c" stroke-width="1.2" marker-end="url(#arr3)"/>
+<line x1="550" y1="110" x2="550" y2="156" stroke="#b88a2c" stroke-width="1.2" marker-end="url(#arr3)"/>
+<line x1="770" y1="110" x2="770" y2="156" stroke="#b76b5e" stroke-width="1.2" marker-end="url(#arr3)"/>
 
-<line x1="350" y1="244" x2="350" y2="256" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arr3)"/>
+<text x="335" y="288" text-anchor="end" font-family="Inter, sans-serif" font-size="11" letter-spacing="1" fill="#6b6b70">外层循环 · git</text>
+<rect x="350" y="278" width="180" height="80" fill="#1a1a1c" stroke="#1a1a1c" stroke-width="1" rx="3"/>
+<text x="440" y="304" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-weight="500" fill="#fbfaf6">外层循环</text>
+<text x="440" y="324" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#a4a4a8">不变量 · 回测</text>
+<text x="440" y="340" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#a4a4a8">门控 · 提交</text>
 
-<text x="370" y="376" font-family="Fraunces, serif" font-style="italic" font-size="13" fill="#8b3a2f">→ 接受时提交到 main 分支</text>
-<line x1="440" y1="300" x2="540" y2="300" stroke="#1a1a1c" stroke-width="0.8" stroke-dasharray="3 3"/>
-<text x="550" y="304" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">git 历史</text>
+<line x1="440" y1="252" x2="440" y2="274" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arr3)"/>
+
+<text x="460" y="394" font-family="Fraunces, serif" font-style="italic" font-size="13" fill="#8b3a2f">→ 接受时提交到 main 分支</text>
+<line x1="530" y1="318" x2="640" y2="318" stroke="#1a1a1c" stroke-width="0.8" stroke-dasharray="3 3"/>
+<text x="650" y="322" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">git 历史</text>
+
+<!-- 持久库（跨 campaign） -->
+<rect x="20" y="410" width="840" height="50" fill="#f5f1e8" stroke="#2d6a5c" stroke-dasharray="3 2" stroke-width="1.2" rx="3"/>
+<text x="40" y="430" font-family="Inter, sans-serif" font-size="11" letter-spacing="1" fill="#6b6b70">持久因子库（跨 campaign 累积）</text>
+<text x="40" y="450" font-family="JetBrains Mono, monospace" font-size="11" fill="#1a1a1c">alpha_cards_library/{cards,indicators,dossiers}/  +  index.jsonl   ·   下次 campaign 启动时自动注入 baseline</text>
+
+<line x1="440" y1="358" x2="440" y2="406" stroke="#1a1a1c" stroke-width="0.8" stroke-dasharray="3 3" marker-end="url(#arr3)"/>
 
 </svg>
 </div>
-<div class="figure-caption"><strong>图 2。</strong> 三类 LLM 角色。外层循环是确定性 Python，负责调度这三类角色，运行不变量与回测，应用验证门控，并提交被接受的编辑。启发式系统作为 git 跟踪的持久产物存在于底层。每一次试验对应一次提交；每一次策展器周期对应一个分支。</div>
+<div class="figure-caption"><strong>图 2。</strong> 四类 LLM 角色（编辑器 / 反思器 / 策展器 / 翻译器）。外层循环是确定性 Python，负责调度这四类角色，运行不变量与回测，应用验证门控，并提交被接受的编辑。翻译器在每一次 <code>add_indicator</code> 被接受后触发，把 Python 源码转换为与种子库 schema 同构的 JSON dossier（双向转换 round-trip，详见 §6.7）。启发式系统作为 git 跟踪的持久产物存在于底层；持久因子库在 campaign 之间累积，下次 campaign 启动时自动注入 baseline。每一次试验对应一次提交；每一次策展器周期对应一个分支。</div>
 </div>
 
 <h3>编辑器</h3>
@@ -1399,6 +1415,12 @@ fallback_if_rejected: |
 <h3>策展器</h3>
 
 <p>策展器每接受 10 次试验运行一次。初始阶段为 <em>影子</em> 策展器：它只能压缩记忆（合并已接受规则、裁剪被新证据推翻的失败方向、报告复杂度指标），而不能修改 <code>strategy.yaml</code>。一旦系统被证明稳定，可启用 <em>主动</em> 策展器，使其提出策略简化建议，并须经过强制的验证复查。策展器使用可用的最强模型（Opus），原因在于压缩是系统中语义要求最高的操作。</p>
+
+<h3 id="role-translator">翻译器</h3>
+
+<p>翻译器在每一次 <code>add_indicator</code> 编辑被门控接受 <em>之后</em> 运行。它不参与提议、不参与评估，仅承担一次受限的、确定性输入输出的转换任务：读入被接受的 <code>indicators/&lt;fn&gt;.py</code> 源码（包含 docstring、参数默认值、被门控记录的训练统计与验证信号），输出一份与 <code>indicators/seed_templates/_index.yaml</code> 中既有种子条目 <em>schema 同构</em> 的 JSON dossier，写入 <code>alpha_cards/dossiers/&lt;fn&gt;_trial_&lt;NNNN&gt;.txt</code>。这一份 dossier 与因子卡片 <code>alpha_cards/&lt;fn&gt;_trial_&lt;NNNN&gt;.yaml</code> 共同构成因子的声明式视图。</p>
+
+<p>翻译器的存在使可执行 Python 与声明式 dossier 的双向往返（round-trip）成为系统的显式承担者，而不是事后人工填表：种子库以 dossier 为入口、编辑器以 Python 为出口，翻译器把出口产物翻译回入口形态，使下一次 campaign 的种子库被自动扩充（§4 因子库自动注入）。翻译器从不评估假设、从不改动启发式系统、从不写入 <code>strategy.yaml</code>；它的所有产物都标注来源 trial，并被 <code>SkillManager</code> 接管入库。翻译器的失败（解析、schema 不符）不会回滚已被接受的编辑——dossier 缺失只是降低该因子在未来 campaign 中的可被检索性。</p>
 </section>
 
 <section id="orchestrator">
@@ -1407,7 +1429,7 @@ fallback_if_rejected: |
   <h2>编排器</h2>
 </div>
 
-<p>三类 LLM 角色仅在外部调度器的指令下工作。这个调度器（<em>编排器</em>）是一个确定性的控制平面，使整个框架可复现、可审计、能够抵御奖励黑客攻击。它是系统中 <em>不允许</em> 由 LLM 承担的部分。</p>
+<p>四类 LLM 角色仅在外部调度器的指令下工作。这个调度器（<em>编排器</em>）是一个确定性的控制平面，使整个框架可复现、可审计、能够抵御奖励黑客攻击。它是系统中 <em>不允许</em> 由 LLM 承担的部分。</p>
 
 <p class="lede" style="font-size: 17px; margin-bottom: 24px;">
 编排器是一段确定性的 Python 控制平面。它调度结构化 LLM 调用，强制信息边界，应用候选编辑，运行不变量与回测，决定接受或拒绝，更新记忆，并将产物提交到 git。它不作任何主观判断。
@@ -1423,7 +1445,7 @@ fallback_if_rejected: |
   </thead>
   <tbody>
     <tr><td><code>ContextBuilder</code></td><td>构造每次 LLM 调用所看到的角色专属上下文；强制脱敏。</td></tr>
-    <tr><td><code>RoleRunner</code></td><td>以类型化输入调用 LLM（编辑器、反思器或策展器），并要求类型化输出。</td></tr>
+    <tr><td><code>RoleRunner</code></td><td>以类型化输入调用 LLM（编辑器、反思器、策展器或翻译器），并要求类型化输出。</td></tr>
     <tr><td><code>ProposalParser</code></td><td>对编辑器的 YAML 输出做语法解析与 schema 校验；无法解析的提案直接拒绝，不会触发回测。</td></tr>
     <tr><td><code>CandidateBuilder</code></td><td>将解析后的编辑应用到一个候选 git 分支；门控接受之前不触碰 <code>main</code>。</td></tr>
     <tr><td><code>SandboxExecutor</code></td><td>在受限命名空间中运行候选指标代码，并设置超时与内存限制。</td></tr>
@@ -2440,7 +2462,12 @@ r^{\text{without } c}_t = \pi_{H \setminus \{c\}}(X_{\le t})\, R_{t+1} - \ldots
 \Delta r^{c}_t \;=\; r^{\text{with } c}_t \;-\; r^{\text{without } c}_t, \qquad
 \Delta S_c \;=\; \sqrt{252}\;\frac{\overline{\Delta r^{c}_t}}{\operatorname{std}(\Delta r^{c}_t)}
 \]
-<span class="where">\(\Delta S_c\) 是卡片 \(c\) 加入到 \(H \setminus \{c\}\) 时所贡献的年化信息率。Leave-one-out，在 \(D_\text{sealed}\) 上仅在运行末尾评测一次。</span>
+<span class="where">\(\Delta S_c\) 是卡片 \(c\) 加入到 \(H \setminus \{c\}\) 时所贡献的年化信息率。在 \(D_\text{sealed}\) 上仅在运行末尾评测一次。</span>
+</div>
+
+<div class="aside" style="margin-top: 10px;">
+<span class="aside-label">操作性定义：pathwise 增量（而非严格 LOO）</span>
+本提案在第一阶段把 \(\Delta S_c\) 的操作性定义固定为 <strong>pathwise 增量夏普</strong>：按照该卡片在发现循环中被接受的时间顺序，将 "已接受卡片 \(\le c-1\) 的策略" 与 "已接受卡片 \(\le c\) 的策略" 在密封窗口上的日收益相减，得到 \(\Delta r^{c}_t\)。这一定义满足两点工程约束：(1) 它与发现过程本身的组合方式一致，每张卡片承担其 <em>边际</em> 贡献，而不是回顾性地被赋予对完整集合的反事实贡献；(2) 它只需要在密封窗口上对 \(|\text{cards}|\) 个累计策略各做一次回测，复杂度 \(\mathcal{O}(N)\) 而不是严格 LOO 所需的 \(\mathcal{O}(N \cdot T)\)。第二阶段及之后，可在补充材料里报告完整 LOO 版本作为稳健性检查；H1 的预注册裁定以本节定义的 pathwise 版本为准。
 </div>
 
 <h4>步骤 2 · 对单卡片贡献做分块自助置信区间</h4>
@@ -3309,7 +3336,7 @@ multiple_testing_correction:
   <li>第一阶段发现使用单一标的 SPY，日频，2010-01-04 至 2024-12-31</li>
   <li>三划分：训练 2010–2018，验证 2019–2020，密封 2021–2024；在智能体上下文中以 <code>split_A/B/C</code> 别名出现</li>
   <li>智能体动作空间：Python 纯函数指标编写 + DSL 编辑；八种离散编辑类型</li>
-  <li>三类 LLM 角色：编辑器 / 反思器 / 策展器；本里程碑中策展器为影子模式</li>
+  <li>四类 LLM 角色：编辑器 / 反思器 / 策展器 / 翻译器；本里程碑中策展器为影子模式，翻译器仅在 <code>add_indicator</code> 被接受后做声明式 dossier 输出</li>
   <li>对 LLM 的验证反馈仅为类别，绝不为数值或曲线</li>
   <li>假设结果由编排器机械化判定，不由反思器判定</li>
   <li>所有回测之前先运行不变量：schema、AST 静态、前缀稳定性动态、成本模型、沙箱、无数据窥探</li>
@@ -3333,7 +3360,7 @@ multiple_testing_correction:
   <li>每一次新增或修改指标且被接受的试验，须导出因子卡片（§6.6）</li>
   <li>日历标签（年份、命名事件）仅出现在面向人的最终报告与编排器内部日志中，绝不出现在智能体提示模板或任何 <code>ContextBuilder</code> 可读的文件中</li>
   <li><strong>HL 的学习对象</strong>是启发式系统：<code>indicators/*.py</code>（Python 因子函数）、<code>strategy.yaml</code>、若干显式记忆层、git 谱系四者的并集。在此系统内 <em>LBG 真正产出的核心产物</em>，是智能体编写的 Python 因子函数集合。Dossier 与因子卡片是这些函数的翻译/元数据视图，并非交付物本身</li>
-  <li><strong>H1 的统计单位</strong>是 <em>幸存的 Python 因子函数</em>，通过其因子卡片做计数操作：一个函数其个体 leave-one-out 增量密封夏普的 95% 分块自助置信区间下界 &gt; 0（block_len 10、n_bootstrap 1000）。H1 裁定为等同算力预算下各系统的计数对比；H1 强结论要求 LBG-Trader 的计数严格大于最强基线，且不低于 \(\tau = 3\)。单卡片验证的多重检验校正用 Benjamini-Hochberg 控制 FDR 于 0.10</li>
+  <li><strong>H1 的统计单位</strong>是 <em>幸存的 Python 因子函数</em>，通过其因子卡片做计数操作：一个函数其个体 <em>pathwise 增量密封夏普</em>（按发现循环中卡片被接受的时间顺序，逐次比较"已接受卡片 \(\le c-1\)"与"已接受卡片 \(\le c\)"的策略在密封窗口上的日收益）的 95% 分块自助置信区间下界 &gt; 0（block_len 10、n_bootstrap 1000）。H1 裁定为等同算力预算下各系统的计数对比；H1 强结论要求 LBG-Trader 的计数严格大于最强基线，且不低于 \(\tau = 3\)。单卡片验证的多重检验校正用 Benjamini-Hochberg 控制 FDR 于 0.10。完整 LOO 版本作为稳健性附录报告，但 H1 的预注册裁定以 pathwise 版本为准</li>
   <li>因子卡片 schema（§6.6）锁定为 <code>knowledge/factors/dossiers/</code> 中输入 dossier schema 的 <em>超集</em>：声明式字段（<code>factor_name</code>、<code>core_analysis</code>、<code>parameterization</code>、<code>combination_and_fusion</code>）加可执行证据（<code>python_implementation_path</code>、<code>prefix_stability_passed</code>、<code>sealed_evidence</code>、<code>status</code>）。这使 Python ↔ dossier 双向翻译有明确定义</li>
   <li>已验证因子库为追加式，跨多次重新发现共享。第 N 次运行的幸存函数（及其卡片）进入第 N+1 次运行的种子池；在新密封窗口上重新验证后，要么保留、要么标 <code>deprecated</code>、要么合并。函数绝不无记录丢弃</li>
   <li>外部因子档案存放于 <code>knowledge/factors/</code>（只读、跨多次运行共享），仅通过 <code>lbg.knowledge.search()</code> 暴露给编辑器。任何档案引用都不豁免任何不变量或密封测试</li>
@@ -3348,8 +3375,8 @@ multiple_testing_correction:
 </section>
 
 <footer>
-  <span>lbg-trader · proposal v2026.05.22 r3 · 规范冻结</span>
-  <span>第一至四部分 · 25 节 · 8 张图 · 14 个数学块 · 27 条已锁定决策</span>
+  <span>lbg-trader · proposal v2026.05.26 r5 · 规范冻结 · 四类角色 · pathwise H1</span>
+  <span>第一至四部分 · 25 节 · 8 张图 · 14 个数学块 · 32 条已锁定决策 · 图 2 更新为四角色版式</span>
 </footer>
 
 </div>

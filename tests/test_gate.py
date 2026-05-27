@@ -40,13 +40,18 @@ from lbg.schemas import ValidationSignal
 # -------- complexity --------
 
 
-def _strategy_with(indicators: list[IndicatorSpec], filters: list = None) -> Strategy:
+def _strategy_with(
+    indicators: list[IndicatorSpec],
+    filters: list | None = None,
+    exit_filters: list | None = None,
+) -> Strategy:
     return Strategy(
         name="x",
         indicators=indicators,
         entry=CrossAboveRule(rule="cross_above", fast=indicators[0].name, slow=indicators[-1].name),
         exit=CrossBelowRule(rule="cross_below", fast=indicators[0].name, slow=indicators[-1].name),
         filters=filters or [],
+        exit_filters=exit_filters or [],
         sizing=FixedFractionSizing(mode="fixed_fraction", fraction=1.0, max_position=1.0),
     )
 
@@ -77,6 +82,26 @@ def test_complexity_increases_with_filter(tmp_path):
             IndicatorSpec(name="b", fn="sma", params={"period": 50}),
         ],
         filters=[IndicatorAboveFilter(rule="indicator_above", indicator="a", threshold=0.0)],
+    )
+    delta = complexity_score(s_filtered, indicators_dir=tmp_path) - complexity_score(
+        s_base, indicators_dir=tmp_path
+    )
+    assert delta == pytest.approx(0.5)
+
+
+def test_complexity_increases_with_exit_filter(tmp_path):
+    s_base = _strategy_with(
+        [
+            IndicatorSpec(name="a", fn="sma", params={"period": 20}),
+            IndicatorSpec(name="b", fn="sma", params={"period": 50}),
+        ]
+    )
+    s_filtered = _strategy_with(
+        [
+            IndicatorSpec(name="a", fn="sma", params={"period": 20}),
+            IndicatorSpec(name="b", fn="sma", params={"period": 50}),
+        ],
+        exit_filters=[IndicatorAboveFilter(rule="indicator_above", indicator="a", threshold=0.0)],
     )
     delta = complexity_score(s_filtered, indicators_dir=tmp_path) - complexity_score(
         s_base, indicators_dir=tmp_path

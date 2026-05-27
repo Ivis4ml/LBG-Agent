@@ -173,3 +173,30 @@ def test_total_alpha_cards_aggregates_emitted_per_iteration(working_tree):
     res = cr.run(n_iterations=2, budget_per_iteration=2)
     assert res.total_alpha_cards == 0
     assert res.total_accepted == 0
+
+
+def test_seal_only_last_iteration_skips_intermediate_vaults(working_tree):
+    """Publication mode: sealed vault only on the final iteration.
+
+    The campaign should still execute every iteration's Discovery loop;
+    `seal_only_last_iteration` controls only whether `_seal()` runs and
+    the per-iteration vault is written.
+    """
+    runner = _AlwaysAbortingRunner()
+    cr = CampaignRunner(working_tree, runner=runner)
+    cr.run(n_iterations=3, budget_per_iteration=1, seal_only_last_iteration=True)
+    vault_0 = working_tree / "campaigns" / "iteration_000" / "sealed_test_final.json"
+    vault_1 = working_tree / "campaigns" / "iteration_001" / "sealed_test_final.json"
+    vault_2 = working_tree / "campaigns" / "iteration_002" / "sealed_test_final.json"
+    assert not vault_0.exists(), "iteration 0 should NOT seal in publication mode"
+    assert not vault_1.exists(), "iteration 1 should NOT seal in publication mode"
+    assert vault_2.exists(), "final iteration must seal in publication mode"
+
+
+def test_seal_only_last_iteration_with_one_iteration_still_seals(working_tree):
+    """Edge case: n_iterations=1 + seal_only_last must still produce a vault."""
+    runner = _AlwaysAbortingRunner()
+    cr = CampaignRunner(working_tree, runner=runner)
+    cr.run(n_iterations=1, budget_per_iteration=1, seal_only_last_iteration=True)
+    vault = working_tree / "campaigns" / "iteration_000" / "sealed_test_final.json"
+    assert vault.exists()

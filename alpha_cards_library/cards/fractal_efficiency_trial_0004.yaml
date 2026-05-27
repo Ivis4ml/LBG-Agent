@@ -1,0 +1,28 @@
+alpha_id: fractal_efficiency_trial_0004
+source_trial: 4
+source_commit: 7cb25dcbf71f33b213a0932e09b238911803cb82
+status: accepted
+signal:
+  indicator: fractal_efficiency
+  fn: fractal_efficiency
+  params:
+    period: 20
+  source_path: indicators/fractal_efficiency.py
+evidence:
+  train_summary:
+    sharpe: 0.6772193359258031
+    max_drawdown: -0.10594866060947827
+    turnover: 7.349536014140522
+    num_trades: 66.0
+  validation_signal: accepted
+  hypothesis_outcome: partially_confirmed
+  sealed_summary: null
+dossier_link:
+  factor_name: FractalEfficiency
+  dossier_path: knowledge/factors/dossiers/FractalEfficiency_20260426_192530.txt
+  matched_via: editor_cite
+attach_config:
+  rule: indicator_above
+  threshold: 0.25
+  target: entry
+  rearm_threshold: null

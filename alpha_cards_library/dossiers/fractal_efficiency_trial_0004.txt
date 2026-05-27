@@ -1,0 +1,30 @@
+{
+  "factor_name": "fractal_efficiency",
+  "lbg_provenance": {
+    "kind": "lbg_emitted",
+    "trial_id": 4,
+    "source_commit": "7cb25dcbf71f33b213a0932e09b238911803cb82",
+    "source_path": "indicators/fractal_efficiency.py",
+    "cited_factors": [
+      "FractalEfficiency"
+    ],
+    "标注": "observation"
+  },
+  "严密的因子定义": "[observation] 给定收盘价序列 C_t 和参数 period=N。net_move_t = |C_t - C_{t-N}|。path_length_t = sum_{i=t-N+1}^{t} |C_i - C_{i-1}|，若 path_length_t = 0 则置为缺失。fractal_efficiency_t = clip(net_move_t / path_length_t, 0, 1)。输出列名为 fractal_efficiency。",
+  "金融学意义阐释": "[inference] 该因子度量 N 日窗口内价格位移相对于实际路径长度的比例。值越高，说明走势越接近单向移动；值越低，说明同样窗口内往返噪声更多。Editor 假设它可作为趋势质量门控，用于减少噪声型 SMA 交叉入场，同时避免过度压缩交易次数。",
+  "参数化实现方式": "[observation] period=20。period 必须 >= 2。输入使用 df['close']。使用 close.shift(period)、close.diff().abs().rolling(period).sum()、replace(0.0, pd.NA)、astype(float)、clip(lower=0.0, upper=1.0)。无额外平滑参数、阈值参数或填充值参数。",
+  "实测训练表现": {
+    "sharpe": 0.6772,
+    "max_drawdown": -0.1059,
+    "turnover": 7.35,
+    "num_trades": 66,
+    "window": "split_A (LBG 训练窗口，约 2266 个 bar)",
+    "notes": "[observation] validation_signal 为 accepted。未测量 IC、ICIR、Rank IC、月度 alpha 或跨品种表现。"
+  },
+  "数据预处理与清洗要求": "[observation] 需要 close 列为可数值化的时间序列，并按时间顺序排列。前 period 个位置因 shift 与 rolling 产生缺失。若窗口内绝对路径长度为 0，则该点输出缺失。源码不做 fillna。prefix_stability 不变式成立：每个时点只依赖当前及过去 close，追加未来数据不应改变既有输出。",
+  "稳健性与过拟合检验": "[observation] LBG 记录的 split_A 训练 Sharpe 为 0.6772，categorical validation_signal 为 accepted。[inference] 该结论仅说明该 trial 在 SPY 日频训练窗口内通过接受规则；不能推出其在其他窗口、品种或频率上稳健。",
+  "因子衰减速度与最优持有期": "[inference] 训练窗口约 2266 个 bar、num_trades=66，隐含平均每笔交易间隔约 34.3 个 bar。该数值来自交易次数与窗口长度的粗略比值，不等同于实测最优持有期；源码本身只定义 20 日效率窗口。",
+  "可与哪些因子概念组合融合": "[inference] cited_factors 包含 FractalEfficiency。可与趋势方向类信号组合：方向信号决定多空或入场方向，fractal_efficiency 只过滤路径效率较低的区间。也可与波动或成交量条件组合，用于区分单向移动、震荡移动和低流动性停滞，但这些组合未在给定材料中实测。",
+  "适用市场与品种范围": "[observation] 本因子仅在 SPY 日频上经过 LBG 协议验证。[inference] 其他市场、品种、频率或组合层面的适用性未测量，只能作为待检验假设。",
+  "因子逻辑分类体系": "[inference] 逻辑分类为趋势质量 / 路径效率 / 分形效率类因子。它不是方向动量本身，而是衡量既定窗口内价格路径是否高效单向。"
+}

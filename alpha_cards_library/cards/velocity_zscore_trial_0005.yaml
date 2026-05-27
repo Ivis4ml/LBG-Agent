@@ -1,0 +1,25 @@
+alpha_id: velocity_zscore_trial_0005
+source_trial: 5
+source_commit: 77d52f6e1667abd6b112ff20753a182658410a4c
+status: accepted
+signal:
+  indicator: velocity_zscore
+  fn: velocity_zscore
+  params:
+    lookback: 60
+  source_path: indicators/velocity_zscore.py
+evidence:
+  train_summary:
+    sharpe: 0.7996050192271779
+    max_drawdown: -0.11996868427075646
+    turnover: 13.58550596553248
+    num_trades: 122.0
+  validation_signal: accepted
+  hypothesis_outcome: partially_confirmed
+  sealed_summary: null
+dossier_link: null
+attach_config:
+  rule: indicator_below
+  threshold: -2.0
+  target: exit
+  rearm_threshold: -0.5

@@ -1,0 +1,26 @@
+alpha_id: ema_above_sma_trial_0000
+source_trial: 0
+source_commit: 5e02f667d136ae033dc1e66e78abdaa3cc6aed0c
+status: accepted
+signal:
+  indicator: ema_above_sma
+  fn: ema_above_sma
+  params:
+    fast_period: 20
+    slow_period: 100
+  source_path: indicators/ema_above_sma.py
+evidence:
+  train_summary:
+    sharpe: 0.8701745256960619
+    max_drawdown: -0.12192483546123245
+    turnover: 10.690234202386215
+    num_trades: 96.0
+  validation_signal: accepted
+  hypothesis_outcome: partially_confirmed
+  sealed_summary: null
+dossier_link: null
+attach_config:
+  rule: indicator_above
+  threshold: 0.0
+  target: entry
+  rearm_threshold: null

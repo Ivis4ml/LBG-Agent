@@ -1,0 +1,25 @@
+alpha_id: roc_n_trial_0000
+source_trial: 0
+source_commit: 33cfbd8b3be8032fcbc6b070f75848c91a268a3b
+status: accepted
+signal:
+  indicator: roc_n
+  fn: roc_n
+  params:
+    period: 20
+  source_path: indicators/roc_n.py
+evidence:
+  train_summary:
+    sharpe: 0.8062640190369788
+    max_drawdown: -0.1199686842707568
+    turnover: 13.362792752982767
+    num_trades: 120.0
+  validation_signal: accepted
+  hypothesis_outcome: partially_confirmed
+  sealed_summary: null
+dossier_link: null
+attach_config:
+  rule: indicator_above
+  threshold: 0.0
+  target: entry
+  rearm_threshold: null

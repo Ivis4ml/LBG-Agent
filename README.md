@@ -32,8 +32,10 @@ The framework runs a multi-trial Discovery loop. Each trial:
    sycophancy.
 5. Every ten accepted trials, the **Curator** (LLM, shadow mode) compresses
    the four memory documents.
-6. After the configured budget, the sealed test window opens *exactly once*
-   and the H1 verdict is computed via a moving block bootstrap.
+6. After the configured budget, the sealed test window opens *exactly once*.
+   Primary H1 is the count of sealed-validated alpha cards; the final
+   strategy Sharpe bootstrap is reported separately as a supplementary
+   diagnostic.
 
 ## The four LLM agents
 
@@ -71,7 +73,7 @@ lbg/
   stage2/                 # forward validation engine
   stage3/                 # PaperTradingEngine (bar-by-bar streaming)
   translator.py           # 4th LLM role · .py → JSON dossier (round-trip bridge)
-  verdict/                # H1 moving block bootstrap + analysis_plan
+  verdict/                # alpha-card H1 + supplementary Sharpe verdicts
 
 knowledge/factors/        # 564 read-only seed dossiers + index.jsonl
 scripts/
@@ -123,27 +125,57 @@ open /tmp/lbg_camp/artifacts/live/dashboard.html
 
 ## Switching LLM providers
 
-Two providers are registered out of the box: Anthropic (default) and
-MIMO (Anthropic-compatible REST endpoint).
+Four providers are registered out of the box:
+
+| Provider     | Auth                                | Default model      | When to use                                      |
+|--------------|-------------------------------------|--------------------|--------------------------------------------------|
+| `anthropic`  | `ANTHROPIC_API_KEY` (per-call)      | claude-sonnet-4-6  | production / publication runs                    |
+| `mimo`       | `MIMO_API_KEY` (per-call)           | mimo-v2.5-pro      | Anthropic-compatible REST alternative            |
+| `claude_cli` | Claude Code OAuth (subscription)    | claude-sonnet-4-6  | dev / testing using a Claude Code Max plan       |
+| `codex_cli`  | ChatGPT OAuth (subscription)        | gpt-5.5            | dev / testing using a ChatGPT Plus/Pro plan      |
 
 ```bash
+# direct API
 LBG_PROVIDER=mimo uv run python scripts/long_discovery.py --budget 5 --out /tmp/lbg_mimo
+
+# Claude Code CLI -- spawns `claude -p` per call, no per-call API cost
+LBG_PROVIDER=claude_cli uv run python scripts/long_discovery.py --budget 5 --out /tmp/lbg_cli
+
+# Codex CLI -- spawns `codex exec` per call, charged to ChatGPT subscription
+LBG_PROVIDER=codex_cli uv run python scripts/long_discovery.py --budget 5 --out /tmp/lbg_codex
+
+# also exposed as --provider on both scripts
+uv run python scripts/campaign.py --provider claude_cli --iterations 2 --budget 3 --out /tmp/lbg_cli
+uv run python scripts/campaign.py --provider codex_cli  --iterations 2 --budget 3 --out /tmp/lbg_codex
 ```
 
-Or in code:
+In code:
 
 ```python
 from lbg.orchestrator import RoleRunner
-runner = RoleRunner(provider="mimo")          # or provider="anthropic"
+runner = RoleRunner(provider="claude_cli")    # or "anthropic" | "mimo" | "codex_cli"
 ```
 
-The Orchestrator is provider-agnostic. Both providers produce bit-identical
-sealed verdicts on the same baseline strategy, by design.
+Both subscription-CLI providers spawn a fresh subprocess per call. They
+require the respective binary on PATH and an active subscription login:
+
+- `claude_cli` — run `claude` interactively once. Invokes
+  `claude -p --output-format json --model <model> --system-prompt <sys>`
+  with tools / sessions / slash commands disabled.
+- `codex_cli` — run `codex login` once. Invokes
+  `codex exec --ephemeral --sandbox read-only --ignore-user-config -m <model>
+  -o <tmp> -` with the system + user prompts merged on stdin (Codex has
+  no separate `--system-prompt` slot).
+
+Cold-start overhead is ~1-3s per call; in exchange there is no per-token
+API billing on subscription plans. Both wrappers retry with exponential
+backoff (30s, 60s, 120s) on rate-limit / quota errors. The Orchestrator
+stays provider-agnostic.
 
 ## Testing
 
 ```bash
-uv run pytest -q                # 440 tests; skips live LLM tests if keys absent
+uv run pytest -q                # 479 tests; skips live LLM tests if keys absent
 uv run ruff check               # lint
 uv run ruff format --check      # format
 ```
@@ -180,16 +212,23 @@ Stage 4 (live capital) is intentionally out of scope.
 | Live browser dashboard | done, `artifacts/live/dashboard.html` |
 | Active Curator mode | not enabled (shadow only) |
 
-Experimental result on the SMA(20/50) baseline across six campaigns
-(90 trials total, Anthropic Opus 4.7, strict + permissive gate variants):
-`H1 strong = False`, `H1 weak = False`. 10 accepts overall, 0 of which
-were `add_indicator` — so 0 alpha cards have landed and the Translator
-agent's wiring (PROPOSAL §6.7 round-trip bridge) remains untriggered.
-v5b iter 1 produced the first non-trivial sealed Sharpe (0.570, 5×
-baseline) via a `change_exit_rule` accept; see `docs/STAGE1_REPORT.html`
-§ 10 + § 11 for the full trajectory. The strategy underperforms
-buy-and-hold on the sealed window by 0.75 Sharpe units; the framework
-reported this cleanly. See `docs/STAGE1_REPORT.html` § 7 – § 8.
+Experimental result on the SMA(20/50) baseline across six historical
+campaigns (90 trials total, strict + permissive gate variants): primary
+H1 remains false because 0 `add_indicator` accepts produced 0 alpha cards.
+Earlier reports that discuss `H1 weak` from strategy-level ΔSharpe should
+be read as supplementary strategy diagnostics, not as the current proposal's
+primary H1. The default Anthropic model is now `claude-sonnet-4-6` to keep
+new discovery runs cheaper; Opus remains available through `RoleRunner(model=...)`.
+
+The primary H1 metric is now computable end-to-end. `lbg.verdict.per_card.compute_per_card_sealed_validation`
+runs the pathwise incremental Sharpe + moving-block bootstrap for each
+accepted alpha card during `Discovery._seal` and writes
+`incremental_sharpe_ci_lower` into `card.evidence.sealed_summary`;
+`compute_alpha_card_h1_verdict` then counts cards with CI lower bound > 0.
+The live dashboard surfaces both the count and per-card CI bounds.
+For honest single-shot H1 evidence, pass `--seal-only-last` to
+`scripts/campaign.py`; the default still seals every iteration for
+dashboard visibility (development mode, effective n=1).
 
 ## License
 

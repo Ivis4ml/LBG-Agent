@@ -31,6 +31,21 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--budget", type=int, default=20)
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--repo", type=Path, default=Path("/Users/xinyu/Code/LBG-Agent"))
+    p.add_argument(
+        "--provider",
+        type=str,
+        default=None,
+        help="anthropic | mimo | claude_cli. Defaults to the LBG_PROVIDER env "
+        "or anthropic. claude_cli routes through the local `claude -p` binary.",
+    )
+    p.add_argument("--model", type=str, default=None, help="model name (e.g. claude-opus-4-7)")
+    p.add_argument(
+        "--library-dir",
+        type=Path,
+        default=None,
+        help="durable alpha-card library to sync into (default: <repo>/alpha_cards_library/). "
+        "Pass --library-dir '' to disable persistence.",
+    )
     args = p.parse_args(argv)
 
     out: Path = args.out.resolve()
@@ -85,11 +100,18 @@ def main(argv: list[str] | None = None) -> int:
     os.chdir(out)
 
     from lbg.orchestrator.discovery import Discovery
+    from lbg.orchestrator.role_runner import RoleRunner
     from lbg.sealed_vault import SealedVault
 
     logger.info("starting long Discovery run, budget=%d", args.budget)
     t0 = time.monotonic()
-    disc = Discovery(repo_root=out)
+    runner_kwargs = {}
+    if args.provider:
+        runner_kwargs["provider"] = args.provider
+    if args.model:
+        runner_kwargs["model"] = args.model
+    runner = RoleRunner(**runner_kwargs) if runner_kwargs else None
+    disc = Discovery(repo_root=out, runner=runner) if runner else Discovery(repo_root=out)
     vault = SealedVault(out / "artifacts/sealed/sealed_test_final.json")
     result = disc.run(
         budget=args.budget,
@@ -99,6 +121,27 @@ def main(argv: list[str] | None = None) -> int:
     )
     elapsed = time.monotonic() - t0
     logger.info("elapsed: %.1f s", elapsed)
+
+    # Sync newly-emitted alpha cards into the durable library so they
+    # survive /tmp cleanup. Same default as scripts/campaign.py: the repo's
+    # own alpha_cards_library/. Pass --library-dir '' to opt out.
+    if args.library_dir is None:
+        library_dir: Path | None = args.repo.resolve() / "alpha_cards_library"
+    elif str(args.library_dir).strip() == "":
+        library_dir = None
+    else:
+        library_dir = args.library_dir.resolve()
+    if library_dir is not None:
+        from lbg.alpha_card_library import AlphaCardLibrary
+
+        sync = AlphaCardLibrary(library_dir).sync_from_run(out, iteration_id=None)
+        logger.info(
+            "library sync: +%d new cards (%d dup), +%d dossiers, total %d",
+            sync.new_cards,
+            sync.duplicate_cards,
+            sync.new_dossiers,
+            sync.library_total,
+        )
 
     summary = {
         "budget": args.budget,

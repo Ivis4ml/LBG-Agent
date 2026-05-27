@@ -179,3 +179,100 @@ def test_event_ordering_preserved(tmp_path):
     w.campaign_end(total_accepted=1, total_alpha_cards=0, elapsed_sec=10.0)
     kinds = [e["kind"] for e in _events(w.jsonl_path)]
     assert kinds == ["iter_start", "trial", "trial", "iter_end", "campaign_end"]
+
+
+def test_library_snapshot_event_shape(tmp_path):
+    """library_snapshot carries the library state the dashboard panel reads."""
+    w = LiveStatusWriter(tmp_path)
+    cards = [
+        {
+            "alpha_id": "vol_regime_zscore_trial_0001",
+            "source_trial": 1,
+            "fn": "vol_regime_zscore",
+            "indicator": "vol_regime_zscore",
+            "params": {"vol_period": 20, "zscore_lookback": 252},
+            "attach_config": {
+                "rule": "indicator_above",
+                "threshold": 1.5,
+                "rearm_threshold": 0.5,
+                "target": "exit",
+            },
+            "sealed_summary": {
+                "incremental_sharpe_point": 0.27,
+                "incremental_sharpe_ci_lower": -0.09,
+                "incremental_sharpe_ci_upper": 0.68,
+            },
+            "dossier_factor": None,
+        },
+        {
+            "alpha_id": "body_to_range_trial_0005",
+            "source_trial": 5,
+            "fn": "body_to_range",
+            "indicator": "body_to_range",
+            "params": {"period": 10},
+            "attach_config": None,
+            "sealed_summary": None,
+            "dossier_factor": "BarBody",
+        },
+    ]
+    w.library_snapshot(iter_id=0, cards=cards, target_distinct_fns=5)
+    events = _events(w.jsonl_path)
+    assert len(events) == 1
+    ev = events[0]
+    assert ev["kind"] == "library_snapshot"
+    assert ev["target_distinct_fns"] == 5
+    assert ev["current_distinct_fns"] == 2
+    assert set(ev["distinct_fns"]) == {"vol_regime_zscore", "body_to_range"}
+    assert ev["library_total"] == 2
+    assert len(ev["cards"]) == 2
+
+
+def test_alpha_card_summary_event_shape(tmp_path):
+    """alpha_card_summary carries the primary-H1 fields the dashboard reads."""
+    w = LiveStatusWriter(tmp_path)
+    h1 = {
+        "candidate_card_count": 2,
+        "validated_factor_count": 1,
+        "best_baseline_count": 0,
+        "tau": 3,
+        "h1_strong": False,
+        "h1_weak": True,
+    }
+    per_card = [
+        {
+            "alpha_id": "good",
+            "source_trial": 1,
+            "incremental_sharpe_point": 0.12,
+            "incremental_sharpe_ci_lower": 0.02,
+            "incremental_sharpe_ci_upper": 0.21,
+        },
+        {
+            "alpha_id": "bad",
+            "source_trial": 2,
+            "incremental_sharpe_point": -0.04,
+            "incremental_sharpe_ci_lower": -0.18,
+            "incremental_sharpe_ci_upper": 0.08,
+        },
+        {
+            "alpha_id": "orphan",
+            "source_trial": 999,
+            "validation_error": "trial commit not found",
+        },
+    ]
+    w.alpha_card_summary(iter_id=0, h1_verdict=h1, per_card_results=per_card)
+    events = _events(w.jsonl_path)
+    assert len(events) == 1
+    ev = events[0]
+    assert ev["kind"] == "alpha_card_summary"
+    assert ev["validated_factor_count"] == 1
+    assert ev["candidate_card_count"] == 2
+    assert ev["h1_weak"] is True
+    assert ev["h1_strong"] is False
+    cards = ev["cards"]
+    assert {c["alpha_id"] for c in cards} == {"good", "bad", "orphan"}
+    good = next(c for c in cards if c["alpha_id"] == "good")
+    assert good["validated"] is True
+    assert good["ci_lower"] == 0.02
+    orphan = next(c for c in cards if c["alpha_id"] == "orphan")
+    assert orphan["validated"] is False
+    assert "error" in orphan

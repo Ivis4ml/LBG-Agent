@@ -1,0 +1,43 @@
+{
+  "factor_name": "kama_ratio",
+  "lbg_provenance": {
+    "kind": "lbg_emitted",
+    "trial_id": 3,
+    "source_commit": "3a6d78c",
+    "source_path": "indicators/kama_ratio.py",
+    "cited_factors": [
+      "KAMA",
+      "AMA"
+    ],
+    "evidence_type": "observation"
+  },
+  "严密的因子定义": "observation: 令 C_t 为 close。change_t = |C_t - C_{t-period}|。volatility_t = rolling_sum_period(|C_t - C_{t-1}|)。ER_t = clip(change_t / volatility_t, 0, 1)，当分母为 0 或缺失时置为 0。fast_sc = 2 / (fast + 1)，slow_sc = 2 / (slow + 1)。SC_t = (ER_t * (fast_sc - slow_sc) + slow_sc)^2。KAMA 递推为 K_0 = C_0，K_t = K_{t-1} + SC_t * (C_t - K_{t-1})。因子输出 R_t = C_t / K_t，名称为 kama_ratio。",
+  "金融学意义阐释": "inference: 该因子衡量价格相对自适应均线的位置。KAMA 在趋势效率较高时加快响应，在噪声较高时放慢响应；因此 close / KAMA 可作为自适应入场过滤器，用于区分价格是否真正站上随市场噪声调整的基准线。Editor hypothesis 指出，它可能以不同于固定窗口 ROC、MACD、EMA、Donchian、FractalEfficiency 与 Aroon 的方式过滤较弱的 SMA-cross entry。",
+  "参数化实现方式": "observation: period=10，用于计算效率比率的回看窗口；fast=2，对应 fast_sc=2/(2+1)；slow=30，对应 slow_sc=2/(30+1)。参数约束为 period >= 2，1 <= fast <= slow。输出为 close / KAMA 的无量纲比值。",
+  "实测训练表现": {
+    "sharpe": 0.6153,
+    "max_drawdown": -0.1177,
+    "turnover": 6.681,
+    "num_trades": 60,
+    "window": "split_A (LBG 训练窗口，约 2266 个 bar)",
+    "notes": "observation: validation_signal 为 accepted；未测量 IC、ICIR、Rank IC、月度 alpha 或样本外表现。"
+  },
+  "数据预处理与清洗要求": "observation: 输入必须包含 close 列。源码使用 close.shift(period)、close.diff().abs().rolling(period).sum() 与 fillna(0.0) 处理效率比率早期缺失值；volatility 为 0 时先替换为 NaN，再将 ER 填为 0。KAMA 递推只依赖当前及历史 close、历史 KAMA 与 trailing rolling 结果，满足 prefix_stability；不得使用未来数据。",
+  "稳健性与过拟合检验": "observation: 该 trial 在 split_A 训练窗口 Sharpe 为 0.6153，categorical validation_signal 为 accepted。inference: accepted 只说明在 LBG 当前协议下通过了训练窗口筛选，不能证明样本外稳健性，也不能证明在其他 ticker、市场或频率上有效。",
+  "因子衰减速度与最优持有期": "inference: split_A 约 2266 个 bar 内产生 60 笔交易，平均每笔交易间隔约 37.77 个 bar。该数值只由 num_trades 与窗口长度推导，不等同于真实最优持有期；更合理的解释是该信号在日频训练窗口中偏中低频换手。",
+  "可与哪些因子概念组合融合": "inference: cited_factors 为 KAMA 与 AMA。本因子可与自适应均线类因子组合，用 close/KAMA 的相对位置作为趋势确认或 entry gate；也可与固定窗口动量、突破或效率类信号组合，检验自适应平滑是否能过滤固定窗口信号中的噪声。该组合假设未在本 dossier 可见数据中单独测量。",
+  "适用市场与品种范围": "observation: 本因子仅在 SPY 日频上经过 LBG 协议验证。inference: 其他市场、品种、频率与交易成本设定下的有效性均未测量。",
+  "因子逻辑分类体系": "inference: 自适应趋势跟随 / 均线相对位置 / 噪声调整型动量过滤。分类依据为源码中的 KAMA 效率比率、递推自适应平滑结构，以及 cited_factors KAMA、AMA。",
+  "未测量项目": {
+    "evidence_type": "observation",
+    "items": [
+      "IC",
+      "ICIR",
+      "Rank IC",
+      "横截面收益预测能力",
+      "月度 alpha",
+      "样本外表现",
+      "多品种表现"
+    ]
+  }
+}

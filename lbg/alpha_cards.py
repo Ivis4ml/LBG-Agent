@@ -83,6 +83,28 @@ class AlphaCardDossierLink(BaseModel):
     matched_via: str = Field(default="name_match")
 
 
+class AlphaCardAttach(BaseModel):
+    """The attach configuration the Editor used when the indicator was
+    accepted. Captures *how* the factor was wired into the strategy so
+    a future campaign can auto-inject it as the starting strategy state
+    (PROPOSAL §20 lock #30 "validated library factors enter seed pool").
+
+    `target`:
+      - "entry" : AND-combine with the entry cross rule (filter in
+                  `strategy.filters`)
+      - "exit"  : OR-combine into the exit signal (filter in
+                  `strategy.exit_filters`); paired with `rearm_threshold`
+                  it controls the auto-resume-after-mute behaviour
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    rule: str  # indicator_above | indicator_below
+    threshold: float
+    target: str  # entry | exit
+    rearm_threshold: float | None = None
+
+
 class AlphaCard(BaseModel):
     """One alpha card. Schema is locked per PROPOSAL §20."""
 
@@ -95,6 +117,11 @@ class AlphaCard(BaseModel):
     signal: AlphaCardSignal
     evidence: AlphaCardEvidence
     dossier_link: AlphaCardDossierLink | None = None
+    # Attach configuration captured at acceptance time -- the wiring needed
+    # to re-instantiate this factor on a future campaign's baseline strategy.
+    # Optional for backward compatibility with cards written before this
+    # field existed; new emissions always include it.
+    attach_config: AlphaCardAttach | None = None
 
 
 class AlphaCardWriter:
@@ -148,6 +175,7 @@ class AlphaCardWriter:
         validation_signal: ValidationSignal,
         hypothesis_outcome: HypothesisOutcome,
         dossier_link: AlphaCardDossierLink | None = None,
+        attach_config: AlphaCardAttach | None = None,
     ) -> Path:
         """Build + write the alpha card for an accepted add_indicator trial.
 
@@ -185,6 +213,7 @@ class AlphaCardWriter:
                 sealed_summary=None,
             ),
             dossier_link=dossier_link,
+            attach_config=attach_config,
         )
         return self.write(card)
 
@@ -251,6 +280,7 @@ def match_dossier_from_citation(
 
 __all__ = [
     "AlphaCard",
+    "AlphaCardAttach",
     "AlphaCardDossierLink",
     "AlphaCardEvidence",
     "AlphaCardSignal",

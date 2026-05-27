@@ -1,0 +1,29 @@
+{
+  "factor_name": "aroon_up_minus_down",
+  "lbg_provenance": {
+    "kind": "lbg_emitted",
+    "trial_id": 1,
+    "source_commit": "e4f7e0df",
+    "source_path": "indicators/aroon_up_minus_down.py",
+    "cited_factors": [
+      "Aroon"
+    ]
+  },
+  "严密的因子定义": "observation: 对每个时点 t，取 high 与 low 的过去 period+1 个观测窗口，默认 period=25。令 bars_since_high_t = period - argmax(high_{t-period:t})，bars_since_low_t = period - argmin(low_{t-period:t})；argmax/argmin 为窗口内从左到右的首次位置。AroonUp_t = (period - bars_since_high_t) / period * 100，AroonDown_t = (period - bars_since_low_t) / period * 100。因子值为 AroonUp_t - AroonDown_t，等价于 100 * (bars_since_low_t - bars_since_high_t) / period，取值范围为 [-100, 100]。",
+  "金融学意义阐释": "observation: 该因子衡量近期最高价与近期最低价谁更接近当前时点。正值表示近期高点比近期低点更新，负值表示近期低点比近期高点更新。inference: 它可作为非 close 派生的趋势择时门控，用 high/low 的新近性过滤仅由收盘价动量或均线交叉触发的较弱趋势信号。",
+  "参数化实现方式": "observation: 参数 period=25，且源码要求 period >= 2。实际滚动窗口 window=period+1=26。输入列只使用 df['high'] 与 df['low']。没有 shift、fillna、clip 或额外平滑。输出 Series 名称为 'aroon_up_minus_down'。",
+  "实测训练表现": {
+    "sharpe": 0.6772,
+    "max_drawdown": -0.1059,
+    "turnover": 7.35,
+    "num_trades": 66,
+    "window": "split_A (LBG 训练窗口，约 2266 个 bar)",
+    "notes": "observation: validation_signal 为 accepted。未测量 IC、ICIR、Rank IC、月度 alpha 或跨品种表现。"
+  },
+  "数据预处理与清洗要求": "observation: 需要 high 与 low 两列。rolling(window) 在窗口未满前产生 NaN，因此默认 period=25 时前 25 个 bar 不产生有效因子值。源码不做缺失值填充；high/low 缺失值清洗应在上游完成。prefix_stability 不变式成立：时点 t 的值只依赖 t 及其之前 period 个 bar，未来数据不会改变过去已计算值。",
+  "稳健性与过拟合检验": "observation: 在 SPY 日频 split_A 训练窗口中，Sharpe=0.6772，max_drawdown=-0.1059，turnover=7.350，num_trades=66，categorical validation_signal=accepted。inference: accepted 表明该 trial 在 LBG 验证门槛下被接受，但不能推出其在其他窗口、其他品种或其他频率上稳定有效。",
+  "因子衰减速度与最优持有期": "inference: split_A 约 2266 个 bar、66 次交易，隐含平均每次交易间隔约 34.3 个 bar。该估计只来自交易次数与训练窗口长度，不是直接测得的最优持有期；真正的衰减曲线未测量。",
+  "可与哪些因子概念组合融合": "observation: cited_factors = ['Aroon']。inference: 可与 Aroon 同类趋势新近性信号组合，也可作为 close-only 动量、均线交叉、ROC、MACD、EMA、Donchian 或 FractalEfficiency 类门控的互补过滤器；该组合假设来自 Editor hypothesis，未在本 dossier 中额外测量。",
+  "适用市场与品种范围": "observation: 本因子仅在 SPY 日频 split_A 训练窗口上经过 LBG 协议验证。inference: 其他市场、品种、频率或样本外窗口的适用性未测量。",
+  "因子逻辑分类体系": "inference: 趋势类 / 价格区间位置类 / high-low recency timing gate。其计算结构来自 Aroon：比较窗口内最高价与最低价距当前时点的时间距离，而不是直接使用 close-only 收益率。"
+}

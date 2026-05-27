@@ -1,7 +1,7 @@
 """Strategy complexity (PROPOSAL.html §4.4 line 1032).
 
     Complexity(H) = λ_1 * |indicators|
-                  + λ_2 * |filters|
+                  + λ_2 * (|entry_filters| + |exit_filters|)
                   + λ_3 * |non_default_params|
                   + λ_4 * LOC_total
                   + λ_5 * #branches_total
@@ -87,7 +87,7 @@ def complexity_score(
     param-count terms still apply.
     """
     n_indicators = len(strategy.indicators)
-    n_filters = len(strategy.filters)
+    n_filters = len(strategy.filters) + len(strategy.exit_filters)
     n_params = sum(len(i.params) for i in strategy.indicators)
 
     loc_total, branch_total = _indicator_source_totals(strategy, Path(indicators_dir))

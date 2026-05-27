@@ -30,25 +30,40 @@ def load_index() -> list[dict[str, Any]]:
 
 
 def search(query: str, top_k: int = 5) -> list[dict[str, Any]]:
-    """Substring match over factor_name + category + one_line, lowercased.
+    """Ranked substring match over factor_name + category + one_line.
 
-    This is a deliberately dumb implementation. Embeddings would be over-
-    engineering at 564 entries; if the corpus ever exceeds a few thousand,
-    swap this for a real retrieval API.
+    Exact and prefix matches on `factor_name` outrank broad category/body
+    hits. This keeps short technical queries such as "sma" from being buried
+    under unrelated words that merely contain the same letters.
     """
     q = query.lower()
     if not q:
         return []
-    out: list[dict[str, Any]] = []
+    scored: list[tuple[int, int, dict[str, Any]]] = []
     for entry in load_index():
-        haystack = " ".join(
-            str(entry.get(k, "")) for k in ("factor_name", "category", "one_line")
-        ).lower()
-        if q in haystack:
-            out.append(entry)
-            if len(out) >= top_k:
-                break
-    return out
+        score = _search_score(entry, q)
+        if score > 0:
+            scored.append((score, len(scored), entry))
+    scored.sort(key=lambda x: (-x[0], x[1]))
+    return [entry for _, _, entry in scored[:top_k]]
+
+
+def _search_score(entry: dict[str, Any], q: str) -> int:
+    name = str(entry.get("factor_name", "")).lower()
+    category = str(entry.get("category", "")).lower()
+    one_line = str(entry.get("one_line", "")).lower()
+    score = 0
+    if q == name:
+        score += 100
+    elif name.startswith(q):
+        score += 70
+    elif q in name:
+        score += 45
+    if q in category:
+        score += 20
+    if q in one_line:
+        score += 10
+    return score
 
 
 def extract_factor_names_from_string(text: str, *, min_len: int = 3) -> list[str]:
