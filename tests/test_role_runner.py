@@ -250,14 +250,30 @@ def test_provider_missing_api_key_message_names_correct_env_var(monkeypatch):
 
 
 def test_provider_registered_entries():
-    """PROVIDERS registry exposes both anthropic and mimo with expected shapes."""
+    """PROVIDERS registry exposes anthropic / mimo / mimo_tp with expected shapes."""
     from lbg.orchestrator import PROVIDERS
 
-    assert {"anthropic", "mimo"} <= set(PROVIDERS)
+    assert {"anthropic", "mimo", "mimo_tp"} <= set(PROVIDERS)
     assert PROVIDERS["anthropic"].base_url is None
     assert PROVIDERS["mimo"].base_url == "https://api.xiaomimimo.com/anthropic"
+    assert PROVIDERS["mimo_tp"].base_url == "https://token-plan-sgp.xiaomimimo.com/anthropic"
     assert PROVIDERS["anthropic"].api_key_env == "ANTHROPIC_API_KEY"
     assert PROVIDERS["mimo"].api_key_env == "MIMO_API_KEY"
+    assert PROVIDERS["mimo_tp"].api_key_env == "MIMO_TP_API_KEY"
+    assert PROVIDERS["mimo_tp"].default_model == "mimo-v2.5-pro"
+
+
+def test_mimo_tp_missing_api_key_message_names_correct_env_var(monkeypatch):
+    monkeypatch.delenv("MIMO_TP_API_KEY", raising=False)
+    runner = RoleRunner(provider="mimo_tp", api_key=None)
+    with pytest.raises(RoleRunnerError, match="MIMO_TP_API_KEY"):
+        runner._client()
+
+
+def test_mimo_tp_provider_arg_switches_defaults():
+    runner = RoleRunner(provider="mimo_tp", api_key="dummy")
+    assert runner.provider == "mimo_tp"
+    assert runner.model == "mimo-v2.5-pro"
 
 
 # -------- helpers --------

@@ -126,9 +126,10 @@ def main(argv: list[str] | None = None) -> int:
         "--provider",
         type=str,
         default=None,
-        help="anthropic | mimo | claude_cli. claude_cli spawns the local "
-        "`claude -p` binary (no per-call API cost on Max subscriptions); "
-        "anthropic uses ANTHROPIC_API_KEY; mimo uses MIMO_API_KEY",
+        help="anthropic | mimo | mimo_tp | claude_cli | codex_cli. claude_cli "
+        "spawns the local `claude -p` binary (no per-call API cost on Max "
+        "subscriptions); anthropic uses ANTHROPIC_API_KEY; mimo uses "
+        "MIMO_API_KEY; mimo_tp uses MIMO_TP_API_KEY (Token-Plan SGP endpoint).",
     )
     parser.add_argument(
         "--gate",

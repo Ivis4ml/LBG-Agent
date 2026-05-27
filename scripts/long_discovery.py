@@ -35,8 +35,9 @@ def main(argv: list[str] | None = None) -> int:
         "--provider",
         type=str,
         default=None,
-        help="anthropic | mimo | claude_cli. Defaults to the LBG_PROVIDER env "
-        "or anthropic. claude_cli routes through the local `claude -p` binary.",
+        help="anthropic | mimo | mimo_tp | claude_cli | codex_cli. Defaults to "
+        "the LBG_PROVIDER env or anthropic. claude_cli routes through the local "
+        "`claude -p` binary; mimo_tp uses the Token-Plan SGP endpoint.",
     )
     p.add_argument("--model", type=str, default=None, help="model name (e.g. claude-opus-4-7)")
     p.add_argument(

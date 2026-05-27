@@ -125,6 +125,16 @@ PROVIDERS: dict[str, ProviderConfig] = {
         base_url="https://api.xiaomimimo.com/anthropic",
         default_model="mimo-v2.5-pro",
     ),
+    # MIMO Token-Plan SGP endpoint -- a separate quota/billing plane from
+    # the standard MIMO key, anthropic-compatible. Mirrors the `mimo`
+    # provider shape with a distinct base_url and env var so the two keys
+    # can be exercised independently without cross-billing.
+    "mimo_tp": ProviderConfig(
+        name="mimo_tp",
+        api_key_env="MIMO_TP_API_KEY",
+        base_url="https://token-plan-sgp.xiaomimimo.com/anthropic",
+        default_model="mimo-v2.5-pro",
+    ),
     # Claude Code CLI -- no API cost on Max-plan subscriptions. See
     # lbg/orchestrator/cli_provider.py for the subprocess wrapper. The
     # `claude` binary must be on PATH; pass `--model` per call so the
@@ -198,7 +208,8 @@ class RoleRunner:
       - falls back to `"anthropic"`.
 
     The actual API key is read from the provider's registered env var
-    (`ANTHROPIC_API_KEY` or `MIMO_API_KEY`). Pass `api_key=...` to override.
+    (`ANTHROPIC_API_KEY`, `MIMO_API_KEY`, or `MIMO_TP_API_KEY`). Pass
+    `api_key=...` to override.
     """
 
     def __init__(

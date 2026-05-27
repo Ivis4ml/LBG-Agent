@@ -125,6 +125,7 @@ cat > .env <<'EOF'
 TIINGO_TOKEN=<your tiingo token>          # for data cross-check
 ANTHROPIC_API_KEY=<your anthropic key>    # default LLM provider
 MIMO_API_KEY=<your mimo key>              # optional: MIMO provider
+MIMO_TP_API_KEY=<your mimo token-plan key># optional: MIMO Token-Plan SGP endpoint
 EOF
 
 # 3. fetch SPY data (one-time; persists to data/spy_daily.parquet)
@@ -147,18 +148,22 @@ open /tmp/lbg_camp/artifacts/live/dashboard.html
 
 ## Switching LLM providers
 
-Four providers are registered out of the box:
+Five providers are registered out of the box:
 
 | Provider     | Auth                                | Default model      | When to use                                      |
 |--------------|-------------------------------------|--------------------|--------------------------------------------------|
 | `anthropic`  | `ANTHROPIC_API_KEY` (per-call)      | claude-sonnet-4-6  | production / publication runs                    |
 | `mimo`       | `MIMO_API_KEY` (per-call)           | mimo-v2.5-pro      | Anthropic-compatible REST alternative            |
+| `mimo_tp`    | `MIMO_TP_API_KEY` (per-call)        | mimo-v2.5-pro      | MIMO Token-Plan SGP endpoint (separate quota)    |
 | `claude_cli` | Claude Code OAuth (subscription)    | claude-sonnet-4-6  | dev / testing using a Claude Code Max plan       |
 | `codex_cli`  | ChatGPT OAuth (subscription)        | gpt-5.5            | dev / testing using a ChatGPT Plus/Pro plan      |
 
 ```bash
 # direct API
 LBG_PROVIDER=mimo uv run python scripts/long_discovery.py --budget 5 --out /tmp/lbg_mimo
+
+# MIMO Token-Plan SGP endpoint (different quota plane than MIMO_API_KEY)
+LBG_PROVIDER=mimo_tp uv run python scripts/long_discovery.py --budget 5 --out /tmp/lbg_mimo_tp
 
 # Claude Code CLI -- spawns `claude -p` per call, no per-call API cost
 LBG_PROVIDER=claude_cli uv run python scripts/long_discovery.py --budget 5 --out /tmp/lbg_cli
