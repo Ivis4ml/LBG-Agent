@@ -748,9 +748,99 @@ window.MathJax = {
     .container { padding: 48px 22px 80px; }
     .role-row, .stage-row { grid-template-columns: 1fr; gap: 8px; }
   }
+
+  /* ─── 顶部阶段导航条（项目主页入口） ───────────────────────────── */
+  .site-nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(251, 250, 246, 0.92);
+    backdrop-filter: saturate(140%) blur(8px);
+    -webkit-backdrop-filter: saturate(140%) blur(8px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .site-nav-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 10px 28px;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    font-family: var(--sans);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+  }
+  .site-nav-brand {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .site-nav-brand .brand-sub {
+    color: var(--ink-muted);
+    font-style: italic;
+    font-size: 13px;
+    margin-left: 6px;
+  }
+  .site-nav-spacer { flex: 1; }
+  .site-nav a.site-nav-link {
+    color: var(--ink-soft);
+    text-decoration: none;
+    padding: 4px 10px;
+    border-radius: 2px;
+    border: 1px solid transparent;
+    transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+    white-space: nowrap;
+  }
+  .site-nav a.site-nav-link:hover {
+    color: var(--ink);
+    border-color: var(--rule);
+    background: var(--paper-warm);
+  }
+  .site-nav a.site-nav-link.is-stage1 { color: var(--teal); }
+  .site-nav a.site-nav-link.is-stage2 { color: var(--accent); }
+  .site-nav a.site-nav-link.is-current {
+    background: var(--paper-warm);
+    border-color: var(--rule);
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .site-nav .tag {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-faint);
+    margin-left: 6px;
+  }
+  @media (max-width: 720px) {
+    .site-nav-inner {
+      padding: 8px 16px;
+      gap: 12px;
+      font-size: 12px;
+      flex-wrap: wrap;
+    }
+    .site-nav-brand .brand-sub { display: none; }
+    .site-nav .tag { display: none; }
+  }
 </style>
 </head>
 <body>
+
+<nav class="site-nav" aria-label="项目主导航">
+  <div class="site-nav-inner">
+    <a class="site-nav-brand" href="./PROPOSAL_ZH.html">
+      LBG-Trader<span class="brand-sub">Sealed Heuristic Learning</span>
+    </a>
+    <span class="site-nav-spacer"></span>
+    <a class="site-nav-link is-current" href="./PROPOSAL_ZH.html">研究提案 ZH<span class="tag">r5</span></a>
+    <a class="site-nav-link" href="./PROPOSAL.html">EN</a>
+    <a class="site-nav-link is-stage1" href="./docs/STAGE1_REPORT.html">Stage 1 阶段报告<span class="tag">main</span></a>
+    <a class="site-nav-link is-stage2" href="./docs/STAGE2_REPORT.html">Stage 2 阶段报告<span class="tag">v26</span></a>
+    <a class="site-nav-link" href="https://github.com/Ivis4ml/LBG-Agent" rel="noopener">GitHub</a>
+  </div>
+</nav>
 
 <div class="grain"></div>
 
@@ -805,6 +895,7 @@ window.MathJax = {
     Repo&nbsp;&nbsp;<span class="v">lbg-trader</span><br>
     Paper&nbsp;<span class="v">Sealed-HS</span><br>
     作者&nbsp;Xin Zhou<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Zheming Liang<br>
     状态&nbsp;草稿
   </div>
 </header>

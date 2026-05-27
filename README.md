@@ -8,12 +8,34 @@ deterministic Python control plane (the **Orchestrator**), which decides
 each trial's fate by running invariants, backtests, and a multi-objective
 gate. No LLM ever touches the sealed test window.
 
+**Contributors** — Xin Zhou, Zheming Liang.
+
+**Project homepage** — <https://ivis4ml.github.io/LBG-Agent/> (served from
+the repository root via GitHub Pages; the root URL redirects to the Chinese
+research proposal, which carries a sticky top nav linking to the EN proposal
+and both stage reports).
+
 **Documentation**
-- [`PROPOSAL.html`](PROPOSAL.html) — source-of-truth specification for
-  architecture, invariants, and verdict criteria
+- [`PROPOSAL.html`](PROPOSAL.html) / [`PROPOSAL_ZH.html`](PROPOSAL_ZH.html) —
+  source-of-truth specification for architecture, invariants, and verdict
+  criteria (English and Chinese; r5 编订, four LLM roles, pathwise H1)
 - [`docs/STAGE1_REPORT.html`](docs/STAGE1_REPORT.html) — Stage 1 实施回顾
-  （中文图文）
+  （中文图文，对应 `main` 分支的 H1 weak = True 节点）
+- [`docs/STAGE2_REPORT.html`](docs/STAGE2_REPORT.html) — Stage 2 实施回顾
+  （v12→v26 完整记录，11/10 因子目标达成）
 - [`CLAUDE.md`](CLAUDE.md) — guidance for Claude Code sessions
+
+### Deploying the homepage on GitHub Pages
+
+1. Repository → **Settings** → **Pages**
+2. Source = `Deploy from a branch`
+3. Branch = `main` (or whichever branch you want to publish), folder = `/ (root)`
+4. After the first build, `https://<owner>.github.io/<repo>/` will redirect to
+   `PROPOSAL_ZH.html`; all stage reports remain reachable from the sticky top
+   nav on every page.
+
+`.nojekyll` is committed at the repo root so GitHub Pages serves the hand-rolled
+HTML verbatim (no Jekyll preprocessing of `_index.yaml`, etc.).
 
 ## What is this
 
