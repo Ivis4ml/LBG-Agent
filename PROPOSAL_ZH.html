@@ -2561,6 +2561,11 @@ r^{\text{without } c}_t = \pi_{H \setminus \{c\}}(X_{\le t})\, R_{t+1} - \ldots
 本提案在第一阶段把 \(\Delta S_c\) 的操作性定义固定为 <strong>pathwise 增量夏普</strong>：按照该卡片在发现循环中被接受的时间顺序，将 "已接受卡片 \(\le c-1\) 的策略" 与 "已接受卡片 \(\le c\) 的策略" 在密封窗口上的日收益相减，得到 \(\Delta r^{c}_t\)。这一定义满足两点工程约束：(1) 它与发现过程本身的组合方式一致，每张卡片承担其 <em>边际</em> 贡献，而不是回顾性地被赋予对完整集合的反事实贡献；(2) 它只需要在密封窗口上对 \(|\text{cards}|\) 个累计策略各做一次回测，复杂度 \(\mathcal{O}(N)\) 而不是严格 LOO 所需的 \(\mathcal{O}(N \cdot T)\)。第二阶段及之后，可在补充材料里报告完整 LOO 版本作为稳健性检查；H1 的预注册裁定以本节定义的 pathwise 版本为准。
 </div>
 
+<div class="aside" style="margin-top: 10px;">
+<span class="aside-label">分辨力下限：什么算"太小以致无法被证伪"</span>
+分块自助置信区间是真实的统计陈述，但其分辨力受样本规模约束。\(T = 1006\) 个密封 bar 配 <code>block_len = 10</code>，有效独立块数约 100。按 Bailey &amp; López de Prado 的夏普标准误公式 \(\hat\sigma(\mathrm{SR}) \approx \sqrt{\bigl(1 - \gamma_3\,\mathrm{SR} + \tfrac{\gamma_4 - 1}{4}\,\mathrm{SR}^2\bigr) / T}\)，在 \(\mathrm{SR} = 0.5\)、\(T = 1006\)、日收益典型厚尾矩（\(\gamma_3 \approx -0.5\)、\(\gamma_4 \approx 6\)）下 \(\hat\sigma(\mathrm{SR}) \approx 0.5\) 年化。换算到本节 per-card pipeline 输出的 \(\Delta S_c\) 配对统计量，\(\alpha = 0.05\)、80% 功效下可靠分辨的最小增量约 \(\Delta S \approx 0.30\) 年化。真实 pathwise 增量低于此值（例如 \(\Delta S = 0.05\)）的卡片在本密封窗口上与零不可区分，且预计会同时无法通过 CI \(>\) 0、BH、SPA 与 DSR。对这类卡片，正确解读是"低于本研究分辨力"，而非"无效"。要在 \(|\Delta S| < 0.30\) 量级上声称真实存在的效应，唯一干净的途径是扩大密封窗口；对本里程碑而言，这意味着等待 Stage 2 paper trading 在严格 &gt; 2024-12-31 的数据上验证 —— 更早期的 SPY 数据正逐渐被 LLM 训练时所见因子文献的先验污染，无法作为额外的真实 OOS 使用。
+</div>
+
 <h4>步骤 2 · 对单卡片贡献做分块自助置信区间</h4>
 
 <div class="math">
@@ -3466,7 +3471,7 @@ multiple_testing_correction:
 </section>
 
 <footer>
-  <span>lbg-trader · proposal v2026.05.26 r5 · 规范冻结 · 四类角色 · pathwise H1</span>
+  <span>lbg-trader · proposal v2026.05.27 r6 · 规范冻结 · 四类角色 · pathwise H1 · §10.5 分辨力下限注脚</span>
   <span>第一至四部分 · 25 节 · 8 张图 · 14 个数学块 · 32 条已锁定决策 · 图 2 更新为四角色版式</span>
 </footer>
 

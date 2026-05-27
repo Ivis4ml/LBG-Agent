@@ -2556,6 +2556,11 @@ r^{\text{without } c}_t = \pi_{H \setminus \{c\}}(X_{\le t})\, R_{t+1} - \ldots
 Strict leave-one-out has no clean meaning for a card whose indicator wires into an <code>entry</code> or <code>exit</code> cross rule — removing one of the two indicators in <code>cross_above(fast, slow)</code> destroys the entry semantics rather than defining a "without \(c\)" policy. The implementation therefore reads "without \(c\)" as <em>the policy at the trial's parent commit</em>, and "with \(c\)" as <em>the policy at the trial commit</em>. Pathwise removes \(c\) along the construction trajectory rather than abstractly from the final composition. This makes the definition total (it covers all eight edit types and any non-trivial wiring), and aligns the H1 unit with the literal artifact LBG produces — a code modification accepted at a particular moment. The pre-registered method name in <code>analysis_plan.yaml</code> is <code>pathwise_incremental_sharpe</code>; the bootstrap on \(\Delta r^{c}_{1:T_\text{sealed}}\) in Step 2 is unchanged.
 </div>
 
+<div class="aside" style="margin-top: 10px;">
+<span class="aside-label">Resolution floor · what counts as "too small to refute"</span>
+The block-bootstrap CI is a real statistical statement, but its resolution is bounded by the sample. With \(T = 1006\) sealed bars and <code>block_len = 10</code> the effective independent block count is about 100. Bailey &amp; López de Prado's Sharpe-ratio standard-error formula \(\hat\sigma(\mathrm{SR}) \approx \sqrt{\bigl(1 - \gamma_3\,\mathrm{SR} + \tfrac{\gamma_4 - 1}{4}\,\mathrm{SR}^2\bigr) / T}\) gives \(\hat\sigma(\mathrm{SR}) \approx 0.5\) annualised at \(\mathrm{SR} = 0.5\), \(T = 1006\), with typical fat-tailed daily moments (\(\gamma_3 \approx -0.5\), \(\gamma_4 \approx 6\)). Translated to the paired \(\Delta S_c\) statistic the per-card pipeline produces, the minimum reliably detectable increment at \(\alpha = 0.05\) with 80% power is approximately \(\Delta S \approx 0.30\) annualised. Cards whose true pathwise increment is below that — for example \(\Delta S = 0.05\) — are statistically indistinguishable from zero on this sealed window, and would be expected to fail CI \(>\) 0, BH, SPA, and DSR <em>all at once</em>. The verdict on such a card is "below this study's resolution", not "no effect". The only clean way to claim a real effect with \(|\Delta S| < 0.30\) is to enlarge the sealed window, which for this milestone means waiting for Stage 2 paper trading on data strictly &gt; 2024-12-31 — earlier data is increasingly polluted by the LLM's training prior over the factor literature and is not usable as additional OOS.
+</div>
+
 <h4>Step 2 · Block-bootstrap CI on the per-card contribution</h4>
 
 <div class="math">
@@ -3460,7 +3465,7 @@ The work succeeds whether the verdict is H1, H2, or H3. The failure mode the pro
 </section>
 
 <footer>
-  <span>lbg-trader · proposal v2026.05.26 r5 · spec-frozen · four roles · pathwise H1 · figure 2 updated</span>
+  <span>lbg-trader · proposal v2026.05.27 r6 · spec-frozen · four roles · pathwise H1 · §10.5 resolution-floor note</span>
   <span>Part I–IV · 25 sections · 8 figures · 14 math blocks · 31 locked decisions</span>
 </footer>
 
