@@ -211,6 +211,42 @@ def test_h1_consumer_reads_producer_output(card_repo):
     assert verdict.validated_factor_count in (0, 1)
 
 
+def test_dsr_attached_when_trial_context_supplied(card_repo):
+    """When n_trials + trial_sharpes are passed explicitly, DSR
+    populates the sealed_summary and the result dataclass."""
+    git = GitManager(card_repo)
+    parent_full = git._git("rev-parse", "HEAD~1").strip()
+    card_path = _write_card(card_repo, parent_full)
+
+    sealed_df = load_split("split_C")
+    # 50 attempted trials with modest cross-section of annualised Sharpes.
+    trial_sharpes = [0.5, 0.3, 0.7, 0.2, 0.9] * 10
+    outcome = compute_per_card_sealed_validation(
+        card_repo,
+        sealed_df,
+        git=git,
+        n_trials_attempted=len(trial_sharpes),
+        trial_sharpes_annualised=trial_sharpes,
+    )
+
+    assert len(outcome) == 1
+    r = outcome[0]
+    assert r.error is None
+    # DSR populated.
+    assert 0.0 <= r.deflated_sharpe_ratio <= 1.0
+    assert isinstance(r.dsr_passes, bool)
+    assert r.dsr_threshold == pytest.approx(0.95)
+
+    # Persisted to YAML too.
+    raw = yaml.safe_load(card_path.read_text(encoding="utf-8"))
+    summary = raw["evidence"]["sealed_summary"]
+    assert "deflated_sharpe_ratio" in summary
+    assert "dsr_passes" in summary
+    assert "dsr_threshold" in summary
+    assert isinstance(summary["dsr_passes"], bool)
+    assert 0.0 <= summary["deflated_sharpe_ratio"] <= 1.0
+
+
 def test_missing_trial_commit_records_error(card_repo, tmp_path):
     """A card pointing at a trial that has no `trial NNNN:` commit yields
     a validation_error rather than crashing the seal step."""

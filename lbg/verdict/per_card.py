@@ -39,6 +39,10 @@ from lbg.dsl import load_strategy
 from lbg.git_manager import GitCommandError, GitManager
 from lbg.verdict.analysis_plan import DEFAULT_ANALYSIS_PLAN, AnalysisPlan
 from lbg.verdict.bootstrap import moving_block_bootstrap_sharpe_diff
+from lbg.verdict.dsr import (
+    DEFAULT_DSR_THRESHOLD,
+    deflated_sharpe_ratio_from_returns,
+)
 from lbg.verdict.multiple_testing import DEFAULT_Q, benjamini_hochberg
 from lbg.verdict.spa import SPAResult, hansen_spa
 from policy_interpreter import compute_positions
@@ -85,12 +89,17 @@ class PerCardValidationResult:
     p_value_one_sided: float = 1.0
     bh_validated: bool = False
     bh_q: float = DEFAULT_Q
+    # Bailey-LdP Deflated Sharpe Ratio. -1.0 means "not computed"
+    # (insufficient trial-search context); a real DSR is in [0, 1].
+    deflated_sharpe_ratio: float = -1.0
+    dsr_passes: bool = False
+    dsr_threshold: float = 0.95
     error: str | None = None
 
     def to_summary(self) -> dict[str, float | str | int | bool]:
         if self.error is not None:
             return {"validation_error": self.error}
-        return {
+        out: dict[str, float | str | int | bool] = {
             "incremental_sharpe_point": self.incremental_sharpe_point,
             "incremental_sharpe_ci_lower": self.incremental_sharpe_ci_lower,
             "incremental_sharpe_ci_upper": self.incremental_sharpe_ci_upper,
@@ -101,6 +110,11 @@ class PerCardValidationResult:
             "bh_validated": self.bh_validated,
             "bh_q": self.bh_q,
         }
+        if self.deflated_sharpe_ratio >= 0.0:
+            out["deflated_sharpe_ratio"] = self.deflated_sharpe_ratio
+            out["dsr_passes"] = self.dsr_passes
+            out["dsr_threshold"] = self.dsr_threshold
+        return out
 
 
 def compute_per_card_sealed_validation(
@@ -111,6 +125,9 @@ def compute_per_card_sealed_validation(
     timeout_sec: float = 30.0,
     rng_seed: int = 42,
     git: GitManager | None = None,
+    n_trials_attempted: int | None = None,
+    trial_sharpes_annualised: list[float] | None = None,
+    dsr_threshold: float = DEFAULT_DSR_THRESHOLD,
 ) -> PerCardValidationOutcome:
     """Populate `evidence.sealed_summary` on every accepted card in `alpha_cards/`.
 
@@ -192,12 +209,43 @@ def compute_per_card_sealed_validation(
                 logger.warning("SPA computation skipped: %s", e)
                 spa_result = None
 
-    # Pass 3: rewrite the results with bh_validated set, then persist the
-    # per-card YAML files. We rebuild the dataclasses rather than mutate
-    # because they are frozen.
+    # Pass 2c: Bailey-LdP Deflated Sharpe Ratio per card. Needs the
+    # trial-search context (total attempted trials + cross-sectional
+    # variance of trial Sharpes). When not passed explicitly, default
+    # to reading `memory/trials.jsonl` from the repo. If neither path
+    # yields useful context, DSR is skipped — per_card YAML simply
+    # omits the DSR fields.
+    n_trials_for_dsr, var_trials_for_dsr = _resolve_dsr_context(
+        repo_root,
+        n_trials_attempted=n_trials_attempted,
+        trial_sharpes_annualised=trial_sharpes_annualised,
+    )
+    dsr_for: dict[int, "DSRResult | None"] = {}
+    if n_trials_for_dsr is not None and var_trials_for_dsr is not None:
+        for i in valid_indices:
+            series = diff_series_list[i]
+            if series is None or len(series) < 2:
+                dsr_for[i] = None
+                continue
+            try:
+                dsr_for[i] = deflated_sharpe_ratio_from_returns(
+                    series,
+                    annualised_sharpe=results[i].incremental_sharpe_point,
+                    n_trials=n_trials_for_dsr,
+                    variance_of_trial_sharpes_annualised=var_trials_for_dsr,
+                    pass_threshold=dsr_threshold,
+                )
+            except (ValueError, ZeroDivisionError) as e:
+                logger.warning("DSR computation skipped for card %d: %s", i, e)
+                dsr_for[i] = None
+
+    # Pass 3: rewrite the results with bh_validated / DSR set, then
+    # persist the per-card YAML files. We rebuild the dataclasses
+    # rather than mutate because they are frozen.
     final_results: list[PerCardValidationResult] = []
     for i, (card_path, card, result) in enumerate(zip(card_paths, cards, results, strict=True)):
         if result.error is None:
+            dsr_obj = dsr_for.get(i)
             patched = PerCardValidationResult(
                 alpha_id=result.alpha_id,
                 source_trial=result.source_trial,
@@ -210,8 +258,13 @@ def compute_per_card_sealed_validation(
                 p_value_one_sided=result.p_value_one_sided,
                 bh_validated=bh_reject_for.get(i, False),
                 bh_q=bh_q,
+                deflated_sharpe_ratio=(
+                    dsr_obj.deflated_sharpe_ratio if dsr_obj is not None else -1.0
+                ),
+                dsr_passes=(dsr_obj.passes if dsr_obj is not None else False),
+                dsr_threshold=(dsr_obj.pass_threshold if dsr_obj is not None else dsr_threshold),
             )
-            card.evidence.sealed_summary = {
+            summary: dict[str, float | bool] = {
                 "incremental_sharpe_point": patched.incremental_sharpe_point,
                 "incremental_sharpe_ci_lower": patched.incremental_sharpe_ci_lower,
                 "incremental_sharpe_ci_upper": patched.incremental_sharpe_ci_upper,
@@ -222,6 +275,11 @@ def compute_per_card_sealed_validation(
                 "bh_validated": patched.bh_validated,
                 "bh_q": patched.bh_q,
             }
+            if patched.deflated_sharpe_ratio >= 0.0:
+                summary["deflated_sharpe_ratio"] = patched.deflated_sharpe_ratio
+                summary["dsr_passes"] = patched.dsr_passes
+                summary["dsr_threshold"] = patched.dsr_threshold
+            card.evidence.sealed_summary = summary
         else:
             patched = result
             card.evidence.sealed_summary = None
@@ -335,6 +393,60 @@ def _error_result(
         alpha=float(1.0 - boot_cfg.ci),
         error=message,
     )
+
+
+def _resolve_dsr_context(
+    repo_root: Path,
+    *,
+    n_trials_attempted: int | None,
+    trial_sharpes_annualised: list[float] | None,
+) -> tuple[int | None, float | None]:
+    """Decide (N, V_annualised) for Bailey-LdP DSR.
+
+    Order of preference:
+      1. Caller-supplied kwargs (both must be present and consistent).
+      2. `memory/trials.jsonl` in `repo_root`: count its non-empty
+         lines for N, and compute sample variance of
+         `train_metrics.sharpe` for V.
+
+    Returns `(None, None)` when neither path yields ≥ 2 trial Sharpes
+    (DSR is undefined). Callers must skip DSR on that signal.
+    """
+    if n_trials_attempted is not None and trial_sharpes_annualised is not None:
+        if len(trial_sharpes_annualised) >= 2:
+            var = float(np.var(trial_sharpes_annualised, ddof=1))
+            return int(n_trials_attempted), var
+        return None, None
+
+    trials_path = repo_root / "memory" / "trials.jsonl"
+    if not trials_path.exists():
+        return None, None
+
+    sharpes: list[float] = []
+    n = 0
+    import json as _json  # local import: only needed on this path
+
+    with trials_path.open("r", encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = _json.loads(line)
+            except _json.JSONDecodeError:
+                continue
+            n += 1
+            tm = obj.get("train_metrics") or {}
+            s = tm.get("sharpe")
+            if isinstance(s, (int, float)) and not _isnan(s):
+                sharpes.append(float(s))
+    if len(sharpes) < 2:
+        return None, None
+    return n, float(np.var(sharpes, ddof=1))
+
+
+def _isnan(x: float) -> bool:
+    return x != x  # cheap NaN check without importing math
 
 
 def _find_trial_commit(git: GitManager, trial_id: int) -> str:

@@ -19,7 +19,7 @@ Advisor 还指出一个 LBG 特有的结构性限制：LLM 不是在随机空间
 
 ## Outline · five steps
 
-### Step 1 · BH FDR per-card 校正（半天）
+### Step 1 · BH FDR per-card 校正（半天）· DONE (commit 4de067a)
 
 - **目的**: 落实 PROPOSAL §20 item 32 —— 在所有被接受的卡片上控制 FDR 0.10。
 - **实现**:
@@ -40,7 +40,7 @@ Advisor 还指出一个 LBG 特有的结构性限制：LLM 不是在随机空间
   `tests/test_multiple_testing.py` 全绿；H1 报告中 `validated_factor_count`
   以 BH 后的计数为准；当前 11 张卡片重跑后给出 BH 校正后的数字（预期会下降）。
 
-### Step 2 · Hansen 2005 SPA 家族级检验（1-2 天）
+### Step 2 · Hansen 2005 SPA 家族级检验（1-2 天）· DONE (commit e8d4e65)
 
 - **目的**: 直接回答"我手上这 N 张卡片，作为家族，至少一张真显著吗"。
   与 BH 互补：BH 控 per-card FDR，SPA 控 family-wise 一致性 + 候选间相关结构。
@@ -58,7 +58,7 @@ Advisor 还指出一个 LBG 特有的结构性限制：LLM 不是在随机空间
 - **退出条件**: 当前 11 张卡片重跑后给出 SPA p 值；如果 SPA 拒绝 → 家族级证据；
   如果不拒绝 → BH 拒绝的子集只能解读为"个别可能显著，整体不显著"。
 
-### Step 3 · Deflated Sharpe Ratio 单卡片调整（半天）
+### Step 3 · Deflated Sharpe Ratio 单卡片调整（半天）· DONE
 
 - **目的**: 在 per_card 表格里加一列"考虑搜索 N 次后这张卡片的 Sharpe 是否真 > 0"。
   作为 BH/SPA 之外的第三种校正视角（Bailey & López de Prado 2014）。

@@ -26,6 +26,12 @@ from lbg.verdict.h1 import (
     compute_h1_verdict,
     compute_strategy_sharpe_verdict,
 )
+from lbg.verdict.dsr import (
+    DEFAULT_DSR_THRESHOLD,
+    DSRResult,
+    deflated_sharpe_ratio,
+    deflated_sharpe_ratio_from_returns,
+)
 from lbg.verdict.multiple_testing import BHResult, benjamini_hochberg
 from lbg.verdict.per_card import (
     PerCardValidationOutcome,
@@ -39,7 +45,9 @@ __all__ = [
     "BASELINE_REGISTRY",
     "BHResult",
     "DEFAULT_ANALYSIS_PLAN",
+    "DEFAULT_DSR_THRESHOLD",
     "AnalysisPlan",
+    "DSRResult",
     "H1Criterion",
     "H1Verdict",
     "PerCardValidationCriterion",
@@ -55,6 +63,8 @@ __all__ = [
     "compute_h1_verdict",
     "compute_per_card_sealed_validation",
     "compute_strategy_sharpe_verdict",
+    "deflated_sharpe_ratio",
+    "deflated_sharpe_ratio_from_returns",
     "hansen_spa",
     "load_analysis_plan",
     "moving_block_bootstrap_sharpe_diff",
