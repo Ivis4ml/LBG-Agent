@@ -29,6 +29,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import yaml
 
@@ -39,9 +40,36 @@ from lbg.git_manager import GitCommandError, GitManager
 from lbg.verdict.analysis_plan import DEFAULT_ANALYSIS_PLAN, AnalysisPlan
 from lbg.verdict.bootstrap import moving_block_bootstrap_sharpe_diff
 from lbg.verdict.multiple_testing import DEFAULT_Q, benjamini_hochberg
+from lbg.verdict.spa import SPAResult, hansen_spa
 from policy_interpreter import compute_positions
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class PerCardValidationOutcome:
+    """Per-card list + family-wise SPA verdict for one sealed pass.
+
+    `per_card` carries the standard list of one result per accepted
+    card. `spa` is the Hansen 2005 SPA p-value bundle computed across
+    the family of cards whose CI computation succeeded; it is `None`
+    when the family is empty (no accepted cards or all errored).
+    """
+
+    per_card: list["PerCardValidationResult"]
+    spa: SPAResult | None
+
+    def __iter__(self):
+        """Backward-compat: callers that used to receive a plain list
+        still see the per-card iteration. Anything new should use
+        `.per_card` and `.spa` explicitly."""
+        return iter(self.per_card)
+
+    def __len__(self) -> int:
+        return len(self.per_card)
+
+    def __getitem__(self, idx):
+        return self.per_card[idx]
 
 
 @dataclass(frozen=True)
@@ -83,35 +111,42 @@ def compute_per_card_sealed_validation(
     timeout_sec: float = 30.0,
     rng_seed: int = 42,
     git: GitManager | None = None,
-) -> list[PerCardValidationResult]:
+) -> PerCardValidationOutcome:
     """Populate `evidence.sealed_summary` on every accepted card in `alpha_cards/`.
 
-    Mutates the per-card YAML files in place. Returns one
-    `PerCardValidationResult` per accepted card found, in card-path order.
-    Cards whose evaluation cannot be done (missing trial commit, missing
-    indicator source at ref, bootstrap size error) are tagged with a
-    `validation_error` in `sealed_summary` rather than dropped — the alpha
-    card lineage stays intact for audit.
+    Mutates the per-card YAML files in place. Returns
+    `PerCardValidationOutcome(per_card, spa)`: a list of one result per
+    accepted card (in card-path order) plus the family-wise Hansen 2005
+    SPA verdict. Cards whose per-card evaluation fails are tagged with
+    a `validation_error` in `sealed_summary` rather than dropped — they
+    are excluded from both the BH family and the SPA family but the
+    alpha card lineage stays intact for audit.
+
+    For backward compatibility, the returned outcome is iterable and
+    supports `len()` / indexing, so existing callers that treated the
+    return value as `list[PerCardValidationResult]` continue to work.
     """
     repo_root = Path(repo_root).resolve()
     cards_dir = repo_root / "alpha_cards"
     if not cards_dir.exists():
-        return []
+        return PerCardValidationOutcome(per_card=[], spa=None)
     git = git or GitManager(repo_root)
 
-    # Pass 1: compute per-card incremental Sharpe + one-sided p-value, but
-    # do not write to disk yet — we need the family of p-values first to
-    # apply Benjamini-Hochberg correctly.
+    # Pass 1: compute per-card incremental Sharpe + one-sided p-value, and
+    # collect the daily diff series for the family-wise SPA test. Do not
+    # write to disk yet — we need the family of p-values first to apply
+    # Benjamini-Hochberg correctly.
     bh_q = plan.per_card_validation.bh_q
     card_paths: list[Path] = []
     cards: list[AlphaCard] = []
     results: list[PerCardValidationResult] = []
+    diff_series_list: list[np.ndarray | None] = []
     for card_path in sorted(cards_dir.glob("trial_*.yaml")):
         raw = yaml.safe_load(card_path.read_text(encoding="utf-8"))
         card = AlphaCard.model_validate(raw)
         if card.status != AlphaCardStatus.ACCEPTED:
             continue
-        result = _validate_one_card(
+        result, diff_series = _validate_one_card(
             card,
             sealed_df,
             git=git,
@@ -122,6 +157,7 @@ def compute_per_card_sealed_validation(
         card_paths.append(card_path)
         cards.append(card)
         results.append(result)
+        diff_series_list.append(diff_series)
 
     # Pass 2: apply Benjamini-Hochberg across the family of cards whose
     # CI computation succeeded. Errored cards are excluded from the BH
@@ -134,6 +170,27 @@ def compute_per_card_sealed_validation(
         bh = benjamini_hochberg(family_p, q=bh_q)
         for k, idx in enumerate(valid_indices):
             bh_reject_for[idx] = bool(bh.reject[k])
+
+    # Pass 2b: family-wise Hansen 2005 SPA on the same family of valid
+    # cards. Requires identical-length diff series to stack into a matrix;
+    # we trim every column to the shortest valid series so the stack is
+    # rectangular. Skipped when the family is empty.
+    spa_result: SPAResult | None = None
+    valid_series = [diff_series_list[i] for i in valid_indices if diff_series_list[i] is not None]
+    if valid_series:
+        min_len = min(len(s) for s in valid_series)
+        if min_len >= plan.per_card_validation.block_len * 5:
+            diff_matrix = np.column_stack([s[:min_len] for s in valid_series])
+            try:
+                spa_result = hansen_spa(
+                    diff_matrix,
+                    block_mean_len=plan.per_card_validation.block_len,
+                    n_bootstrap=plan.per_card_validation.n_bootstrap,
+                    rng_seed=rng_seed,
+                )
+            except ValueError as e:
+                logger.warning("SPA computation skipped: %s", e)
+                spa_result = None
 
     # Pass 3: rewrite the results with bh_validated set, then persist the
     # per-card YAML files. We rebuild the dataclasses rather than mutate
@@ -178,7 +235,7 @@ def compute_per_card_sealed_validation(
             encoding="utf-8",
         )
         final_results.append(patched)
-    return final_results
+    return PerCardValidationOutcome(per_card=final_results, spa=spa_result)
 
 
 def _validate_one_card(
@@ -189,12 +246,19 @@ def _validate_one_card(
     plan: AnalysisPlan,
     timeout_sec: float,
     rng_seed: int,
-) -> PerCardValidationResult:
+) -> tuple[PerCardValidationResult, "np.ndarray | None"]:
+    """Compute the per-card sealed metrics and return the daily diff series.
+
+    Returns `(result, diff_series)` where `diff_series` is the daily
+    `with - without` paired return series used by the family-wise SPA
+    test downstream. `diff_series` is `None` for errored cards so the
+    SPA family-builder can skip them cleanly.
+    """
     boot_cfg = plan.per_card_validation
     try:
         trial_sha = _find_trial_commit(git, card.source_trial)
     except ValueError as e:
-        return _error_result(card, plan, str(e))
+        return _error_result(card, plan, str(e)), None
 
     try:
         with tempfile.TemporaryDirectory(prefix=f"lbg_card_{card.source_trial}_") as td:
@@ -211,25 +275,32 @@ def _validate_one_card(
                 parent_strategy, sealed_df, parent_dir / "indicators", timeout_sec
             )
     except (FileNotFoundError, GitCommandError, ValueError, OSError) as e:
-        return _error_result(card, plan, f"materialize_or_backtest_failed: {e}")
+        return _error_result(card, plan, f"materialize_or_backtest_failed: {e}"), None
 
     n = min(len(r_with), len(r_without))
     if n < boot_cfg.block_len * 5:
-        return _error_result(
-            card,
-            plan,
-            f"insufficient_sealed_bars: have {n}, need {boot_cfg.block_len * 5}",
+        return (
+            _error_result(
+                card,
+                plan,
+                f"insufficient_sealed_bars: have {n}, need {boot_cfg.block_len * 5}",
+            ),
+            None,
         )
 
+    r_with_arr = r_with.to_numpy()[:n]
+    r_without_arr = r_without.to_numpy()[:n]
+    diff_series = r_with_arr - r_without_arr
+
     boot = moving_block_bootstrap_sharpe_diff(
-        r_with.to_numpy()[:n],
-        r_without.to_numpy()[:n],
+        r_with_arr,
+        r_without_arr,
         block_len=boot_cfg.block_len,
         n_bootstrap=boot_cfg.n_bootstrap,
         alpha=1.0 - boot_cfg.ci,
         rng_seed=rng_seed,
     )
-    return PerCardValidationResult(
+    result = PerCardValidationResult(
         alpha_id=card.alpha_id,
         source_trial=card.source_trial,
         incremental_sharpe_point=float(boot["point_estimate"]),
@@ -244,6 +315,7 @@ def _validate_one_card(
         # is known. The per-card path here cannot know the family.
         bh_validated=False,
     )
+    return result, diff_series
 
 
 def _error_result(

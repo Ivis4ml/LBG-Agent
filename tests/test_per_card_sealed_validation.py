@@ -160,6 +160,16 @@ def test_producer_populates_sealed_summary_keys(card_repo):
     r = results[0]
     assert r.error is None, f"validation should succeed, got: {r.error}"
 
+    # Outcome wrapper carries a SPA verdict on the family of valid cards.
+    assert results.spa is not None
+    assert results.spa.n_candidates == 1
+    assert 0.0 < results.spa.spa_p_value <= 1.0
+    assert 0.0 < results.spa.spa_p_value_l <= 1.0
+    assert 0.0 < results.spa.spa_p_value_u <= 1.0
+    # The three Hansen variants must bracket: SPA_l ≥ SPA_c ≥ SPA_u.
+    assert results.spa.spa_p_value_l >= results.spa.spa_p_value - 1e-9
+    assert results.spa.spa_p_value >= results.spa.spa_p_value_u - 1e-9
+
     # Persisted on disk?
     raw = yaml.safe_load(card_path.read_text(encoding="utf-8"))
     summary = raw["evidence"]["sealed_summary"]

@@ -777,18 +777,23 @@ class Discovery:
         sealed = run_backtest(positions, df_sealed)
 
         # Producer for primary H1: populate each accepted card's sealed_summary
-        # with pathwise incremental Sharpe + bootstrap CI before counting.
-        # Failures per card are recorded as `validation_error` in sealed_summary,
-        # not propagated -- the seal step must still produce a verdict payload.
+        # with pathwise incremental Sharpe + bootstrap CI + BH-validated flag,
+        # then run Hansen 2005 SPA on the family of valid cards. Failures per
+        # card are recorded as `validation_error` in sealed_summary, not
+        # propagated -- the seal step must still produce a verdict payload.
         per_card_results: list = []
+        spa_summary: dict | None = None
         try:
-            per_card_results = compute_per_card_sealed_validation(
+            outcome = compute_per_card_sealed_validation(
                 self.repo_root,
                 df_sealed,
                 plan=plan,
                 timeout_sec=self.timeout_sec,
                 git=self.git,
             )
+            per_card_results = outcome.per_card
+            if outcome.spa is not None:
+                spa_summary = outcome.spa.as_summary()
         except Exception as e:  # noqa: BLE001
             logger.warning("per-card sealed validation failed: %s", e)
 
@@ -827,6 +832,7 @@ class Discovery:
                 }
                 for r in per_card_results
             ],
+            "spa_verdict": spa_summary,
         }
         if vault is not None:
             try:
