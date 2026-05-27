@@ -121,6 +121,47 @@ def test_bootstrap_too_few_bars_raises():
         moving_block_bootstrap_sharpe_diff(np.zeros(20), np.zeros(20), block_len=10)
 
 
+def test_bootstrap_one_sided_p_value_strong_edge():
+    """Clear positive edge -> bootstrap diffs almost never ≤ 0 -> p ≈ 1/(n+1)."""
+    rng = np.random.default_rng(0)
+    r_strat = rng.normal(0.003, 0.01, 1000)
+    r_base = rng.normal(0.0001, 0.01, 1000)
+    out = moving_block_bootstrap_sharpe_diff(
+        r_strat, r_base, block_len=10, n_bootstrap=500, alpha=0.05, rng_seed=1
+    )
+    assert "p_value_one_sided" in out
+    # With a strong positive edge, p should be at the Davison-Hinkley floor.
+    assert out["p_value_one_sided"] < 0.01
+
+
+def test_bootstrap_one_sided_p_value_no_edge():
+    """Identical inputs -> diffs are exactly zero -> all draws are ≤ 0 -> p ≈ 1."""
+    r = np.random.default_rng(0).normal(0.0005, 0.01, 1000)
+    out = moving_block_bootstrap_sharpe_diff(
+        r.copy(), r.copy(), block_len=10, n_bootstrap=500, alpha=0.05, rng_seed=2
+    )
+    # All 500 resampled diffs equal zero, so n_le_zero = n_bootstrap and
+    # p = (n + 1) / (n + 1) = 1.0 by Davison-Hinkley.
+    assert out["p_value_one_sided"] == 1.0
+
+
+def test_bootstrap_one_sided_p_value_in_open_unit_interval():
+    """Davison-Hinkley +1/+1 smoothing keeps p strictly in (0, 1).
+
+    This matters for downstream BH: a raw p of 0 would short-circuit
+    benjamini_hochberg into rejecting unconditionally; the smoothed p
+    floors at 1/(n+1) so BH still has work to do.
+    """
+    rng = np.random.default_rng(7)
+    r_strat = rng.normal(0.005, 0.005, 800)  # very strong edge
+    r_base = rng.normal(-0.001, 0.005, 800)
+    out = moving_block_bootstrap_sharpe_diff(
+        r_strat, r_base, block_len=10, n_bootstrap=500, alpha=0.05, rng_seed=3
+    )
+    assert 0.0 < out["p_value_one_sided"] < 1.0
+    assert out["p_value_one_sided"] >= 1.0 / (500 + 1)
+
+
 def test_bootstrap_seed_determinism():
     r_strat = np.random.default_rng(0).normal(0.001, 0.01, 500)
     r_base = np.random.default_rng(1).normal(0.0005, 0.01, 500)
@@ -199,8 +240,21 @@ def test_h1_criterion_strict_literal():
 # -------- primary H1 verdict --------
 
 
-def _alpha_card(alpha_id: str, ci_lower: float | None) -> AlphaCard:
-    sealed_summary = None if ci_lower is None else {"incremental_sharpe_ci_lower": ci_lower}
+def _alpha_card(
+    alpha_id: str,
+    ci_lower: float | None,
+    *,
+    bh_validated: bool | None = None,
+) -> AlphaCard:
+    if ci_lower is None:
+        sealed_summary = None
+    else:
+        # Default BH validation tracks CI > 0 unless overridden — keeps
+        # most tests succinct while still allowing them to construct
+        # cards where the two diverge (i.e., CI > 0 but BH rejected, or
+        # vice versa).
+        bh = (ci_lower > 0.0) if bh_validated is None else bh_validated
+        sealed_summary = {"incremental_sharpe_ci_lower": ci_lower, "bh_validated": bh}
     return AlphaCard(
         alpha_id=alpha_id,
         source_trial=1,
@@ -223,17 +277,27 @@ def _alpha_card(alpha_id: str, ci_lower: float | None) -> AlphaCard:
     )
 
 
-def test_alpha_card_h1_counts_only_positive_sealed_ci():
+def test_alpha_card_h1_counts_bh_validated_cards():
+    """Primary H1 counts cards whose `bh_validated` flag is True.
+
+    Cards with CI lower > 0 but BH-rejected (because the family-wise
+    correction pushed them below the BH threshold) do NOT contribute to
+    `validated_factor_count`; they show up only in
+    `ci_only_validated_count` as a diagnostic.
+    """
     verdict = compute_alpha_card_h1_verdict(
         [
-            _alpha_card("good", 0.01),
-            _alpha_card("bad", -0.01),
-            _alpha_card("pending", None),
+            _alpha_card("bh_good", 0.01),  # CI > 0 + bh_validated
+            _alpha_card("ci_only", 0.01, bh_validated=False),  # CI > 0, BH rejected
+            _alpha_card("bad", -0.01),  # CI < 0, BH false
+            _alpha_card("pending", None),  # no sealed summary
         ]
     )
-    assert verdict.candidate_card_count == 3
+    assert verdict.candidate_card_count == 4
     assert verdict.validated_factor_count == 1
-    assert verdict.validated_alpha_ids == ("good",)
+    assert verdict.validated_alpha_ids == ("bh_good",)
+    assert verdict.ci_only_validated_count == 2  # both `bh_good` and `ci_only`
+    assert set(verdict.ci_only_validated_alpha_ids) == {"bh_good", "ci_only"}
     assert verdict.weak
     assert not verdict.strong
 

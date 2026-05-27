@@ -62,6 +62,13 @@ def moving_block_bootstrap_sharpe_diff(
     ci_lower = float(np.percentile(diffs, 100 * alpha / 2))
     ci_upper = float(np.percentile(diffs, 100 * (1 - alpha / 2)))
 
+    # Percentile-bootstrap one-sided p-value for H0: ΔSharpe ≤ 0 vs H1: > 0.
+    # Davison-Hinkley convention (+1 in num and denom) keeps p strictly in
+    # (0, 1) so downstream multiple-testing corrections (Benjamini-Hochberg)
+    # never see a 0.0 input.
+    n_le_zero = int(np.sum(diffs <= 0.0))
+    p_value_one_sided = float((n_le_zero + 1) / (n_bootstrap + 1))
+
     return {
         "point_estimate": float(point_estimate),
         "ci_lower": ci_lower,
@@ -69,4 +76,5 @@ def moving_block_bootstrap_sharpe_diff(
         "alpha": float(alpha),
         "n_bootstrap": int(n_bootstrap),
         "block_len": int(block_len),
+        "p_value_one_sided": p_value_one_sided,
     }

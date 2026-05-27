@@ -171,6 +171,19 @@ def test_producer_populates_sealed_summary_keys(card_repo):
     assert summary["incremental_sharpe_ci_lower"] <= summary["incremental_sharpe_point"]
     assert summary["incremental_sharpe_ci_upper"] >= summary["incremental_sharpe_point"]
 
+    # BH FDR correction fields (PROPOSAL §20 item 32).
+    assert "p_value_one_sided" in summary
+    assert "bh_validated" in summary
+    assert "bh_q" in summary
+    assert summary["bh_q"] == pytest.approx(0.10)
+    # p-value must be in the Davison-Hinkley open unit interval.
+    assert 0.0 < summary["p_value_one_sided"] <= 1.0
+    # bh_validated is a bool, not a truthy float.
+    assert isinstance(summary["bh_validated"], bool)
+    # With only one card in the family, BH reduces to "p ≤ q".
+    expected_bh = summary["p_value_one_sided"] <= summary["bh_q"]
+    assert summary["bh_validated"] == expected_bh
+
 
 def test_h1_consumer_reads_producer_output(card_repo):
     """End-to-end: producer writes -> consumer counts. Closes the round trip."""

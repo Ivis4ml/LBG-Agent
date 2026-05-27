@@ -32,6 +32,12 @@ class PerCardValidationCriterion(BaseModel):
     block_len: int = Field(ge=2)
     n_bootstrap: int = Field(ge=100)
     threshold: Literal["lower_bound_gt_zero"]
+    # PROPOSAL §20 item 32: Benjamini-Hochberg FDR control across the
+    # family of accepted cards. The H1 validated-factor count counts
+    # cards whose `bh_validated` flag is True. The raw CI lower bound
+    # > 0 column is retained for backwards-compatible inspection but is
+    # no longer the primary H1 signal.
+    bh_q: float = Field(default=0.10, gt=0.0, lt=1.0)
 
 
 class H1Criterion(BaseModel):

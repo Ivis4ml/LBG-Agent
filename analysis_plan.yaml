@@ -15,6 +15,12 @@ per_card_validation:
   block_len: 10
   n_bootstrap: 1000
   threshold: lower_bound_gt_zero
+  # PROPOSAL §20 item 32: Benjamini-Hochberg FDR control across the
+  # family of accepted cards. The H1 validated_factor_count is the
+  # number of cards whose bh_validated flag is True; the raw CI lower
+  # bound > 0 column is retained for inspection but is not the primary
+  # H1 signal.
+  bh_q: 0.10
 
 h1:
   test: validated_factor_count

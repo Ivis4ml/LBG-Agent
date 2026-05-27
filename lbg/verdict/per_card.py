@@ -38,6 +38,7 @@ from lbg.dsl import load_strategy
 from lbg.git_manager import GitCommandError, GitManager
 from lbg.verdict.analysis_plan import DEFAULT_ANALYSIS_PLAN, AnalysisPlan
 from lbg.verdict.bootstrap import moving_block_bootstrap_sharpe_diff
+from lbg.verdict.multiple_testing import DEFAULT_Q, benjamini_hochberg
 from policy_interpreter import compute_positions
 
 logger = logging.getLogger(__name__)
@@ -53,9 +54,12 @@ class PerCardValidationResult:
     n_bootstrap: int
     block_len: int
     alpha: float
+    p_value_one_sided: float = 1.0
+    bh_validated: bool = False
+    bh_q: float = DEFAULT_Q
     error: str | None = None
 
-    def to_summary(self) -> dict[str, float | str | int]:
+    def to_summary(self) -> dict[str, float | str | int | bool]:
         if self.error is not None:
             return {"validation_error": self.error}
         return {
@@ -65,6 +69,9 @@ class PerCardValidationResult:
             "n_bootstrap": self.n_bootstrap,
             "block_len": self.block_len,
             "alpha": self.alpha,
+            "p_value_one_sided": self.p_value_one_sided,
+            "bh_validated": self.bh_validated,
+            "bh_q": self.bh_q,
         }
 
 
@@ -92,6 +99,12 @@ def compute_per_card_sealed_validation(
         return []
     git = git or GitManager(repo_root)
 
+    # Pass 1: compute per-card incremental Sharpe + one-sided p-value, but
+    # do not write to disk yet — we need the family of p-values first to
+    # apply Benjamini-Hochberg correctly.
+    bh_q = plan.per_card_validation.bh_q
+    card_paths: list[Path] = []
+    cards: list[AlphaCard] = []
     results: list[PerCardValidationResult] = []
     for card_path in sorted(cards_dir.glob("trial_*.yaml")):
         raw = yaml.safe_load(card_path.read_text(encoding="utf-8"))
@@ -106,20 +119,54 @@ def compute_per_card_sealed_validation(
             timeout_sec=timeout_sec,
             rng_seed=rng_seed,
         )
-        # Keep sealed_summary schema = `dict[str, float] | None`. Errors are
-        # an honest non-validation -- leave the field None so the H1 reader
-        # treats this card as not-yet-validated, and route the error string
-        # through the discovery payload via `result.to_summary()`.
+        card_paths.append(card_path)
+        cards.append(card)
+        results.append(result)
+
+    # Pass 2: apply Benjamini-Hochberg across the family of cards whose
+    # CI computation succeeded. Errored cards are excluded from the BH
+    # family (they have no valid p-value to contribute); they will
+    # carry `bh_validated = False` and sealed_summary = None as before.
+    valid_indices = [i for i, r in enumerate(results) if r.error is None]
+    bh_reject_for: dict[int, bool] = {}
+    if valid_indices:
+        family_p = [results[i].p_value_one_sided for i in valid_indices]
+        bh = benjamini_hochberg(family_p, q=bh_q)
+        for k, idx in enumerate(valid_indices):
+            bh_reject_for[idx] = bool(bh.reject[k])
+
+    # Pass 3: rewrite the results with bh_validated set, then persist the
+    # per-card YAML files. We rebuild the dataclasses rather than mutate
+    # because they are frozen.
+    final_results: list[PerCardValidationResult] = []
+    for i, (card_path, card, result) in enumerate(zip(card_paths, cards, results, strict=True)):
         if result.error is None:
+            patched = PerCardValidationResult(
+                alpha_id=result.alpha_id,
+                source_trial=result.source_trial,
+                incremental_sharpe_point=result.incremental_sharpe_point,
+                incremental_sharpe_ci_lower=result.incremental_sharpe_ci_lower,
+                incremental_sharpe_ci_upper=result.incremental_sharpe_ci_upper,
+                n_bootstrap=result.n_bootstrap,
+                block_len=result.block_len,
+                alpha=result.alpha,
+                p_value_one_sided=result.p_value_one_sided,
+                bh_validated=bh_reject_for.get(i, False),
+                bh_q=bh_q,
+            )
             card.evidence.sealed_summary = {
-                "incremental_sharpe_point": result.incremental_sharpe_point,
-                "incremental_sharpe_ci_lower": result.incremental_sharpe_ci_lower,
-                "incremental_sharpe_ci_upper": result.incremental_sharpe_ci_upper,
-                "n_bootstrap": float(result.n_bootstrap),
-                "block_len": float(result.block_len),
-                "alpha": result.alpha,
+                "incremental_sharpe_point": patched.incremental_sharpe_point,
+                "incremental_sharpe_ci_lower": patched.incremental_sharpe_ci_lower,
+                "incremental_sharpe_ci_upper": patched.incremental_sharpe_ci_upper,
+                "n_bootstrap": float(patched.n_bootstrap),
+                "block_len": float(patched.block_len),
+                "alpha": patched.alpha,
+                "p_value_one_sided": patched.p_value_one_sided,
+                "bh_validated": patched.bh_validated,
+                "bh_q": patched.bh_q,
             }
         else:
+            patched = result
             card.evidence.sealed_summary = None
         card_path.write_text(
             yaml.safe_dump(
@@ -130,8 +177,8 @@ def compute_per_card_sealed_validation(
             ),
             encoding="utf-8",
         )
-        results.append(result)
-    return results
+        final_results.append(patched)
+    return final_results
 
 
 def _validate_one_card(
@@ -191,6 +238,11 @@ def _validate_one_card(
         n_bootstrap=int(boot["n_bootstrap"]),
         block_len=int(boot["block_len"]),
         alpha=float(boot["alpha"]),
+        p_value_one_sided=float(boot["p_value_one_sided"]),
+        # `bh_validated` is filled in by the family-level pass in
+        # `compute_per_card_sealed_validation` once every card's p-value
+        # is known. The per-card path here cannot know the family.
+        bh_validated=False,
     )
 
 
