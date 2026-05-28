@@ -1,0 +1,23 @@
+
+B3 · per-card empirical null (single-factor-vs-baseline)
+split=split_C  n_null=200  def=single_factor_vs_baseline
+================================================================================================
+card                               obs CI_lower    obs p  null<=obs  emp pct  emp p(point)
+------------------------------------------------------------------------------------------------
+aroon_up_minus_down_trial_0001           0.0000   1.0000  197/200     98.50%        0.5800
+body_to_range_trial_0005                 0.0000   1.0000  199/200     99.50%        0.9150
+donchian_position_trial_0001             0.0000   1.0000  198/200     99.00%        0.2650
+ema_above_sma_trial_0000                -0.3888   0.2857  177/200     88.50%        0.0450
+fractal_efficiency_trial_0004            0.0000   0.0619  197/200     98.50%        0.0100
+kama_ratio_trial_0003                   -0.5057   0.9331   90/200     45.00%        0.8250
+macd_histogram_trial_0002                0.0000   1.0000  198/200     99.00%        0.3800
+roc_n_trial_0000                         0.0000   1.0000  200/200    100.00%        0.6600
+upper_wick_ratio_trial_0004              0.0000   1.0000  200/200    100.00%        1.0000
+velocity_zscore_trial_0005              -0.9222   0.8152    8/200      4.00%        0.9150
+vol_regime_zscore_trial_0001            -0.0913   0.0929  157/200     78.50%        0.2400
+------------------------------------------------------------------------------------------------
+Westfall-Young minP : observed min-p=0.0619, P(null min-p <= obs) = 0.2700  (n_draws=200)
+Westfall-Young maxT : observed max point=0.2486, P(null max point >= obs) = 0.2950  (n_draws=200)
+  → family-wise adjusted p for the strongest card under each statistic. Neither significant unless small.
+================================================================================================
+

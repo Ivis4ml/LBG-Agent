@@ -110,12 +110,32 @@ Advisor 还指出一个 LBG 特有的结构性限制：LLM 不是在随机空间
   > 试验次数；合成 null 上的高接受率既可能说明 gate 过于宽松，也可能说明 LLM
   > 先验与 bootstrap 伪影部分重合。本节给出的是 pipeline 在 LLM 先验加随机数
   > 据条件下的 operating characteristic，而非纯统计意义上的 FDR。
-- **后续 B2 路径**（推迟执行）:
-  - 先修上面提到的 materialize bug
-  - 把 null campaign 的 budget 从 6 提到 30+ 以累计更多 add_indicator 候选
-  - 同时在 calibration 脚本里导出每张 null card 的完整 statistic（ci_lower / p_value /
-    sharpe_point）写入 replications.jsonl，用于经验 FDR 分布构造
-  - 跑完之后可以给 vol_regime_zscore（+0.249, CI [-0.091, +0.685]）一个经验百分位
+- **B2 重跑（budget 15, codex_cli, DONE）**: 修完两个 bug 后跑 30 reps（27 OK）。
+  6 张 add_indicator null 卡片到达 sealed、0 errored（bug a 验证）；0/6 CI_lower > 0
+  （sealed 特异度首次有实证支撑）；null point ΔSR 最高 +0.559（随机能刷出比真实
+  最佳还高的点估计）。详见 `docs/synthetic_null_results/`（B2 段）。但 n=6 仍太小，
+  经验 p 下限 1/6，无法对 vol_regime_zscore 做精细定位 → 转 B3。
+
+### B3 · per-card 经验 null 分布（DONE，无 LLM，N=200）
+
+- **目的**: 绕开 LLM，对 11 张 v26 卡片每张直接在 N=200 个 bootstrap 抽样上算
+  sealed CI，给每张卡片的真实观测 CI 一个经验 null 百分位 / p 值。这是对
+  "FDR 怎么算？基于 null distribution？" 的直接回答。
+- **定义改动**: 用「单因子 vs 裸 baseline」而非 v26 的「pathwise 沿轨迹」（v26
+  trial commits 已丢失，无法重放）。observed 与 null 两臂用同一定义重算，可比。
+  vol_regime_zscore（v26 首个被接受的因子）两定义恰好重合，B3 观测 CI 与 v26
+  数字 bit-for-bit 一致（+0.2486, CI [-0.0913, +0.6852]）—— 这是机制正确性的交叉验证。
+- **实现**: `lbg/verdict/per_card_null.py`（inject_card_into_strategy +
+  card_pathwise_ci + bootstrap_dataframe）+ `scripts/per_card_null_distribution.py`。
+  9 个单元测试。
+- **结果**（详见 `docs/synthetic_null_results/b3_per_card_null/`）:
+  - vol_regime_zscore 经验 p(point) = 0.240 → **不显著**（点估计最高但方差也最大）
+  - fractal_efficiency 个体 p=0.010，但 CI_lo=0 脆弱、是选择后的 p、不过家族校正
+  - 6 张因子在裸 baseline 上惰性（filter 不触发，CI=0）—— 只在组合中起作用
+  - 家族级（Westfall-Young）：minP adjusted p=0.27、maxT adjusted p=0.295，**均不显著**
+  - 结论：本窗口本定义下 **H1 = False，且有可辩护的经验 null p 值支撑**
+- **B3 的局限**（写报告必须承认）: 不测 pipeline-FDR；不验证 SPA/DSR 单独校准；
+  不解决 Stage 2 OOS；11 卡片家族对家族校正功效弱。
 
 ### Step 5 · Walk-forward 多窗口 sealed（1-2 周）
 
