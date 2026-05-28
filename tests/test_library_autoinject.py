@@ -114,7 +114,15 @@ def _seed_card(
 
 @pytest.fixture
 def repo_skeleton(tmp_path) -> Path:
-    """Minimal repo skeleton with sma_cross baseline."""
+    """Minimal repo skeleton with sma_cross baseline, git-initialised.
+
+    git init + an initial commit is required so the auto-inject's own
+    commit (added in Bug (a) fix) has a parent to extend. The fixture
+    used to skip git, but every real campaign runs against an
+    initialised repo, and the missing-git path was masking the bug.
+    """
+    import subprocess
+
     (tmp_path / "indicators").mkdir()
     (tmp_path / "indicators" / "sma.py").write_text(
         (REPO / "indicators" / "sma.py").read_text(encoding="utf-8"),
@@ -122,6 +130,22 @@ def repo_skeleton(tmp_path) -> Path:
     )
     (tmp_path / "strategy.yaml").write_text(
         (REPO / "strategy.yaml").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    subprocess.run(
+        ["git", "init", "--initial-branch=main", "-q"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(["git", "config", "user.email", "t@example.invalid"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "test"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "add", "indicators/", "strategy.yaml"], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "commit", "-q", "-m", "baseline"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
     )
     return tmp_path
 
@@ -144,6 +168,68 @@ def test_inject_empty_library_is_noop(repo_skeleton, tmp_path):
 def test_inject_no_library_dir_is_noop(repo_skeleton):
     cr = CampaignRunner(repo_skeleton, library_dir=None)
     assert cr._inject_library_into_baseline() == 0
+
+
+def test_inject_commits_indicator_files_to_git(repo_skeleton, tmp_path):
+    """Bug (a) regression: auto-inject must commit indicator .py + strategy.yaml
+    so subsequent trial commits have a parent that knows about the
+    library factors. Without this, `git show <parent>:indicators/<fn>.py`
+    in per_card sealed validation fails with exit 128.
+    """
+    import subprocess
+
+    library_dir = tmp_path / "library"
+    library = AlphaCardLibrary(library_dir)
+    _seed_card(
+        library,
+        alpha_id="vol_regime_zscore_trial_0003",
+        fn="vol_regime_zscore",
+        indicator_name="vol_regime_zscore",
+        target="exit",
+    )
+
+    head_before = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=repo_skeleton,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+    cr = CampaignRunner(repo_skeleton, library_dir=library_dir)
+    n = cr._inject_library_into_baseline()
+    assert n == 1
+
+    head_after = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=repo_skeleton,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert head_after != head_before, "auto-inject must produce a new commit"
+
+    # The committed tree must include the injected indicator .py.
+    show = subprocess.run(
+        ["git", "show", f"{head_after}:indicators/vol_regime_zscore.py"],
+        cwd=repo_skeleton,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert show.returncode == 0, f"file missing from commit tree: {show.stderr}"
+    assert "vol_regime_zscore" in show.stdout
+
+    # And the strategy.yaml in the commit must reflect the inject too.
+    show_strat = subprocess.run(
+        ["git", "show", f"{head_after}:strategy.yaml"],
+        cwd=repo_skeleton,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert show_strat.returncode == 0
+    assert "vol_regime_zscore" in show_strat.stdout
 
 
 # -------- single-card injection --------

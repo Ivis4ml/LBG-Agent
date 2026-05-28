@@ -70,6 +70,7 @@ def run_one_replication(
     budget: int,
     iterations: int,
     source_parquet: Path,
+    source_library_dir: Path | None,
     bootstrap_seed: int,
 ) -> dict:
     """One bootstrap + campaign + parse cycle. Returns the metrics dict."""
@@ -80,31 +81,54 @@ def run_one_replication(
     boot_parquet = rep_dir / "spy_daily_boot.parquet"
     bootstrap_spy_parquet(source_parquet, boot_parquet, rng_seed=bootstrap_seed, mean_block_len=10)
 
-    # Step B: run a tiny campaign on the bootstrap, with LBG_DATA_PATH
+    # Step B: copy the source library into a per-rep scratch dir so
+    # campaign's `sync_from_run` writes accepted (bootstrap-derived!)
+    # cards into the scratch copy, not the real `alpha_cards_library/`.
+    # Bug (b): without this, null-data acceptances (e.g., dispersion_regime
+    # with -99.99% drawdown) silently entered the production library.
+    if source_library_dir is not None and source_library_dir.exists():
+        rep_library_dir: Path | None = rep_dir / "alpha_cards_library"
+        # shutil.copytree refuses an existing destination; clean first.
+        if rep_library_dir.exists():
+            import shutil as _shutil
+
+            _shutil.rmtree(rep_library_dir)
+        import shutil as _shutil
+
+        _shutil.copytree(source_library_dir, rep_library_dir)
+    else:
+        rep_library_dir = None
+
+    # Step C: run a tiny campaign on the bootstrap, with LBG_DATA_PATH
     # pointing at our bootstrap parquet. campaign.py writes its
-    # artefacts to --out. We let it pick its own gate; defaulting to
-    # strict so we observe what the *production* gate does on null data.
+    # artefacts to --out. Permissive gate matches the v26 real-data
+    # setting (per STAGE2_REPORT lines 952/961) so the comparison is
+    # apples-to-apples.
     campaign_out = rep_dir / "campaign"
     env = os.environ.copy()
     env["LBG_DATA_PATH"] = str(boot_parquet)
     env["LBG_PROVIDER"] = provider
 
+    campaign_argv = [
+        sys.executable,
+        str(REPO_ROOT / "scripts" / "campaign.py"),
+        "--provider",
+        provider,
+        "--iterations",
+        str(iterations),
+        "--budget",
+        str(budget),
+        "--gate",
+        "permissive",
+        "--out",
+        str(campaign_out),
+    ]
+    if rep_library_dir is not None:
+        campaign_argv += ["--library-dir", str(rep_library_dir)]
+
     t0 = time.time()
     proc = subprocess.run(
-        [
-            sys.executable,
-            str(REPO_ROOT / "scripts" / "campaign.py"),
-            "--provider",
-            provider,
-            "--iterations",
-            str(iterations),
-            "--budget",
-            str(budget),
-            "--gate",
-            "permissive",
-            "--out",
-            str(campaign_out),
-        ],
+        campaign_argv,
         cwd=str(REPO_ROOT),
         env=env,
         capture_output=True,
@@ -180,6 +204,16 @@ def cmd_run(args: argparse.Namespace) -> int:
         )
         return 2
 
+    # Source library: by default the production library. Each replication
+    # gets a fresh COPY in its scratch dir to isolate it from real campaigns
+    # (Bug (b) fix). Empty string disables library auto-inject entirely.
+    if args.source_library_dir is None:
+        source_library_dir: Path | None = REPO_ROOT / "alpha_cards_library"
+    elif str(args.source_library_dir).strip() == "":
+        source_library_dir = None
+    else:
+        source_library_dir = Path(args.source_library_dir).resolve()
+
     log_path = base_out / "replications.jsonl"
     summary_path = base_out / "summary.json"
     rng = np.random.default_rng(args.rng_seed)
@@ -213,6 +247,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             budget=args.budget,
             iterations=args.iterations,
             source_parquet=source,
+            source_library_dir=source_library_dir,
             bootstrap_seed=bootstrap_seed,
         )
         records.append(rec)
@@ -375,6 +410,16 @@ def main(argv: list[str] | None = None) -> int:
         type=str,
         default=str(DEFAULT_SOURCE_PARQUET),
         help="path to the source SPY parquet to bootstrap from",
+    )
+    parser.add_argument(
+        "--source-library-dir",
+        type=str,
+        default=None,
+        help=(
+            "library to copy into each replication's scratch dir as the "
+            "auto-inject source. Defaults to alpha_cards_library/ at the "
+            "repo root. Pass '' to disable library auto-inject entirely."
+        ),
     )
     parser.add_argument("--base-out", type=str, default=None)
     parser.add_argument(

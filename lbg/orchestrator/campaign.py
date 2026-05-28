@@ -31,6 +31,7 @@ from typing import Any
 import yaml
 
 from lbg.gate import GateConfig
+from lbg.git_manager import GitManager
 from lbg.orchestrator.discovery import Discovery, DiscoveryResult
 from lbg.orchestrator.role_runner import RoleRunner
 from lbg.sealed_vault import SealedVault
@@ -574,6 +575,32 @@ class CampaignRunner:
         self.baseline_indicator_files = {
             p.name: p.read_text(encoding="utf-8") for p in sorted(indicators_dir.glob("*.py"))
         }
+        # Commit the injected indicator files + strategy.yaml so that
+        # trial commits later in the campaign have a proper parent
+        # containing the library factors. Without this commit the
+        # files exist on disk but are unknown to git, and sealed
+        # validation's `git show <parent>:indicators/<fn>.py` fails
+        # with exit 128 ("path exists on disk, but not in commit").
+        # Originally surfaced by Step 4's null calibration where
+        # codex rep_007's `add_indicator dispersion_regime` errored
+        # during sealed CI computation; live v26 campaigns happen to
+        # have worked because the first trial after auto-inject was
+        # always an add_indicator that pulled the library files into
+        # its commit, but that was accidental.
+        try:
+            git = GitManager(self.repo_root)
+            git.stage(["strategy.yaml", "indicators/"])
+            git.commit(f"library auto-inject: {n_injected} factor(s)", allow_empty=False)
+        except Exception as e:  # noqa: BLE001
+            # Auto-inject still mutated the working tree; failing to
+            # commit just degrades subsequent sealed validation, not
+            # the current iteration. Log loudly so the issue surfaces
+            # in the dashboard / logs.
+            logger.warning(
+                "library auto-inject git commit failed: %s — sealed validation "
+                "may fail to materialize the parent commit for the affected cards",
+                e,
+            )
         return n_injected
 
     def _reset_event_memory_only(self) -> None:

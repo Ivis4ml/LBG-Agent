@@ -95,14 +95,15 @@ Advisor 还指出一个 LBG 特有的结构性限制：LLM 不是在随机空间
     产出 1 张 add_indicator 候选，且因 git materialize bug 报错，**实证 n ≈ 0**
   - 不能据此声称"sealed filter 把所有 null false positive 过滤掉了"
 - **已知 bug**（B2 重跑前必须修，详见 `docs/synthetic_null_results/README.md`）:
-  - **(a)** Sealed validation 在 null subprocess 路径下 `git show <SHA>:indicators/<fn>.py`
-    会报 exit 128（库内因子文件不在该 commit 里）。real campaign 因 auto-inject
-    一步显式 commit 文件未触发。**修复前 sealed null specificity 没法测准**
-  - **(b)** Null campaign 默认沿用源仓库的 `alpha_cards_library/`，
-    `sync_from_run` 会把 bootstrap 数据上 accept 的卡片同步进真实库（在本次
-    ablation 中 codex rep_007 的 dispersion_regime 卡片就这样污染了真实库，
-    手动 revert 后才 commit）。**B2 前必须给 null script 加 `--library-dir`
-    指向每 rep 独立 scratch 目录**
+  - **(a) DONE**: `_inject_library_into_baseline` 现在在 staging 完成后显式
+    `git stage indicators/ strategy.yaml && git commit "library auto-inject"`，
+    使后续 trial commit 的 parent 包含库内因子，sealed validation 的
+    `git show <SHA>:indicators/<fn>.py` 不再报 exit 128。回归测试见
+    `tests/test_library_autoinject.py::test_inject_commits_indicator_files_to_git`
+  - **(b) DONE**: `synthetic_null_calibration.py` 现在为每个 rep 把源 `alpha_cards_library/`
+    复制到 `rep_dir/alpha_cards_library/` 并以此路径传 `--library-dir`，
+    `sync_from_run` 写入 scratch 副本而不污染源仓库。新增 `--source-library-dir`
+    CLI 用于在测试场景里指向其他源（或空串关闭 auto-inject）
 - **LLM-prior caveat**（advisor 指出，仍然适用）:
   > 合成 null 上的接受率并不等于 pipeline 在随机空间的 false-discovery rate。
   > LLM 仍然基于训练先验提出 ADX、MACD 这类已知因子，因此 effective N 小于名义
