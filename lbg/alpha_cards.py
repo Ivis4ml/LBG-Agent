@@ -64,13 +64,15 @@ class AlphaCardEvidence(BaseModel):
     train_summary: dict[str, float]  # sharpe / max_drawdown / turnover / num_trades
     validation_signal: ValidationSignal
     hypothesis_outcome: HypothesisOutcome
-    # `dict[str, float | bool]` because Benjamini-Hochberg adds a
-    # `bh_validated: bool` flag alongside the numeric per-card metrics.
+    # `dict[str, float | bool | str]`: Benjamini-Hochberg adds a
+    # `bh_validated: bool` flag alongside the numeric per-card metrics, and
+    # a failed per-card validation persists `{"validation_error": <str>}`
+    # so the failure reason survives in the card's own audit trail.
     # bool subclasses int in Python; without explicitly allowing bool
     # here pydantic coerces True/False to 1.0/0.0, which silently breaks
     # the downstream H1 reader (it does `summary.get("bh_validated", False)`
     # and would never see True after a round-trip).
-    sealed_summary: dict[str, float | bool] | None = None
+    sealed_summary: dict[str, float | bool | str] | None = None
 
 
 class AlphaCardDossierLink(BaseModel):

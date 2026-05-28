@@ -15,11 +15,14 @@ per_card_validation:
   block_len: 10
   n_bootstrap: 1000
   threshold: lower_bound_gt_zero
-  # PROPOSAL §20 item 32: Benjamini-Hochberg FDR control across the
-  # family of accepted cards. The H1 validated_factor_count is the
-  # number of cards whose bh_validated flag is True; the raw CI lower
-  # bound > 0 column is retained for inspection but is not the primary
-  # H1 signal.
+  # PROPOSAL §20 item 32: Benjamini-Hochberg FDR control across the family
+  # of accepted cards. The H1 validated_factor_count counts cards that
+  # clear BOTH bars: bh_validated = True (survives the BH family
+  # correction) AND CI lower bound > 0 (the pre-registered threshold).
+  # The conjunction is strictly stronger than `lower_bound_gt_zero` alone,
+  # so it adds the multiple-testing correction without loosening the
+  # pre-registered criterion. The bare CI-lower>0 count is retained as an
+  # inspection column (ci_only_validated_count) but is not the H1 signal.
   bh_q: 0.10
 
 h1:

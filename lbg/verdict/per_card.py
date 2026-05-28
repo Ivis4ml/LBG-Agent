@@ -282,7 +282,11 @@ def compute_per_card_sealed_validation(
             card.evidence.sealed_summary = summary
         else:
             patched = result
-            card.evidence.sealed_summary = None
+            # Persist the failure reason in the card's own audit trail
+            # rather than dropping it. The card is still excluded from the
+            # BH / SPA families (it has no valid p-value), but the YAML now
+            # records why it errored instead of a bare None.
+            card.evidence.sealed_summary = {"validation_error": result.error or "unknown_error"}
         card_path.write_text(
             yaml.safe_dump(
                 card.model_dump(mode="json"),

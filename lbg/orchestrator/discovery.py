@@ -141,6 +141,17 @@ class Discovery:
             incumbent_outcome.complexity,
         )
 
+        # Commit of the current incumbent strategy. Rejected trials still
+        # commit (line ~616) and advance HEAD, so HEAD is NOT a safe parent
+        # for the next candidate -- it may hold a rejected edit. Track the
+        # incumbent commit separately and refresh it only after a successful
+        # accept commit, so alpha-card `source_commit` materializes the true
+        # "without card" baseline rather than a discarded reject.
+        try:
+            incumbent_commit_sha = self.git.head_sha()
+        except GitCommandError:
+            incumbent_commit_sha = "0" * 40
+
         result = DiscoveryResult(incumbent_strategy=incumbent_strategy)
         self.live.iter_start(self.iter_id, budget=budget)
 
@@ -157,6 +168,7 @@ class Discovery:
                     trial_id=trial_id,
                     incumbent_strategy=incumbent_strategy,
                     incumbent_outcome=incumbent_outcome,
+                    incumbent_commit_sha=incumbent_commit_sha,
                     df_train=df_train,
                     df_val=df_val,
                 )
@@ -189,6 +201,13 @@ class Discovery:
                 result.accepted_trial_ids.append(trial_id)
                 incumbent_strategy = step.new_strategy
                 incumbent_outcome = step.candidate_outcome
+                # The accept commit (inside _run_one_trial) advanced HEAD to
+                # the new incumbent; re-read it fresh rather than assume, so a
+                # failed commit_trial leaves the prior SHA intact.
+                try:
+                    incumbent_commit_sha = self.git.head_sha()
+                except GitCommandError:
+                    pass
                 logger.info("trial %d accepted: %s", trial_id, step.summary)
             else:
                 result.n_rejected += 1
@@ -268,6 +287,7 @@ class Discovery:
         trial_id: int,
         incumbent_strategy: Strategy,
         incumbent_outcome: TrialOutcome,
+        incumbent_commit_sha: str,
         df_train,
         df_val,
     ):
@@ -396,11 +416,12 @@ class Discovery:
         editor_yaml_path.write_text(editor_result.raw_text, encoding="utf-8")
         reflector_yaml_path.write_text(refl_result.raw_text, encoding="utf-8")
 
-        # Memory writes (jsonl + md).
-        try:
-            parent_commit = self.git.head_sha()
-        except GitCommandError:
-            parent_commit = "0" * 40
+        # Memory writes (jsonl + md). The candidate was built on top of the
+        # incumbent strategy, so its parent is the incumbent commit -- NOT
+        # `head_sha()`, which may point at a just-committed rejected trial.
+        # This is what alpha-card `source_commit` materializes as the
+        # "without card" baseline in sealed per-card validation.
+        parent_commit = incumbent_commit_sha
 
         # Auto-extract cited factors for add_indicator trials when the
         # Editor forgot to populate cited_factors. Empirically only ~27% of

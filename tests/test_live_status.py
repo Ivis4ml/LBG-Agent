@@ -245,13 +245,24 @@ def test_alpha_card_summary_event_shape(tmp_path):
             "incremental_sharpe_point": 0.12,
             "incremental_sharpe_ci_lower": 0.02,
             "incremental_sharpe_ci_upper": 0.21,
+            "bh_validated": True,
+        },
+        {
+            # CI > 0 but BH-rejected: validated must be False (matches H1).
+            "alpha_id": "ci_only",
+            "source_trial": 2,
+            "incremental_sharpe_point": 0.09,
+            "incremental_sharpe_ci_lower": 0.05,
+            "incremental_sharpe_ci_upper": 0.19,
+            "bh_validated": False,
         },
         {
             "alpha_id": "bad",
-            "source_trial": 2,
+            "source_trial": 3,
             "incremental_sharpe_point": -0.04,
             "incremental_sharpe_ci_lower": -0.18,
             "incremental_sharpe_ci_upper": 0.08,
+            "bh_validated": False,
         },
         {
             "alpha_id": "orphan",
@@ -269,10 +280,15 @@ def test_alpha_card_summary_event_shape(tmp_path):
     assert ev["h1_weak"] is True
     assert ev["h1_strong"] is False
     cards = ev["cards"]
-    assert {c["alpha_id"] for c in cards} == {"good", "bad", "orphan"}
+    assert {c["alpha_id"] for c in cards} == {"good", "ci_only", "bad", "orphan"}
     good = next(c for c in cards if c["alpha_id"] == "good")
     assert good["validated"] is True
+    assert good["bh_validated"] is True
     assert good["ci_lower"] == 0.02
+    # CI > 0 alone does not validate: BH must also reject.
+    ci_only = next(c for c in cards if c["alpha_id"] == "ci_only")
+    assert ci_only["validated"] is False
+    assert ci_only["ci_lower"] == 0.05
     orphan = next(c for c in cards if c["alpha_id"] == "orphan")
     assert orphan["validated"] is False
     assert "error" in orphan

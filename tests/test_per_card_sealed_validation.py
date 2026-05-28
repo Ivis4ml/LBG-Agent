@@ -286,3 +286,10 @@ def test_missing_trial_commit_records_error(card_repo, tmp_path):
     orphan = next(r for r in results if r.alpha_id == "orphan")
     assert orphan.error is not None
     assert "trial commit" in orphan.error
+
+    # The failure reason is persisted to the card's own audit trail, not
+    # dropped to a bare None (codex review, Issue 4).
+    raw = yaml.safe_load((cards_dir / "trial_0999.yaml").read_text(encoding="utf-8"))
+    summary = raw["evidence"]["sealed_summary"]
+    assert summary is not None
+    assert "trial commit" in summary["validation_error"]

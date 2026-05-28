@@ -80,7 +80,13 @@ def _library_cards_summary(library) -> list[dict[str, Any]]:
             entry["attach_config"] = None
         sealed = card.evidence.sealed_summary
         if sealed is not None:
-            entry["sealed_summary"] = {k: float(v) for k, v in sealed.items()}
+            # A failed per-card validation persists `{"validation_error": <str>}`
+            # in sealed_summary; skip non-numeric values so the snapshot does
+            # not crash on `float(<str>)`. Numeric metrics + bool flags coerce
+            # fine (bool subclasses int).
+            entry["sealed_summary"] = {
+                k: float(v) for k, v in sealed.items() if isinstance(v, (int, float))
+            }
         else:
             entry["sealed_summary"] = None
         if card.dossier_link is not None:

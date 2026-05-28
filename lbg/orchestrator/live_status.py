@@ -210,10 +210,15 @@ class LiveStatusWriter:
                 ci_lo = float(r.get("incremental_sharpe_ci_lower", 0.0))
                 ci_hi = float(r.get("incremental_sharpe_ci_upper", 0.0))
                 point = float(r.get("incremental_sharpe_point", 0.0))
+                bh = bool(r.get("bh_validated", False))
                 entry["ci_lower"] = ci_lo
                 entry["ci_upper"] = ci_hi
                 entry["point"] = point
-                entry["validated"] = ci_lo > 0.0
+                entry["bh_validated"] = bh
+                # Match the H1 verdict: a card is validated only when it
+                # clears BOTH the BH family correction AND the CI bar. The
+                # raw `ci_lower` stays above as an inspection column.
+                entry["validated"] = bh and ci_lo > 0.0
             cards.append(entry)
         self._write(
             {

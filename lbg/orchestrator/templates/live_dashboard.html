@@ -132,7 +132,7 @@ footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--ink-mu
   </div>
   <div class="chart-card full">
     <h3>alpha card 增量 Sharpe · 95% 区间</h3>
-    <div class="hint">主 H1 计量。横条 = 单 alpha card 在 sealed 窗口的 pathwise 增量 Sharpe 区间 [ci_lower, ci_upper]；红点 = 点估计；竖虚线 = 验证阈值 0。<code>ci_lower &gt; 0</code> 的 card 计入 <code>validated_factor_count</code>。</div>
+    <div class="hint">主 H1 计量。横条 = 单 alpha card 在 sealed 窗口的 pathwise 增量 Sharpe 区间 [ci_lower, ci_upper]；红点 = 点估计；竖虚线 = 验证阈值 0。同时满足 <code>bh_validated</code>（通过 Benjamini-Hochberg 家族校正）<strong>且</strong> <code>ci_lower &gt; 0</code> 的 card 才计入 <code>validated_factor_count</code>；<code>ci_lower &gt; 0</code> 单独作为检视列保留。</div>
     <div style="position: relative; height: 260px;"><canvas id="alphaCardChart"></canvas></div>
   </div>
 
@@ -304,7 +304,8 @@ const alphaCardChart = new Chart(document.getElementById('alphaCardChart').getCo
             return [
               `point: ${c.point.toFixed(3)}`,
               `95% CI: [${c.ci_lower.toFixed(3)}, ${c.ci_upper.toFixed(3)}]`,
-              c.validated ? 'validated (ci_lower > 0)' : 'not validated',
+              `bh_validated: ${c.bh_validated ? 'yes' : 'no'}`,
+              c.validated ? 'validated (bh ∧ ci_lower > 0)' : 'not validated',
             ];
           },
         },

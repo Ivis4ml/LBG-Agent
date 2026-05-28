@@ -96,37 +96,42 @@ def compute_alpha_card_h1_verdict(
     *,
     plan: AnalysisPlan = DEFAULT_ANALYSIS_PLAN,
 ) -> AlphaCardH1Verdict:
-    """Count alpha cards with sealed CI lower bound > 0.
+    """Count alpha cards that clear the H1 bar: BH-reject AND CI lower > 0.
 
     `cards` may be a repository root, an `alpha_cards/` directory, or an
     iterable of already-validated `AlphaCard` objects. Cards without
     `evidence.sealed_summary` are honest non-validations, not failures.
     """
     loaded = _load_alpha_cards(cards)
-    # H1 (primary): cards with `bh_validated = True` in the sealed
-    # summary. compute_per_card_sealed_validation runs BH across the
-    # whole family of accepted cards and writes the flag back.
-    bh_validated_ids: list[str] = []
+    # H1 (primary): a card counts only if it BOTH survives the
+    # Benjamini-Hochberg family correction (`bh_validated`, written back by
+    # compute_per_card_sealed_validation) AND clears the pre-registered
+    # `ci_lower > 0` bar. The conjunction is strictly stronger than the
+    # original pre-registration, so it cannot loosen the verdict post-hoc;
+    # it only adds the multiple-testing correction on top.
+    h1_validated_ids: list[str] = []
     ci_only_ids: list[str] = []
     for card in loaded:
         if card.status != AlphaCardStatus.ACCEPTED:
             continue
         summary = card.evidence.sealed_summary or {}
-        if summary.get("bh_validated", False):
-            bh_validated_ids.append(card.alpha_id)
+        bh = bool(summary.get("bh_validated", False))
         ci_lower = _sealed_incremental_ci_lower(card)
-        if ci_lower is not None and ci_lower > 0.0:
+        ci_positive = ci_lower is not None and ci_lower > 0.0
+        if ci_positive:
             ci_only_ids.append(card.alpha_id)
+        if bh and ci_positive:
+            h1_validated_ids.append(card.alpha_id)
 
     baseline_counts = dict(plan.h1.baseline_validated_counts)
     best_baseline_count = max(baseline_counts.values(), default=0)
-    n_val = len(bh_validated_ids)
+    n_val = len(h1_validated_ids)
     strong = n_val > best_baseline_count and n_val >= plan.h1.tau
     weak = n_val >= 1 and n_val >= best_baseline_count
     return AlphaCardH1Verdict(
         candidate_card_count=len(loaded),
         validated_factor_count=n_val,
-        validated_alpha_ids=tuple(bh_validated_ids),
+        validated_alpha_ids=tuple(h1_validated_ids),
         baseline_validated_counts=baseline_counts,
         best_baseline_count=best_baseline_count,
         tau=plan.h1.tau,

@@ -277,27 +277,32 @@ def _alpha_card(
     )
 
 
-def test_alpha_card_h1_counts_bh_validated_cards():
-    """Primary H1 counts cards whose `bh_validated` flag is True.
+def test_alpha_card_h1_requires_bh_and_ci_positive():
+    """Primary H1 counts cards that clear BOTH bars: bh_validated AND
+    CI lower > 0.
 
-    Cards with CI lower > 0 but BH-rejected (because the family-wise
-    correction pushed them below the BH threshold) do NOT contribute to
-    `validated_factor_count`; they show up only in
-    `ci_only_validated_count` as a diagnostic.
+    The two diverging cases must NOT contribute to
+    `validated_factor_count`:
+      - CI > 0 but BH-rejected (family correction pushed it below q), and
+      - BH-reject true but CI <= 0 (one-sided p cleared 0.10 yet the 95%
+        CI still straddles zero).
+    Both still surface in `ci_only_validated_count` only when CI > 0.
     """
     verdict = compute_alpha_card_h1_verdict(
         [
-            _alpha_card("bh_good", 0.01),  # CI > 0 + bh_validated
+            _alpha_card("both_good", 0.01),  # CI > 0 + bh_validated -> H1
             _alpha_card("ci_only", 0.01, bh_validated=False),  # CI > 0, BH rejected
+            _alpha_card("bh_no_ci", -0.01, bh_validated=True),  # BH ok, CI <= 0
             _alpha_card("bad", -0.01),  # CI < 0, BH false
             _alpha_card("pending", None),  # no sealed summary
         ]
     )
-    assert verdict.candidate_card_count == 4
+    assert verdict.candidate_card_count == 5
     assert verdict.validated_factor_count == 1
-    assert verdict.validated_alpha_ids == ("bh_good",)
-    assert verdict.ci_only_validated_count == 2  # both `bh_good` and `ci_only`
-    assert set(verdict.ci_only_validated_alpha_ids) == {"bh_good", "ci_only"}
+    assert verdict.validated_alpha_ids == ("both_good",)
+    # ci_only is the CI>0 inspection column: both_good + ci_only (NOT bh_no_ci).
+    assert verdict.ci_only_validated_count == 2
+    assert set(verdict.ci_only_validated_alpha_ids) == {"both_good", "ci_only"}
     assert verdict.weak
     assert not verdict.strong
 
