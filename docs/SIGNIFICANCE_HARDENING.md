@@ -73,27 +73,48 @@ Advisor 还指出一个 LBG 特有的结构性限制：LLM 不是在随机空间
   - 收益率正态化下偏度峰度 → 0 时 DSR 退化为标准 Sharpe z-检验
 - **退出条件**: 当前 11 张卡片给出 DSR 值；与 BH/SPA 形成三列校正视图。
 
-### Step 4 · 合成 null 标定（1-2 周，含算力）
+### Step 4 · 合成 null 标定（基础设施完成，sealed 层 specificity 待补）
 
 - **目的**: 经验测量"在真零假设下 gate 接受率 / sealed CI 通过率"，
   作为整套 pipeline 的 operating characteristic。
-- **实现**:
-  - 新建 `scripts/synthetic_null_calibration.py`，
-    使用 stationary-bootstrap 重排 SPY 收益（保留收益率边际分布与短期自相关）
-  - 在每个重排数据集上跑 campaign（budget=15、iterations=2），共 30 次
-  - 汇总：接受率、单卡 CI 通过率、BH 拒绝率、SPA 拒绝率的经验分布
-  - 与真实数据上的对应指标做对比
-- **报告中必须明说的 LLM-prior caveat**（advisor 指出）:
+- **当前状态**（2026-05-27）:
+  - 基础设施已完成（commit f623b79）：bootstrap 模块 + LBG_DATA_PATH 覆盖 +
+    calibration 编排脚本 + 10 个单元测试
+  - 跨 provider ablation 已跑：codex_cli 与 mimo_tp 各 15 reps × budget 6 ×
+    iterations 1，结果归档至 `docs/synthetic_null_results/`
+- **可信的实证发现**:
+  - Gate FPR per trial: **codex_cli 8.9% ± 10.7%**、**mimo_tp 7.8% ± 8.6%**。
+    两 provider 在 null 上的 gate 行为统计上无显著差异（n=15 each，差异 95% CI
+    约 ±0.07）
+  - LLM 在 null 数据上**自然偏向 remove_filter / change_sizing_mode / simplify**
+    （这些不产 alpha card），15 个 codex accepts 里只有 1 个 add_indicator，
+    15 个 mimo accepts 里 0 个 add_indicator。一个有趣的次生发现：null 数据让
+    Editor 倾向于"剥离已注入的库内因子"
+- **未被实证支撑的（需补 B2 才能讲）**:
+  - **sealed validation 在 null 上的 specificity 仍未测试**。30 个 reps 累计仅
+    产出 1 张 add_indicator 候选，且因 git materialize bug 报错，**实证 n ≈ 0**
+  - 不能据此声称"sealed filter 把所有 null false positive 过滤掉了"
+- **已知 bug**（B2 重跑前必须修，详见 `docs/synthetic_null_results/README.md`）:
+  - **(a)** Sealed validation 在 null subprocess 路径下 `git show <SHA>:indicators/<fn>.py`
+    会报 exit 128（库内因子文件不在该 commit 里）。real campaign 因 auto-inject
+    一步显式 commit 文件未触发。**修复前 sealed null specificity 没法测准**
+  - **(b)** Null campaign 默认沿用源仓库的 `alpha_cards_library/`，
+    `sync_from_run` 会把 bootstrap 数据上 accept 的卡片同步进真实库（在本次
+    ablation 中 codex rep_007 的 dispersion_regime 卡片就这样污染了真实库，
+    手动 revert 后才 commit）。**B2 前必须给 null script 加 `--library-dir`
+    指向每 rep 独立 scratch 目录**
+- **LLM-prior caveat**（advisor 指出，仍然适用）:
   > 合成 null 上的接受率并不等于 pipeline 在随机空间的 false-discovery rate。
   > LLM 仍然基于训练先验提出 ADX、MACD 这类已知因子，因此 effective N 小于名义
   > 试验次数；合成 null 上的高接受率既可能说明 gate 过于宽松，也可能说明 LLM
   > 先验与 bootstrap 伪影部分重合。本节给出的是 pipeline 在 LLM 先验加随机数
   > 据条件下的 operating characteristic，而非纯统计意义上的 FDR。
-- **测试**:
-  - synthetic-null 脚本可以在 mini 模式（budget=2、iterations=1）3 分钟内跑通
-  - 标定输出 JSON schema 稳定，可被报告生成器消费
-- **退出条件**: 拿到 30 次重排 campaign 的接受率分布；与真实数据接受率对比的
-  z-score 或经验百分位写入最终报告。
+- **后续 B2 路径**（推迟执行）:
+  - 先修上面提到的 materialize bug
+  - 把 null campaign 的 budget 从 6 提到 30+ 以累计更多 add_indicator 候选
+  - 同时在 calibration 脚本里导出每张 null card 的完整 statistic（ci_lower / p_value /
+    sharpe_point）写入 replications.jsonl，用于经验 FDR 分布构造
+  - 跑完之后可以给 vol_regime_zscore（+0.249, CI [-0.091, +0.685]）一个经验百分位
 
 ### Step 5 · Walk-forward 多窗口 sealed（1-2 周）
 

@@ -1,0 +1,15 @@
+{
+  "provider": "codex_cli",
+  "n_replications": 15,
+  "n_replications_with_summary": 15,
+  "acceptance_count_mean": 0.5333333333333333,
+  "acceptance_count_std": 0.6399404734221844,
+  "acceptance_rate_mean": 0.08888888888888888,
+  "acceptance_rate_std": 0.10665674557036406,
+  "ci_pass_mean": 0.0,
+  "bh_pass_mean": 0.0,
+  "dsr_pass_mean": 0.0,
+  "spa_p_mean": NaN,
+  "spa_p_rejection_rate_10": NaN,
+  "elapsed_sec_total": 1795.1
+}

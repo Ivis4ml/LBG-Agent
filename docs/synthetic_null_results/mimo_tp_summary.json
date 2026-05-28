@@ -1,0 +1,15 @@
+{
+  "provider": "mimo_tp",
+  "n_replications": 15,
+  "n_replications_with_summary": 15,
+  "acceptance_count_mean": 0.4666666666666667,
+  "acceptance_count_std": 0.5163977794943222,
+  "acceptance_rate_mean": 0.07777777777777777,
+  "acceptance_rate_std": 0.08606629658238703,
+  "ci_pass_mean": 0.0,
+  "bh_pass_mean": 0.0,
+  "dsr_pass_mean": 0.0,
+  "spa_p_mean": NaN,
+  "spa_p_rejection_rate_10": NaN,
+  "elapsed_sec_total": 6817.4
+}
