@@ -185,6 +185,26 @@ def run_one_replication(
         metrics["spa_p_value_u"] = spa.get("spa_p_value_u")
         # Strategy-level supplementary verdict (less interesting but log it).
         metrics["sealed_strategy_sharpe"] = sealed.get("sharpe")
+        # Raw per-card null statistics — the empirical-null distribution
+        # is built from these. Without this dump we only have counts,
+        # which (per advisor's Step 4 review) is insufficient to
+        # position a real-data observed CI lower against the null. See
+        # docs/SIGNIFICANCE_HARDENING.md §4 (B2 path).
+        metrics["per_card_null_stats"] = [
+            {
+                "alpha_id": c.get("alpha_id"),
+                "source_trial": c.get("source_trial"),
+                "incremental_sharpe_point": c.get("incremental_sharpe_point"),
+                "incremental_sharpe_ci_lower": c.get("incremental_sharpe_ci_lower"),
+                "incremental_sharpe_ci_upper": c.get("incremental_sharpe_ci_upper"),
+                "p_value_one_sided": c.get("p_value_one_sided"),
+                "bh_validated": c.get("bh_validated"),
+                "deflated_sharpe_ratio": c.get("deflated_sharpe_ratio"),
+                "dsr_passes": c.get("dsr_passes"),
+                "validation_error": c.get("validation_error"),
+            }
+            for c in per_card
+        ]
     else:
         metrics["error"] = "no_campaign_summary"
 
