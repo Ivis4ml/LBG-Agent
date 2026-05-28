@@ -151,6 +151,7 @@ def run_one_replication(
         "rep_id": rep_id,
         "provider": provider,
         "bootstrap_seed": bootstrap_seed,
+        "budget": budget,
         "elapsed_sec": round(elapsed, 1),
         "campaign_exit_code": proc.returncode,
     }
@@ -334,14 +335,21 @@ def cmd_compare(args: argparse.Namespace) -> int:
 def _summarize(records: list[dict], *, provider: str) -> dict:
     if not records:
         return {"provider": provider, "n_replications": 0}
-    budgets = [r.get("total_accepted") for r in records]
+    # Per-rep acceptance RATE uses each record's own budget as denominator
+    # (records may carry mixed budgets across resumed runs). Records that
+    # predate the `budget` field fall back to 6 (the original default) so
+    # old datasets still summarise without crashing.
+    rates = np.array(
+        [
+            r["total_accepted"] / float(r.get("budget", 6) or 6)
+            for r in records
+            if r.get("total_accepted") is not None
+        ],
+        dtype=float,
+    )
     accepted = np.array(
         [r["total_accepted"] for r in records if r.get("total_accepted") is not None], dtype=float
     )
-    # The budget per iteration is configurable; approximate via the
-    # MAX of total_accepted as a denominator if we can't see it.
-    # We pass `budget` through env upstream; for now use total trials = 6 (default).
-    # The real per-rep budget is in records as `budget` field if we add it.
     bh_pass = np.array(
         [r["n_bh_pass"] for r in records if r.get("n_bh_pass") is not None], dtype=float
     )
@@ -369,8 +377,8 @@ def _summarize(records: list[dict], *, provider: str) -> dict:
         ),
         "acceptance_count_mean": mean(accepted),
         "acceptance_count_std": std(accepted),
-        "acceptance_rate_mean": mean(accepted / np.maximum(1.0, np.full_like(accepted, 6.0))),
-        "acceptance_rate_std": std(accepted / np.maximum(1.0, np.full_like(accepted, 6.0))),
+        "acceptance_rate_mean": mean(rates),
+        "acceptance_rate_std": std(rates),
         "ci_pass_mean": mean(ci_pass),
         "bh_pass_mean": mean(bh_pass),
         "dsr_pass_mean": mean(dsr_pass),
