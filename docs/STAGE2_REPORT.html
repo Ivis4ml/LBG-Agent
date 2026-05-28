@@ -320,8 +320,12 @@ window.MathJax = {
   <div class="kpi teal"><div class="kpi-label">/goal 状态</div><div class="kpi-value">11 / 10</div><div class="kpi-sub">distinct factor count · MET</div></div>
   <div class="kpi gold"><div class="kpi-label">alpha cards in library</div><div class="kpi-value">11</div><div class="kpi-sub">每个含 .py + dossier + sealed CI</div></div>
   <div class="kpi"><div class="kpi-label">campaign 序列</div><div class="kpi-value">v12 → v26</div><div class="kpi-sub">15 次实证 · ~3.5 小时 codex_cli</div></div>
-  <div class="kpi teal"><div class="kpi-label">测试基线</div><div class="kpi-value">606</div><div class="kpi-sub">pytest 全绿 · ruff 全过</div></div>
+  <div class="kpi teal"><div class="kpi-label">测试基线</div><div class="kpi-value">720</div><div class="kpi-sub">pytest 全绿（含显著性硬化 +114）· ruff 全过</div></div>
 </div>
+
+<div class="aside note">
+<span class="aside-label">v26 之后 · 显著性硬化（§9）</span>
+v26 凑齐 11 个因子后，本报告新增了一整段对"这些因子真的显著吗"的回答：三层多重校正栈（BH FDR / Hansen SPA / Bailey-LdP DSR）、合成 null 标定的 provider ablation、以及 B3 per-card 经验 null 分布。<strong>结论：在本窗口本定义下没有任何因子通过家族级校正，H1 = False</strong>——但这一次有经验 null 分布撑腰。详见 <strong>§ 9</strong>。</div>
 
 <h3>本阶段读者路径</h3>
 
@@ -332,6 +336,7 @@ window.MathJax = {
   <li>想看 HL 因子发现循环 + Python↔dossier round-trip：读 <strong>§ 6</strong>。</li>
   <li>想看 v12→v26 的完整故事（每次 campaign 学到了什么、gate 怎么演化的）：读 <strong>§ 7</strong>。</li>
   <li>想看当前 library 里都有哪 11 个因子：读 <strong>§ 8</strong>。</li>
+  <li>想看"这些因子真的显著吗"（多重校正 + 合成 null + 经验 p）：读 <strong>§ 9</strong>。</li>
 </ul>
 
 <p>本文档与 <code>PROPOSAL.html</code>（规范源头，最新 r4 已记录四角色与 pathwise H1）、<code>docs/STAGE1_REPORT.html</code>（main 分支状态对应的第一阶段 15 节实施回顾）协同阅读。STAGE1 报告记录的是 main 分支（提交 d77e5a2）截止时的状态——15 sections、3 LLM 角色、0 alpha cards；本 STAGE2 报告对应 codexreview 分支的<em>所有后续工作</em>：4 LLM 角色（含 Translator）、51 seed templates、11 distinct factors in library、完整的 gate 演化时间线。</p>
@@ -1181,7 +1186,7 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
 
 <p><strong>读表说明</strong>：
 <br><em>train Sharpe</em> 是该因子被接受时<em>整个策略</em>在 split_A 上的实测 Sharpe（incumbent + 这张 card 起作用），不是因子单独贡献。
-<br><em>sealed 增量 Sharpe (pathwise CI)</em> 只在该 card 是<em>当次 campaign 接受</em>时计量（同一 run 内 per-card validation 跑过）；之后再被 auto-inject 进 baseline 的卡片不重复计量。当前只有 v12 接受的 <code>vol_regime_zscore</code> 和 v20 接受的 <code>body_to_range</code> 有 sealed 数据。剩下 9 个是后续 campaign 接受、本 run 之外的 sealed CI 还没回填——下一阶段的 strict 复检会把它们都补齐（见 § 10 路线图 ①）。
+<br><em>sealed 增量 Sharpe (pathwise CI)</em> 只在该 card 是<em>当次 campaign 接受</em>时计量（同一 run 内 per-card validation 跑过）；之后再被 auto-inject 进 baseline 的卡片不重复计量。当前只有 v12 接受的 <code>vol_regime_zscore</code> 和 v20 接受的 <code>body_to_range</code> 有 sealed 数据。剩下 9 个是后续 campaign 接受、本 run 之外的 sealed CI 还没回填——§9 的 B3 已用「单因子 vs 裸 baseline」定义给全部 11 个补了经验 null p 值，strict pathwise 复检见 § 11 路线图 ①。
 <br>所有 11 个因子的<em>sealed CI lower 都未严格大于 0</em>。最接近的是 <code>vol_regime_zscore</code>（lower -0.091，点估计 +0.249）。这是 permissive gate growth-phase 路径的预期产物——sharpe 不显著下降即可入库，意在<em>多样性</em>而非<em>每张都严格显著</em>。</p>
 
 <p>类别分布：trend × 5、momentum × 3、microstructure × 2、regime × 2（vol_regime_zscore + fractal_efficiency）。覆盖 7 类 seed template 中的 4 类——剩下 mean_reversion / volatility / drawdown / volume 类还没被接受过任何 add_indicator，是下一阶段探索的重点方向。</p>
@@ -1213,10 +1218,99 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
 
 </section>
 
-<!-- ============================== § 9 Stage 2 入口 ============================== -->
-<section id="stage2">
+<!-- ============================== § 9 显著性硬化 ============================== -->
+<section id="significance">
 <div class="section-marker">
   <span class="section-num">§ 9</span>
+  <h2>显著性硬化 · 这 11 个因子真的显著吗？</h2>
+</div>
+
+<p class="lede">§8 给出 11 个因子，但留了一个尖锐的问题：跑了 15 次 campaign、上百次 trial，<em>“被接受”不等于“显著”</em>。一个搜索过程从噪声里挑出右尾，本身就会制造表观 alpha。本节记录为回答“怎么确保因子显著、而非搜索偶然”所做的一整套显著性硬化工作：三层多重校正、分辨力下限的明确承认、合成 null 标定，以及最终对每张卡片给出可辩护的经验 null p 值。结论先行：<strong>在本窗口本定义下 H1 = False</strong>，但这一次有经验 null 分布支撑，不再是“CI 恰好包含 0”的空话。</p>
+
+<h3>三层多重校正栈</h3>
+
+<p>校正回答的不是同一个问题，叠在一起才完整。三层都已实现并接入 sealed payload（<code>lbg/verdict/</code>，75 个单元测试）。</p>
+
+<div class="rung">
+  <div class="rung-tag">BH FDR</div>
+  <div class="rung-body"><strong>Benjamini-Hochberg，控 per-card FDR 于 0.10</strong>（PROPOSAL §20 第 32 条原本只写了规范、代码里没实现，本阶段补上）。对家族里所有卡片的单边 bootstrap p 值做 step-up，回答“逐张卡片的假阳率”。<code>lbg/verdict/multiple_testing.py</code>。</div>
+</div>
+<div class="rung">
+  <div class="rung-tag">SPA</div>
+  <div class="rung-body"><strong>Hansen 2005 Superior Predictive Ability</strong>，家族级检验：“这一组卡片<em>作为整体</em>，至少有一张真显著吗”，并自动考虑候选间的相关结构。stationary bootstrap + SPA_l / SPA_c / SPA_u 三档。这是金融计量里专门回答“试了 N 个、最好那个还显著吗”的标准方法。<code>lbg/verdict/spa.py</code>。</div>
+</div>
+<div class="rung">
+  <div class="rung-tag">DSR</div>
+  <div class="rung-body"><strong>Deflated Sharpe Ratio</strong>（Bailey &amp; López de Prado 2014）：考虑“试了多少次”后，单张卡片 Sharpe &gt; 0 的概率。输入 SR̂、偏度、峰度、样本长度、试验次数。纯 stdlib 实现（math.erf + Acklam 反正态），无 scipy 依赖。<code>lbg/verdict/dsr.py</code>。</div>
+</div>
+
+<div class="aside note">
+<span class="aside-label">分辨力下限 · ΔSR ≈ 0.30 年化</span>
+PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 sealed bar + block_len 10，Bailey-LdP 的 Sharpe 标准误公式给出 σ̂(SR) ≈ 0.5 年化，α=0.05、80% 功效下可靠分辨的最小增量约 <strong>ΔSR ≈ 0.30</strong>。低于此值的因子在本窗口上与零不可区分——它们“未被反驳”不应被读作“已被证实”。vol_regime_zscore 的 +0.249 正好坐在这条线下方，所以无论怎么校正，它的 CI 必然包含 0。
+</div>
+
+<h3>合成 null 标定 · pipeline 在已知零假设上的行为</h3>
+
+<p>把 SPY 日收益用 stationary bootstrap 打乱（保留边际分布与短期自相关、毁掉真实信号），跑同一套 discovery pipeline，看 gate 接受率与 sealed 通过率。任何接受都是构造性的假阳。结果归档于 <code>docs/synthetic_null_results/</code>。</p>
+
+<table>
+  <thead>
+    <tr><th>实验</th><th>设置</th><th>gate FPR / trial</th><th>add_indicator 到达 sealed</th><th>sealed CI&gt;0 通过</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Step 4 · codex_cli</td><td>15 reps × budget 6</td><td class="num">8.9% ± 10.7%</td><td class="num">1（且 error）</td><td class="num">—</td></tr>
+    <tr><td>Step 4 · mimo_tp</td><td>15 reps × budget 6</td><td class="num">7.8% ± 8.6%</td><td class="num">0</td><td class="num">—</td></tr>
+    <tr><td>B2 · codex_cli</td><td>30 reps × budget 15（27 OK）</td><td class="num">15.1%</td><td class="num">6（0 error）</td><td class="num yes">0 / 6</td></tr>
+  </tbody>
+</table>
+
+<p><strong>provider ablation</strong>：codex_cli (gpt-5.5) 与 mimo_tp (mimo-v2.5-pro) 用相同 bootstrap 种子（看到完全相同的 null 数据），gate 接受率 8.9% vs 7.8%，差异在 n=15 下统计不显著（差值 95% CI ≈ ±0.07）。advisor 担心的 “LLM 训练先验差异” 在此规模上没有显现。次生发现：LLM 在 null 数据上<em>极少提 add_indicator</em>，绝大多数接受是 remove_filter / simplify——它最“高产”的动作是把已注入的库内因子剥回去。</p>
+
+<div class="aside warn">
+<span class="aside-label">过程中发现并修复的两个 bug</span>
+<strong>(a) auto-inject 未 commit</strong>：库因子被注入 baseline 但其 <code>.py</code> 未进 git，导致 sealed validation 的 <code>git show &lt;parent&gt;:indicators/&lt;fn&gt;.py</code> 报 exit 128。Step 4 那唯一一张到达 sealed 的 add_indicator 就是这样 error 的——所以 Step 4 的 sealed 特异度其实<em>没测到</em>。修复后 B2 的 6 张全部干净计算。<br>
+<strong>(b) null campaign 污染真实库</strong>：campaign 的 <code>sync_from_run</code> 把 bootstrap 数据上接受的卡片写回了源 <code>alpha_cards_library/</code>（一张 -99.99% 回撤的 dispersion_regime 卡片）。手动 revert 后给 null script 加了 per-rep scratch library 隔离。
+</div>
+
+<h3>B3 · 每张卡片的经验 null 分布</h3>
+
+<p>合成 null 即便 budget 15 也只产出 6 张 add_indicator（LLM 在噪声上不爱造因子），n 太小。B3 改用纯计算：绕开 LLM，对 11 张卡片<em>每张</em>在 N=200 个 bootstrap 抽样上直接算 sealed CI，给它的真实观测 CI 一个经验百分位。定义改为「单因子 vs 裸 baseline」（v26 的 pathwise trial commits 已随 /tmp 丢失，无法重放；新定义 observed 与 null 两臂一致可比）。交叉验证：vol_regime_zscore 是 v26 首个被接受的因子、其 pathwise parent 就是裸 baseline，两定义恰好重合，B3 观测 CI 与 v26 数字 bit-for-bit 一致——机制正确性的硬证据。</p>
+
+<table>
+  <thead>
+    <tr><th>卡片</th><th>obs point ΔSR</th><th>obs CI_lower</th><th>经验 p(point)</th><th>判读</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>vol_regime_zscore</code>（v26 头牌）</td><td class="num"><strong>+0.249</strong></td><td class="num">-0.091</td><td class="num"><strong>0.240</strong></td><td class="no">不显著</td></tr>
+    <tr><td><code>fractal_efficiency</code></td><td class="num">+0.213</td><td class="num">0.000</td><td class="num">0.010</td><td>个体低但脆弱</td></tr>
+    <tr><td><code>ema_above_sma</code></td><td class="num">+0.193</td><td class="num">-0.389</td><td class="num">0.045</td><td>边缘</td></tr>
+    <tr><td>donchian / macd / roc / aroon / body_to_range / upper_wick</td><td class="num">0.000</td><td class="num">0.000</td><td class="num">—</td><td>裸 baseline 上惰性</td></tr>
+    <tr><td><code>kama_ratio</code></td><td class="num">-0.181</td><td class="num">-0.506</td><td class="num">0.825</td><td class="no">null</td></tr>
+    <tr><td><code>velocity_zscore</code></td><td class="num">-0.243</td><td class="num">-0.922</td><td class="num">0.915</td><td class="no">null</td></tr>
+  </tbody>
+</table>
+
+<p><em>经验 p(point)</em> = 200 个 null 抽样里点估计 ΔSharpe ≥ 该卡片观测值的比例。<strong>家族级</strong>（Westfall-Young，以 bootstrap 抽样为独立单元）：minP adjusted p = <strong>0.27</strong>、maxT adjusted p = <strong>0.295</strong>——<em>都不显著</em>。</p>
+
+<p><strong>三个诚实结论</strong>：</p>
+<ul>
+  <li><strong>vol_regime_zscore 经验 p = 0.24，不显著</strong>。它点估计最高，但波动率也最大：24% 的 null 抽样能靠运气刷出更高的点估计（B2 里 null 点估计最高刷到了 +0.559，比真实最佳还高）。这正是“点估计会骗人、必须看 CI / 看 null 分布”的活体演示。</li>
+  <li><strong>fractal_efficiency 个体经验 p = 0.010 看着诱人</strong>，但 (a) 它的 CI_lower = 0（在裸 baseline 上几乎不改变仓位，信号脆弱）；(b) 0.010 是从整个 v26 搜索里选出来的，没校正更大的搜索空间；(c) 不过家族级校正。</li>
+  <li><strong>没有任何卡片通过家族级校正</strong>（最好的 adjusted p ≈ 0.27）。在本窗口本定义下 H1 = False——但现在这是个有经验 null 撑腰的判断，而不是“CI 恰好跨 0”的偶然。</li>
+</ul>
+
+<div class="aside">
+<span class="aside-label">B3 不能做什么（写报告必须承认）</span>
+不测 pipeline 级 FDR（那需要 LLM 在环，是 Step 4 / B2 的事）；不验证 SPA / DSR 作为独立程序的校准；不解决 Stage 2 paper-trading 那个唯一干净的 OOS 问题；11 张卡片的家族对家族级校正功效本来就弱。还有一条不可由统计补救的根本约束：<strong>SPY 2021-2024 对 LLM 不是真 OOS</strong>——这段时期的因子文献在它训练数据里。真正干净的 OOS 只能由 Stage 2 在 &gt;2024-12-31 数据上的 paper trading 提供。</div>
+
+<p>完整复盘（含 codex / claude / mimo 三 provider 配额耗尽的 run 日志）见 <code>docs/SIGNIFICANCE_HARDENING.md</code> 与 <code>docs/synthetic_null_results/</code>。脚本：<code>scripts/synthetic_null_calibration.py</code>（pipeline 级）、<code>scripts/per_card_null_distribution.py</code>（B3 per-card）。</p>
+
+</section>
+
+<!-- ============================== § 10 Stage 2 入口 ============================== -->
+<section id="stage2">
+<div class="section-marker">
+  <span class="section-num">§ 10</span>
   <h2>Stage 2 入口 · forward validation 协议</h2>
 </div>
 
@@ -1266,7 +1360,7 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
 <!-- ============================== § 10 路线图 ============================== -->
 <section id="roadmap">
 <div class="section-marker">
-  <span class="section-num">§ 10</span>
+  <span class="section-num">§ 11</span>
   <h2>路线图 · 从 11 个因子到 strict-H1 验证</h2>
 </div>
 
@@ -1328,10 +1422,10 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
 
 </section>
 
-<!-- ============================== § 11 联调 ============================== -->
+<!-- ============================== § 12 联调 ============================== -->
 <section id="cross-ref">
 <div class="section-marker">
-  <span class="section-num">§ 11</span>
+  <span class="section-num">§ 12</span>
   <h2>对照阅读 · 文档之间的关系</h2>
 </div>
 
@@ -1372,10 +1466,10 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
 
 </section>
 
-<!-- ============================== § 12 收尾 ============================== -->
+<!-- ============================== § 13 收尾 ============================== -->
 <section id="closing">
 <div class="section-marker">
-  <span class="section-num">§ 12</span>
+  <span class="section-num">§ 13</span>
   <h2>结语</h2>
 </div>
 
