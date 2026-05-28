@@ -216,6 +216,18 @@ window.MathJax = {
     display: block; font-family: var(--sans); font-size: 13px;
     color: var(--ink-muted); margin-top: 10px; line-height: 1.65;
   }
+  .figure { margin: 40px 0; }
+  .figure-caption {
+    font-family: var(--sans); font-size: 13px; line-height: 1.65;
+    color: var(--ink-muted); margin-top: 14px;
+  }
+  .figure-caption strong { color: var(--ink-soft); font-weight: 500; }
+  .chart-legend {
+    display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 14px;
+    font-family: var(--sans); font-size: 12px; color: var(--ink-muted);
+  }
+  .chart-legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .chart-legend i { width: 15px; height: 3px; border-radius: 2px; display: inline-block; }
   .footer {
     margin-top: 80px; padding-top: 28px;
     border-top: 1px solid var(--rule);
@@ -295,7 +307,7 @@ window.MathJax = {
 <header class="title-block">
   <div>
     <div class="title-meta">第二阶段 · 项目愿景与路线图</div>
-    <h1>从<em>会写代码</em>的智能体<br>到<em>会沉淀因子</em>的研究体系</h1>
+    <h1>从<em>会写代码</em>的智能体<br>到<em>会积累因子</em>的研究体系</h1>
     <p class="subtitle">第一阶段把 sealed-evaluation 协议建好了；现在主 H1 终于可以被计算。本阶段记录修订后的项目愿景、当前实现快照，以及把 H1 从"可计算"推到"非零"所需的具体工作。</p>
   </div>
   <div class="title-right">
@@ -1267,9 +1279,10 @@ PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 se
 <p><strong>provider ablation</strong>：codex_cli (gpt-5.5) 与 mimo_tp (mimo-v2.5-pro) 用相同 bootstrap 种子（看到完全相同的 null 数据），gate 接受率 8.9% vs 7.8%，差异在 n=15 下统计不显著（差值 95% CI ≈ ±0.07）。advisor 担心的 “LLM 训练先验差异” 在此规模上没有显现。次生发现：LLM 在 null 数据上<em>极少提 add_indicator</em>，绝大多数接受是 remove_filter / simplify——它最“高产”的动作是把已注入的库内因子剥回去。</p>
 
 <div class="aside warn">
-<span class="aside-label">过程中发现并修复的两个 bug</span>
+<span class="aside-label">过程中发现并修复的三个 bug</span>
 <strong>(a) auto-inject 未 commit</strong>：库因子被注入 baseline 但其 <code>.py</code> 未进 git，导致 sealed validation 的 <code>git show &lt;parent&gt;:indicators/&lt;fn&gt;.py</code> 报 exit 128。Step 4 那唯一一张到达 sealed 的 add_indicator 就是这样 error 的——所以 Step 4 的 sealed 特异度其实<em>没测到</em>。修复后 B2 的 6 张全部干净计算。<br>
-<strong>(b) null campaign 污染真实库</strong>：campaign 的 <code>sync_from_run</code> 把 bootstrap 数据上接受的卡片写回了源 <code>alpha_cards_library/</code>（一张 -99.99% 回撤的 dispersion_regime 卡片）。手动 revert 后给 null script 加了 per-rep scratch library 隔离。
+<strong>(b) null campaign 污染真实库</strong>：campaign 的 <code>sync_from_run</code> 把 bootstrap 数据上接受的卡片写回了源 <code>alpha_cards_library/</code>（一张 -99.99% 回撤的 dispersion_regime 卡片）。手动 revert 后给 null script 加了 per-rep scratch library 隔离。<br>
+<strong>(c) source_commit 指向被拒绝的 commit</strong>（codex review 补发现）：discovery 对每个 trial（含 reject）都会 commit 并推进 HEAD，旧代码用 <code>head_sha()</code> 作为 <code>parent_commit</code>。于是 reject 紧跟 accept add_indicator 时，新卡片的 <code>source_commit</code> 指向被拒绝的 trial commit，sealed per-card validation 的「without card」基线被一条已废弃 edit 污染。已改为单独跟踪 <code>incumbent_commit_sha</code>，仅在 accept commit 成功后刷新。影响：v26 现场 pathwise per_card 数字可能各偏一条 reject edit（<code>vol_regime_zscore</code> 不受影响，其 parent 本就是裸 baseline，B3 已 bit-for-bit 复现）。v26 的 /tmp repos 已丢失无法精确重算，但 B3 的「单因子 vs 裸 baseline」定义完全绕开 <code>source_commit</code>，独立确认 H1=False。
 </div>
 
 <h3>B3 · 每张卡片的经验 null 分布</h3>
@@ -1303,7 +1316,167 @@ PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 se
 <span class="aside-label">B3 不能做什么（写报告必须承认）</span>
 不测 pipeline 级 FDR（那需要 LLM 在环，是 Step 4 / B2 的事）；不验证 SPA / DSR 作为独立程序的校准；不解决 Stage 2 paper-trading 那个唯一干净的 OOS 问题；11 张卡片的家族对家族级校正功效本来就弱。还有一条不可由统计补救的根本约束：<strong>SPY 2021-2024 对 LLM 不是真 OOS</strong>——这段时期的因子文献在它训练数据里。真正干净的 OOS 只能由 Stage 2 在 &gt;2024-12-31 数据上的 paper trading 提供。</div>
 
-<p>完整复盘（含 codex / claude / mimo 三 provider 配额耗尽的 run 日志）见 <code>docs/SIGNIFICANCE_HARDENING.md</code> 与 <code>docs/synthetic_null_results/</code>。脚本：<code>scripts/synthetic_null_calibration.py</code>（pipeline 级）、<code>scripts/per_card_null_distribution.py</code>（B3 per-card）。</p>
+<p>完整回顾（含 codex / claude / mimo 三 provider 配额耗尽的 run 日志）见 <code>docs/SIGNIFICANCE_HARDENING.md</code> 与 <code>docs/synthetic_null_results/</code>。脚本：<code>scripts/synthetic_null_calibration.py</code>（pipeline 级）、<code>scripts/per_card_null_distribution.py</code>（B3 per-card）。</p>
+
+<h3>B4 · codex review 复查 · 修复的现场验证</h3>
+
+<p>codex review 提出的 bug (c)（<code>source_commit</code> 指向被拒绝的 commit）当时只在代码层修复，无法在 v26 上重算——其 <code>/tmp</code> repo 已丢失。本次复查用 <code>--provider codex_cli</code> 重新跑了两次 3 轮 campaign（dev 多次开封一次、publication <code>--seal-only-last</code> 一次，共 60 trial），既验证了修复在真实运行中的行为，也意外得到一个把本节论点讲透的实例。<strong>这两次 run 不是新的 H1 证据</strong>——单窗口、effective n=1、家族级检验未拒绝；它们的价值是验证机制。</p>
+
+<p>第一个收获是 bug (c) 的现场确认。publication run 的 iter 0 序列恰好是 <em>trial 0 拒绝 → trial 1 拒绝 → trial 2 接受</em> <code>vol_regime_zscore</code>，正是该 bug 的触发条件。核对新卡片的 <code>source_commit</code>：它指向 <code>d4732d9</code>（"campaign baseline"，其 <code>indicators/</code> 只有 <code>sma.py</code>），即 trial 0 之前的纯净 incumbent，而非两条被拒 commit 中的任何一条。</p>
+
+<div class="figure">
+<div class="chart-wrap" style="background: var(--paper-warm); padding: 32px 28px;">
+<svg viewBox="0 0 760 250" width="100%" role="img">
+<title>source_commit 修复前后在 git 谱系上的指向</title>
+<defs>
+  <marker id="arC" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#1a1a1c" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <marker id="arBug" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#8b3a2f" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <marker id="arFix" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#2d6a5c" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+
+<!-- commit chain at y=120, four nodes evenly spaced -->
+<!-- baseline x=70, t0 x=255, t1 x=440, t2 x=625 -->
+<text x="70"  y="40" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">提交链（iter 0）</text>
+
+<line x1="150" y1="120" x2="235" y2="120" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arC)"/>
+<line x1="335" y1="120" x2="420" y2="120" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arC)"/>
+<line x1="520" y1="120" x2="605" y2="120" stroke="#1a1a1c" stroke-width="1.2" marker-end="url(#arC)"/>
+
+<!-- baseline -->
+<rect x="10" y="98" width="140" height="44" rx="3" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1.6"/>
+<text x="80" y="116" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#1a1a1c">d4732d9</text>
+<text x="80" y="132" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b6b70">baseline · 仅 sma.py</text>
+
+<!-- t0 reject -->
+<rect x="185" y="98" width="150" height="44" rx="3" fill="#fbfaf6" stroke="#d8d4c8" stroke-width="1.3"/>
+<text x="260" y="116" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#6b6b70">trial 0</text>
+<text x="260" y="132" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#8b3a2f">reject · ema_above_sma</text>
+
+<!-- t1 reject -->
+<rect x="370" y="98" width="150" height="44" rx="3" fill="#fbfaf6" stroke="#d8d4c8" stroke-width="1.3"/>
+<text x="445" y="116" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#6b6b70">trial 1</text>
+<text x="445" y="132" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#8b3a2f">reject · roc_n</text>
+
+<!-- t2 accept -->
+<rect x="555" y="98" width="150" height="44" rx="3" fill="#fbfaf6" stroke="#2d6a5c" stroke-width="1.6"/>
+<text x="630" y="116" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#1a1a1c">fa392e0</text>
+<text x="630" y="132" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#2d6a5c">accept · +vol_regime_zscore</text>
+
+<!-- bug arrow: card.source_commit (old) -> t1 reject, curving up -->
+<path d="M610 96 C560 64, 500 64, 452 94" fill="none" stroke="#8b3a2f" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arBug)"/>
+<text x="520" y="58" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#8b3a2f">旧 <tspan font-family="JetBrains Mono, monospace" font-size="10">head_sha()</tspan> → 被拒 commit（基线被污染）</text>
+
+<!-- fix arrow: card.source_commit (new) -> baseline, curving down -->
+<path d="M600 144 C420 200, 230 200, 100 146" fill="none" stroke="#2d6a5c" stroke-width="1.6" marker-end="url(#arFix)"/>
+<text x="350" y="212" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#2d6a5c">修复后 <tspan font-family="JetBrains Mono, monospace" font-size="10">incumbent_commit_sha</tspan> → 纯净 baseline（本次 run 实测）</text>
+</svg>
+</div>
+<div class="figure-caption"><strong>Figure C.</strong> <code>source_commit</code> 修复在真实 git 谱系上的指向。<code>vol_regime_zscore</code> 卡片紧跟两条被拒 commit 之后产生；旧代码用 <code>head_sha()</code> 会把「without card」基线落在 <code>trial 1</code> 的被拒 edit 上（红色虚线），修复后改为单独跟踪、仅在 accept 后刷新的 <code>incumbent_commit_sha</code>，指回纯净 baseline <code>d4732d9</code>（绿线）。全程 60 trial 无 <code>validation_error</code>，sealed per-card 计算干净。</div>
+</div>
+
+<p>第二个收获更切题。publication run 末轮开封的 sealed 窗口里，两张卡片的 pathwise 增量 Sharpe 95% 区间出现了一个分歧案例，恰好演示<em>为什么单边 p 值不够、必须叠加区间下界</em>——这正是 codex review 同时改的 H1 合取判据（<code>bh_validated ∧ ci_lower &gt; 0</code>）所拦截的情形。</p>
+
+<div class="figure">
+<div class="chart-wrap" style="background: var(--paper-warm); padding: 32px 28px;">
+<svg viewBox="-20 0 780 300" width="100%" role="img">
+<title>两张卡片的 sealed 增量 Sharpe 点估计与 95% 区间</title>
+<!-- x-scale: data -0.4..+1.0 mapped to px 120..700; scale = 580/1.4 = 414.29 px/unit; x(v)=120+(v+0.4)*414.29 -->
+<!-- check: x(0)=286, x(-0.4)=120, x(1.0)=700 -->
+
+<!-- resolution-floor band |ΔSR|<0.30 : x(-0.30)=161 .. x(+0.30)=410 -->
+<rect x="161" y="55" width="249" height="160" fill="#b88a2c" opacity="0.10"/>
+<text x="285" y="48" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#b88a2c">分辨力下限带 |ΔSR| &lt; 0.30 · 与零不可区分</text>
+
+<!-- zero line x=286 -->
+<line x1="286" y1="55" x2="286" y2="215" stroke="#1a1a1c" stroke-width="1.3" stroke-dasharray="4 3"/>
+<text x="286" y="232" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#1a1a1c">0</text>
+
+<!-- x ticks: -0.4->120, 0.5->493, 1.0->700 -->
+<line x1="120" y1="215" x2="700" y2="215" stroke="#d8d4c8" stroke-width="1"/>
+<text x="120" y="232" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#a4a4a8">-0.4</text>
+<text x="493" y="232" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#a4a4a8">+0.5</text>
+<text x="700" y="232" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#a4a4a8">+1.0</text>
+<text x="410" y="252" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">sealed pathwise 增量 Sharpe（年化）</text>
+
+<!-- row 1: vol_regime_zscore  y=95  CI [0.023,0.958] pt 0.485 -->
+<!-- x(0.023)=295, x(0.958)=683, x(0.485)=487 -->
+<text x="112" y="92" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#1a1a1c">vol_regime_zscore</text>
+<text x="112" y="107" text-anchor="end" font-family="Inter, sans-serif" font-size="10" fill="#2d6a5c">bh=True · CI&gt;0 → 计入</text>
+<line x1="295" y1="95" x2="683" y2="95" stroke="#2d6a5c" stroke-width="2.4"/>
+<line x1="295" y1="88" x2="295" y2="102" stroke="#2d6a5c" stroke-width="2.4"/>
+<line x1="683" y1="88" x2="683" y2="102" stroke="#2d6a5c" stroke-width="2.4"/>
+<circle cx="487" cy="95" r="5" fill="#2d6a5c"/>
+<text x="487" y="80" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#2d6a5c">+0.485</text>
+
+<!-- row 2: body_to_range  y=160  CI [-0.050,0.345] pt 0.156 -->
+<!-- x(-0.050)=265, x(0.345)=429, x(0.156)=350 -->
+<text x="112" y="157" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#1a1a1c">body_to_range</text>
+<text x="112" y="172" text-anchor="end" font-family="Inter, sans-serif" font-size="10" fill="#8b3a2f">bh=True · CI 跨 0 → 剔除</text>
+<line x1="265" y1="160" x2="429" y2="160" stroke="#8b3a2f" stroke-width="2.4"/>
+<line x1="265" y1="153" x2="265" y2="167" stroke="#8b3a2f" stroke-width="2.4"/>
+<line x1="429" y1="153" x2="429" y2="167" stroke="#8b3a2f" stroke-width="2.4"/>
+<circle cx="350" cy="160" r="5" fill="#8b3a2f"/>
+<text x="350" y="145" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#8b3a2f">+0.156</text>
+
+<!-- family-level verdict banner -->
+<rect x="120" y="262" width="580" height="30" rx="3" fill="#fbfaf6" stroke="#8b3a2f" stroke-width="1.2"/>
+<text x="410" y="281" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#8b3a2f">家族级 SPA p = 0.084 · 5% 下不拒绝 → 无 strong H1（validated_factor_count = 1 &lt; τ = 3）</text>
+</svg>
+</div>
+<div class="figure-caption"><strong>Figure D.</strong> publication run 末轮 sealed 窗口的两张卡片。<code>body_to_range</code> 的单边 bootstrap p = 0.063 过了 BH（q=0.10）那一关，但它的 95% 双侧区间 <code>[-0.050, +0.345]</code> 仍跨零——旧的「仅看 <code>bh_validated</code>」会把它计入 H1（count = 2），合取判据（<code>bh ∧ ci_lower&gt;0</code>）把它剔除（count = 1），方向是收紧、不放松，与预注册一致。<code>vol_regime_zscore</code> 两关都过，但这是 volatility_target sizing 的<em>不同 incumbent</em> 载体，与 §9 上文裸 baseline 上的 +0.249 不矛盾：σ̂(SR) ≈ 0.5 的分辨力下限未变，点估计上移只因载体策略不同。底栏才是结论——即便一张卡片的区间排除了零，<strong>家族级 SPA（p = 0.084）依旧不拒绝</strong>，没有 strong H1。</div>
+</div>
+
+<p>第三张图把 gate 的选择性摊开。两次 run 共 60 个 trial，只有 8 个被接受；占压倒多数的拒绝理由是「无显著改善」，其余按多目标 gate 的各条约束分布（过拟合 gap、交易数过少、回撤回归）。这与 §9 合成 null 上观察到的「gate 大多数时候在拒绝」一致——选择性本身是它能压住搜索偶然的前提。</p>
+
+<div class="figure">
+<div class="chart-wrap" style="background: var(--paper-warm); padding: 32px 28px;">
+<svg viewBox="0 0 760 270" width="100%" role="img">
+<title>两次 run 共 60 trial 的 gate 决策分布</title>
+<!-- horizontal bars: x start 250, scale 470px / 60 trials = 7.833 px/trial -->
+<text x="250" y="28" text-anchor="start" font-family="Inter, sans-serif" font-size="11" fill="#6b6b70">60 trial · 8 accept / 52 reject</text>
+
+<!-- accepted 8 -> 62.7px  y=55 (teal) -->
+<text x="238" y="68" text-anchor="end" font-family="Inter, sans-serif" font-size="12.5" fill="#1a1a1c">accepted</text>
+<rect x="250" y="55" width="63" height="22" rx="2" fill="#2d6a5c"/>
+<text x="321" y="71" font-family="JetBrains Mono, monospace" font-size="12" fill="#2d6a5c">8</text>
+
+<!-- no_meaningful_improvement 41 -> 321px  y=95 (accent) -->
+<text x="238" y="108" text-anchor="end" font-family="Inter, sans-serif" font-size="12.5" fill="#1a1a1c">reject · 无显著改善</text>
+<rect x="250" y="95" width="321" height="22" rx="2" fill="#8b3a2f"/>
+<text x="579" y="111" font-family="JetBrains Mono, monospace" font-size="12" fill="#8b3a2f">41</text>
+
+<!-- overfit_gap 6 -> 47px  y=135 (gold) -->
+<text x="238" y="148" text-anchor="end" font-family="Inter, sans-serif" font-size="12.5" fill="#1a1a1c">reject · 过拟合 gap</text>
+<rect x="250" y="135" width="47" height="22" rx="2" fill="#b88a2c"/>
+<text x="305" y="151" font-family="JetBrains Mono, monospace" font-size="12" fill="#b88a2c">6</text>
+
+<!-- too_few_trades 3 -> 23.5px  y=175 -->
+<text x="238" y="188" text-anchor="end" font-family="Inter, sans-serif" font-size="12.5" fill="#1a1a1c">reject · 交易数过少</text>
+<rect x="250" y="175" width="24" height="22" rx="2" fill="#a4a4a8"/>
+<text x="282" y="191" font-family="JetBrains Mono, monospace" font-size="12" fill="#6b6b70">3</text>
+
+<!-- drawdown_regression 2 -> 15.7px  y=215 -->
+<text x="238" y="228" text-anchor="end" font-family="Inter, sans-serif" font-size="12.5" fill="#1a1a1c">reject · 回撤回归</text>
+<rect x="250" y="215" width="16" height="22" rx="2" fill="#a4a4a8"/>
+<text x="274" y="231" font-family="JetBrains Mono, monospace" font-size="12" fill="#6b6b70">2</text>
+
+<!-- scale ticks -->
+<line x1="250" y1="248" x2="720" y2="248" stroke="#d8d4c8" stroke-width="1"/>
+<text x="250" y="263" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#a4a4a8">0</text>
+<text x="485" y="263" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#a4a4a8">30</text>
+<text x="720" y="263" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#a4a4a8">60</text>
+</svg>
+</div>
+<div class="figure-caption"><strong>Figure E.</strong> 两次 codex_cli run 合并的 gate 决策分布（共 60 trial）。接受率 13%；52 次拒绝里「无显著改善」占 41 次，其余落在过拟合 gap、交易数过少、回撤回归等多目标约束上。strict gate 的选择性是显著性硬化的第一道闸门——在它之后才轮到 BH / SPA / DSR。</div>
+</div>
+
+<p><strong>B4 的边界同样要写清</strong>：这两次 run 是单一 SPY sealed 窗口（effective n=1），1 张卡片过 per-card 关、远低于 strong 所需的 τ=3，家族级 SPA 不拒绝，且整条策略 sealed Sharpe 0.513 仍不及买入持有 0.861（ΔSharpe = -0.348，CI 含两侧符号）。它们确认的是<em>机制</em>——修复正确、合取判据按预期收紧、gate 保持选择性——而非推翻本节「H1 = False」的结论。真正干净的多窗口 OOS 仍只能由 Stage 2 的 paper trading 提供。</p>
 
 </section>
 
@@ -1418,7 +1591,7 @@ PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 se
   <li>这些 alpha card 对应的 Translator dossier 经人工抽样审阅，<code>observation:</code> 段都对应得上源代码事实。</li>
 </ol>
 
-<p>三条中任一条不满足，本阶段 H1 视为 inconclusive（既不 strong 也不 weak），但 library 累积 + Python↔dossier round-trip 已经验证 LBG 的工程闭环。</p>
+<p>三条中任一条不满足，本阶段 H1 视为 inconclusive（既不 strong 也不 weak），但 library 累积 + Python↔dossier round-trip 已经验证 LBG 工程流程的完整性。</p>
 
 </section>
 
@@ -1441,7 +1614,7 @@ PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 se
     </tr>
     <tr>
       <td><code>docs/STAGE1_REPORT.html</code> (v1.0.0)</td>
-      <td>第一阶段实施回顾。从空仓库到 sealed-evaluation 协议落地的 15 节叙事 + 八次 campaign 的诚实账单。</td>
+      <td>第一阶段实施回顾。从空仓库到 sealed-evaluation 协议实现的 15 节叙事 + 八次 campaign 的诚实账单。</td>
       <td>想理解"我们造了什么、它发现了什么"的读者。</td>
     </tr>
     <tr>
@@ -1475,7 +1648,7 @@ PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 se
 
 <p class="lede">第一阶段证明了<em>可信的实验协议是可以建出来的</em>；codexreview 分支证明了<em>建好的协议里能稳定长出可记录的因子</em>。15 次 campaign 从 0 alpha cards 推到 11 个不同因子（每个含 Python 源码 + JSON dossier + sealed CI 记录）。中间 7 次 gate 演化，每一次都为了堵住 LLM 找到的新捷径——这本身是 HL 范式的活体演示：被维护的<em>软件系统</em>每一轮都比上一轮聪明一点点。</p>
 
-<p>诚实地说：到本报告定稿为止，主 H1（strict gate 下严格 sealed CI &gt; 0 的 card 数）尚未在 11 个因子上系统复检。permissive 下点估计有正有负，CI lower 还跨着零。下一阶段要做的是 strict 复检 + walk-forward 多窗口，把"library accumulation"路径推到"H1 evidence"路径。<em>这是科学验证；之前 codexreview 分支做完的是工程闭环。</em>两件事不能互相替代——但工程闭环已经牢固，科学验证有清晰的起点。</p>
+<p>诚实地说：到本报告定稿为止，主 H1（strict gate 下严格 sealed CI &gt; 0 的 card 数）尚未在 11 个因子上系统复检。permissive 下点估计有正有负，CI lower 还跨着零。下一阶段要做的是 strict 复检 + walk-forward 多窗口，把"library accumulation"路径推到"H1 evidence"路径。<em>这是科学验证；之前 codexreview 分支做完的是工程流程的搭建。</em>两件事不能互相替代——但工程流程已经完整稳固，科学验证有清晰的起点。</p>
 
 <p style="font-family: var(--serif); font-style: italic; font-size: 18px; color: var(--ink-soft); text-align: center; max-width: 580px; margin: 32px auto 0;">
 The library grew from 0 to 11 factors,<br>
