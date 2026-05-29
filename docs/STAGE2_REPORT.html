@@ -326,7 +326,7 @@ window.MathJax = {
   <h2>TL;DR · 现状一页纸</h2>
 </div>
 
-<p class="lede">LBG-Trader 的修订愿景是：让 LLM 在一个严格的沙箱里持续编辑一个<em>由 Python 因子函数构成的启发式系统</em>，并把"该系统在每次 Discovery 后新长出几条经过 sealed 验证的因子"作为主 H1。本报告记录 codexreview 分支上 v12 到 v26 的完整旅程：从首次 alpha card 产出（vol_regime_zscore，v12）到 11 个不同因子<em>都带 dossier 和源码</em>（v26，goal=10 MET）。中间路过 7 次 gate 演化，每次都为了堵掉 LLM 找到的<em>新</em>捷径——sizing 旋钮挤、rearm 旋钮挤、val 过拟合、Pareto-on-MDD 漏洞。当前的 gate 形态既能阻挡这些捷径，又能在 library &lt; goal 时给 add_indicator 一个"成长期"折扣，让因子库稳定累积。</p>
+<p class="lede">LBG-Trader 的修订愿景是：让 LLM 在一个严格的沙箱里持续编辑一个<em>由 Python 因子函数构成的启发式系统</em>，并把"该系统在每次 Discovery 后新长出几条经过 sealed 验证的因子"作为主 H1。本报告记录 codexreview 分支上 v12 到 v26 的完整旅程：从首次 alpha card 产出（vol_regime_zscore，v12）到 11 个不同因子<em>都带 dossier 和源码</em>（v26，goal=10 MET）。中间路过 7 次 gate 演化，每次都为了堵掉 LLM 找到的<em>新</em>捷径，sizing 旋钮挤、rearm 旋钮挤、val 过拟合、Pareto-on-MDD 漏洞。当前的 gate 形态既能阻挡这些捷径，又能在 library &lt; goal 时给 add_indicator 一个"成长期"折扣，让因子库稳定累积。</p>
 
 <div class="kpi-grid">
   <div class="kpi teal"><div class="kpi-label">/goal 状态</div><div class="kpi-value">11 / 10</div><div class="kpi-sub">distinct factor count · MET</div></div>
@@ -337,7 +337,7 @@ window.MathJax = {
 
 <div class="aside note">
 <span class="aside-label">v26 之后 · 显著性硬化（§9）</span>
-v26 凑齐 11 个因子后，本报告新增了一整段对"这些因子真的显著吗"的回答：三层多重校正栈（BH FDR / Hansen SPA / Bailey-LdP DSR）、合成 null 标定的 provider ablation、以及 B3 per-card 经验 null 分布。<strong>结论：在本窗口本定义下没有任何因子通过家族级校正，H1 = False</strong>——但这一次有经验 null 分布撑腰。详见 <strong>§ 9</strong>。</div>
+v26 凑齐 11 个因子后，本报告新增了一整段对"这些因子真的显著吗"的回答：三层多重校正栈（BH FDR / Hansen SPA / Bailey-LdP DSR）、合成 null 标定的 provider ablation、以及 B3 per-card 经验 null 分布。<strong>结论：在本窗口本定义下没有任何因子通过家族级校正，H1 = False</strong>，但这一次有经验 null 分布撑腰。详见 <strong>§ 9</strong>。</div>
 
 <h3>本阶段读者路径</h3>
 
@@ -351,7 +351,7 @@ v26 凑齐 11 个因子后，本报告新增了一整段对"这些因子真的�
   <li>想看"这些因子真的显著吗"（多重校正 + 合成 null + 经验 p）：读 <strong>§ 9</strong>。</li>
 </ul>
 
-<p>本文档与 <code>PROPOSAL.html</code>（规范源头，最新 r4 已记录四角色与 pathwise H1）、<code>docs/STAGE1_REPORT.html</code>（main 分支状态对应的第一阶段 15 节实施回顾）协同阅读。STAGE1 报告记录的是 main 分支（提交 d77e5a2）截止时的状态——15 sections、3 LLM 角色、0 alpha cards；本 STAGE2 报告对应 codexreview 分支的<em>所有后续工作</em>：4 LLM 角色（含 Translator）、51 seed templates、11 distinct factors in library、完整的 gate 演化时间线。</p>
+<p>本文档与 <code>PROPOSAL.html</code>（规范源头，最新 r4 已记录四角色与 pathwise H1）、<code>docs/STAGE1_REPORT.html</code>（main 分支状态对应的第一阶段 15 节实施回顾）协同阅读。STAGE1 报告记录的是 main 分支（提交 d77e5a2）截止时的状态，15 sections、3 LLM 角色、0 alpha cards；本 STAGE2 报告对应 codexreview 分支的<em>所有后续工作</em>：4 LLM 角色（含 Translator）、51 seed templates、11 distinct factors in library、完整的 gate 演化时间线。</p>
 
 </section>
 
@@ -364,7 +364,7 @@ v26 凑齐 11 个因子后，本报告新增了一整段对"这些因子真的�
 
 <p>项目最初的描述是"用 LLM 提示工程跑 SPY 策略发现"。这套描述在 2026 年早春的方案里被改写过一次，又在 2026 年 5 月被改写过第二次。两次修订的方向都是<em>把学习的对象搬到代码而不是参数上</em>。</p>
 
-<p>对照 Jiayi Weng 的 Heuristic Learning：HL 的学习对象不是神经网络权重，而是一个由代码、状态表征、反馈通道、记忆、更新机制构成的<em>软件系统</em>。每一次反馈不是去调一个数值参数，而是去修改这套软件中的某一处——加一段判断、写一个新函数、整理一份记忆。LBG-Trader 把这个范式映射到量化研究上的对应物如下：</p>
+<p>对照 Jiayi Weng 的 Heuristic Learning：HL 的学习对象不是神经网络权重，而是一个由代码、状态表征、反馈通道、记忆、更新机制构成的<em>软件系统</em>。每一次反馈不是去调一个数值参数，而是去修改这套软件中的某一处，加一段判断、写一个新函数、整理一份记忆。LBG-Trader 把这个范式映射到量化研究上的对应物如下：</p>
 
 <table>
   <thead>
@@ -400,9 +400,9 @@ v26 凑齐 11 个因子后，本报告新增了一整段对"这些因子真的�
 <h3>三个判断在第一阶段被反复确认</h3>
 
 <ol>
-  <li><strong>策略层 Sharpe 不是稳健的成功标志。</strong>v0–v7 八次 campaign 显示，单一 sealed 窗口的 ΔSharpe 可以因 baseline 选择翻转——v6 把 baseline 从 SMA-cross 换成 buyhold 后立刻出现"H1 weak True"，但这只是策略层的 supplementary 结果，不是修订后的主 H1。继续在策略层堆指标会回到 LLM-guided BO 的窠臼。</li>
-  <li><strong>因子数量是更可积累的单位。</strong>主 H1 现在改为"sealed-validated alpha card 数量"。<em>积累</em> 才是 HL 在长程上想体现的——一条新的、有 sealed 证据的因子是可持续的产出，下一次 Discovery 还能在它上面继续修改。一个翻一次符号就消失的 ΔSharpe 不是。</li>
-  <li><strong>code 与 dossier 的双向流通是这次特别想做对的事。</strong><code>knowledge/factors/</code> 里 564 份 dossier 是项目最初的<em>种子库</em>——Editor 通过 substring 检索拿到 hint；反向，每被接受一个 <code>add_indicator</code>，Translator 就把 Python 源代码翻译回 dossier JSON 写进 <code>alpha_cards/dossiers/</code>。这样一次完整的 Discovery run 既消费 dossier 也产出 dossier，库会真的"长大"。这是 PROPOSAL §6.7 的"round-trip 桥梁"。</li>
+  <li><strong>策略层 Sharpe 不是稳健的成功标志。</strong>v0–v7 八次 campaign 显示，单一 sealed 窗口的 ΔSharpe 可以因 baseline 选择翻转，v6 把 baseline 从 SMA-cross 换成 buyhold 后立刻出现"H1 weak True"，但这只是策略层的 supplementary 结果，不是修订后的主 H1。继续在策略层堆指标会回到 LLM-guided BO 的窠臼。</li>
+  <li><strong>因子数量是更可积累的单位。</strong>主 H1 现在改为"sealed-validated alpha card 数量"。<em>积累</em> 才是 HL 在长程上想体现的，一条新的、有 sealed 证据的因子是可持续的产出，下一次 Discovery 还能在它上面继续修改。一个翻一次符号就消失的 ΔSharpe 不是。</li>
+  <li><strong>code 与 dossier 的双向流通是这次特别想做对的事。</strong><code>knowledge/factors/</code> 里 564 份 dossier 是项目最初的<em>种子库</em>，Editor 通过 substring 检索拿到 hint；反向，每被接受一个 <code>add_indicator</code>，Translator 就把 Python 源代码翻译回 dossier JSON 写进 <code>alpha_cards/dossiers/</code>。这样一次完整的 Discovery run 既消费 dossier 也产出 dossier，库会真的"长大"。这是 PROPOSAL §6.7 的"round-trip 桥梁"。</li>
 </ol>
 
 <div class="aside">
@@ -434,7 +434,7 @@ v26 凑齐 11 个因子后，本报告新增了一整段对"这些因子真的�
 \Delta r^{c}_t \;=\; r^{\text{with } c}_t \;-\; r^{\text{without } c}_t, \qquad
 \Delta S_c \;=\; \sqrt{252}\,\frac{\overline{\Delta r^{c}_t}}{\operatorname{std}(\Delta r^{c}_t)}
 \]
-<span class="where">这条定义对全部八种 edit type 都生效——把"去掉 \(c\) 的策略"定义为<em>这次 trial 之前的策略状态</em>，把"带上 \(c\) 的策略"定义为<em>这次 trial 接受之后的策略状态</em>。Pathwise 沿着构造轨迹去掉 \(c\)，而不是从最终复合策略里抽象地去掉。</span>
+<span class="where">这条定义对全部八种 edit type 都生效，把"去掉 \(c\) 的策略"定义为<em>这次 trial 之前的策略状态</em>，把"带上 \(c\) 的策略"定义为<em>这次 trial 接受之后的策略状态</em>。Pathwise 沿着构造轨迹去掉 \(c\)，而不是从最终复合策略里抽象地去掉。</span>
 </div>
 
 <h3>从 trial 到 sealed_summary 的实现路径</h3>
@@ -447,7 +447,7 @@ v26 凑齐 11 个因子后，本报告新增了一整段对"这些因子真的�
   <li>分别在 sealed 窗口（split_C，约 1006 个 bar）上跑 backtest，得到两组 paired daily returns。</li>
   <li>对差值序列做 moving block bootstrap：<code>block_len=10, n_bootstrap=1000, α=0.05</code>。</li>
   <li>把 <code>{incremental_sharpe_point, incremental_sharpe_ci_lower, incremental_sharpe_ci_upper, n_bootstrap, block_len, alpha}</code> 写回 <code>card.evidence.sealed_summary</code>。</li>
-  <li>找不到 trial commit 或者 sealed 窗口太短时，记一个 <code>validation_error</code>，但 <code>sealed_summary</code> 保留 <code>None</code>——这与"还没被验证"的语义一致，H1 计数器自然不会把它算进去。</li>
+  <li>找不到 trial commit 或者 sealed 窗口太短时，记一个 <code>validation_error</code>，但 <code>sealed_summary</code> 保留 <code>None</code>，这与"还没被验证"的语义一致，H1 计数器自然不会把它算进去。</li>
 </ol>
 
 <h3>消费端 · H1 verdict</h3>
@@ -641,7 +641,7 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
 
 <h3>live dashboard · 第二阶段新增 H1 KPI 与 per-card CI 图</h3>
 
-<p><code>artifacts/live/dashboard.html</code> 是浏览器 2 秒轮询 <code>run_status.jsonl</code> 的静态页面（不需要服务端）。Stage 2 开局补了一个 KPI（"H1 · validated factor count" + "n / candidate cards · H1 weak/strong"）和一张图（"alpha card 增量 Sharpe · 95% 区间"——横向 floating bar 表示 CI，红点表示点估计，红色竖虚线为阈值 0）。<code>scripts/dashboard_demo.py</code> 可以喂合成事件给页面，方便在不跑 LLM 的情况下检视 UI。</p>
+<p><code>artifacts/live/dashboard.html</code> 是浏览器 2 秒轮询 <code>run_status.jsonl</code> 的静态页面（不需要服务端）。Stage 2 开局补了一个 KPI（"H1 · validated factor count" + "n / candidate cards · H1 weak/strong"）和一张图（"alpha card 增量 Sharpe · 95% 区间"，横向 floating bar 表示 CI，红点表示点估计，红色竖虚线为阈值 0）。<code>scripts/dashboard_demo.py</code> 可以喂合成事件给页面，方便在不跑 LLM 的情况下检视 UI。</p>
 
 </section>
 
@@ -689,7 +689,7 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
   <h2>多 agent 架构可视化</h2>
 </div>
 
-<p>四个 LLM 角色（Editor / Reflector / Curator / Translator）只在外圈调用；中间的 Orchestrator 全部是确定性 Python，从不调用 LLM。这条结构约束是整个实验的可信度来源——所有"接受 / 拒绝 / 衡量"决策都不经过 LLM 之手。</p>
+<p>四个 LLM 角色（Editor / Reflector / Curator / Translator）只在外圈调用；中间的 Orchestrator 全部是确定性 Python，从不调用 LLM。这条结构约束是整个实验的可信度来源，所有"接受 / 拒绝 / 衡量"决策都不经过 LLM 之手。</p>
 
 <div class="figure">
 <div class="chart-wrap" style="background: var(--paper-warm); padding: 36px 28px;">
@@ -830,7 +830,7 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
   <h2>Heuristic Learning 因子发现循环 · Python ↔ dossier round-trip</h2>
 </div>
 
-<p>本节的图把"如何用 HL 范式发现因子"画出来。一个因子在 LBG-Trader 里存在<em>三种形式</em>——文字描述（dossier）、Python 函数（indicator）、metadata view（alpha card）——三者在 Discovery 循环里彼此转换、互相校验。</p>
+<p>本节的图把"如何用 HL 范式发现因子"画出来。一个因子在 LBG-Trader 里存在<em>三种形式</em>，文字描述（dossier）、Python 函数（indicator）、metadata view（alpha card），三者在 Discovery 循环里彼此转换、互相校验。</p>
 
 <div class="figure">
 <div class="chart-wrap" style="background: var(--paper-warm); padding: 36px 28px;">
@@ -926,7 +926,7 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
 <div class="figure-caption"><strong>Figure B.</strong> 因子的三种形式 + 一次 HL 反馈循环。<br>
 <strong>上行（输入端）</strong>：knowledge/factors（dossier 形式，564 份只读）通过 substring search 提示给 Editor；indicators/seed_templates（Python 形式，51 个可执行模板）提供 verbatim 拷贝模板；Editor 用这两个为材料写出 add_indicator 提案。<br>
 <strong>中行（Orchestrator）</strong>：执行 5 层 invariants + sandbox + train/val backtest + multi-obj gate（含 diversity discount）。<br>
-<strong>下行（产出端）</strong>：accept 时同时产出 alpha card（metadata）、Translator 把 Python 翻成 dossier（DOSSIER 形式 #2）。三种形式都进入 alpha_cards_library/ 持久化，下一次 campaign 启动时通过 auto-inject 把 library 中已有因子接回 strategy.yaml。<strong>这就是 Jiayi Weng 的 HL 在量化研究上的具体形态——learning 的对象是 软件系统 = 代码 + 文档 + 元数据，三者必须同步生长。</strong></div>
+<strong>下行（产出端）</strong>：accept 时同时产出 alpha card（metadata）、Translator 把 Python 翻成 dossier（DOSSIER 形式 #2）。三种形式都进入 alpha_cards_library/ 持久化，下一次 campaign 启动时通过 auto-inject 把 library 中已有因子接回 strategy.yaml。<strong>这就是 Jiayi Weng 的 HL 在量化研究上的具体形态，learning 的对象是 软件系统 = 代码 + 文档 + 元数据，三者必须同步生长。</strong></div>
 </div>
 
 <h3>每个因子的三种形式 · 三个不变量</h3>
@@ -934,7 +934,7 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
 <ol>
   <li><strong>语义一致性</strong>：alpha_cards_library/cards/&lt;alpha_id&gt;.yaml 的 signal.fn 必须和 indicators/&lt;fn&gt;.py 的函数名一致；dossiers/&lt;alpha_id&gt;.txt 的 lbg_provenance.source_path 必须指回同一个 .py。</li>
   <li><strong>可执行性</strong>：indicators/&lt;fn&gt;.py 通过 sandbox 加载、prefix_stability 校验、cost-aware backtest，全部成功。dossier 里所有 observation: 段都对应可在源码中验证的事实；inference: 段标记为 Editor / Translator 的推测，<em>不可</em>当作经验事实。</li>
-  <li><strong>round-trip 完整性</strong>：把 alpha_cards_library/dossiers/&lt;name&gt;.txt 当作 knowledge/factors/ 的新条目放进去，下次 Editor 检索时能搜到——种子库和产出库 schema 一致是这个 round-trip 的硬约束。</li>
+  <li><strong>round-trip 完整性</strong>：把 alpha_cards_library/dossiers/&lt;name&gt;.txt 当作 knowledge/factors/ 的新条目放进去，下次 Editor 检索时能搜到，种子库和产出库 schema 一致是这个 round-trip 的硬约束。</li>
 </ol>
 
 </section>
@@ -947,7 +947,7 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
   <h2>v12 → v26 旅程 · 15 次 campaign + 7 次 gate 演化</h2>
 </div>
 
-<p>Stage 1 收尾时，主 H1 计量端刚补回（STAGE1 § 15）。本 STAGE2 报告记录从那一刻起的 15 次 campaign：每一次跑出来的<em>新</em>问题被定位、写成 gate 规则、加测试、再跑——直到 library 长到 11 个不同因子。这一节按时间顺序列出每次 campaign 的关键发现 + 触发的修补。</p>
+<p>Stage 1 收尾时，主 H1 计量端刚补回（STAGE1 § 15）。本 STAGE2 报告记录从那一刻起的 15 次 campaign：每一次跑出来的<em>新</em>问题被定位、写成 gate 规则、加测试、再跑，直到 library 长到 11 个不同因子。这一节按时间顺序列出每次 campaign 的关键发现 + 触发的修补。</p>
 
 <h3>campaign 时间线</h3>
 
@@ -998,7 +998,7 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
       <td>3</td>
       <td class="num">0</td>
       <td>—</td>
-      <td>library auto-inject 成功；<em>新</em> bug 出现：rearm 旋钮挤——<strong>strict_sharpe_for_parameter_change</strong></td>
+      <td>library auto-inject 成功；<em>新</em> bug 出现：rearm 旋钮挤，<strong>strict_sharpe_for_parameter_change</strong></td>
     </tr>
     <tr>
       <td>v17</td>
@@ -1007,7 +1007,7 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
       <td>4</td>
       <td class="num">0</td>
       <td>1/5</td>
-      <td>val-overfit 发现：train 跌 + val 涨 + sealed 崩——<strong>max_val_train_gap_widening</strong>（delta-based）+ <strong>max_filter_tweaks_per_campaign</strong></td>
+      <td>val-overfit 发现：train 跌 + val 涨 + sealed 崩，<strong>max_val_train_gap_widening</strong>（delta-based）+ <strong>max_filter_tweaks_per_campaign</strong></td>
     </tr>
     <tr>
       <td>v18</td>
@@ -1016,7 +1016,7 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
       <td>0</td>
       <td class="num">0</td>
       <td>1/5</td>
-      <td>绝对 gap 检查太严，baseline 自身就被打死——改回 delta-based</td>
+      <td>绝对 gap 检查太严，baseline 自身就被打死，改回 delta-based</td>
     </tr>
     <tr>
       <td>v19</td>
@@ -1025,7 +1025,7 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
       <td>1</td>
       <td class="num">0</td>
       <td>1/5</td>
-      <td>规则全部按设计触发；但<em>仍找不到</em>互补因子——动作空间稀疏</td>
+      <td>规则全部按设计触发；但<em>仍找不到</em>互补因子，动作空间稀疏</td>
     </tr>
     <tr style="background: rgba(45, 106, 92, 0.08);">
       <td><strong>v20</strong></td>
@@ -1043,7 +1043,7 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
       <td>3</td>
       <td class="num">0</td>
       <td>2/5</td>
-      <td>2-因子 baseline 后 saturation；要给 library &lt; goal 的 add_indicator 让路——<strong>library_diversity_discount</strong>（sharpe slack）</td>
+      <td>2-因子 baseline 后 saturation；要给 library &lt; goal 的 add_indicator 让路，<strong>library_diversity_discount</strong>（sharpe slack）</td>
     </tr>
     <tr style="background: rgba(45, 106, 92, 0.08);">
       <td><strong>v23</strong></td>
@@ -1061,7 +1061,7 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
       <td>1</td>
       <td class="num">0</td>
       <td>3/5</td>
-      <td>add_indicator 提复杂度，Pareto-on-other 永远不满足——<strong>growth-phase Pareto</strong>：library &lt; goal 时只看 sharpe-not-worse</td>
+      <td>add_indicator 提复杂度，Pareto-on-other 永远不满足，<strong>growth-phase Pareto</strong>：library &lt; goal 时只看 sharpe-not-worse</td>
     </tr>
     <tr style="background: rgba(45, 106, 92, 0.08);">
       <td><strong>v25</strong></td>
@@ -1101,7 +1101,7 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
 </div>
 <div class="rung">
   <div class="rung-tag">v17 +3</div>
-  <div class="rung-body"><strong>max_filter_tweaks_per_campaign=1</strong>：一个 campaign 内 filter 旋钮（threshold / rearm_threshold）总共只能调一次——之后强制 exploration。</div>
+  <div class="rung-body"><strong>max_filter_tweaks_per_campaign=1</strong>：一个 campaign 内 filter 旋钮（threshold / rearm_threshold）总共只能调一次，之后强制 exploration。</div>
 </div>
 <div class="rung">
   <div class="rung-tag">v17 +4</div>
@@ -1198,10 +1198,10 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
 
 <p><strong>读表说明</strong>：
 <br><em>train Sharpe</em> 是该因子被接受时<em>整个策略</em>在 split_A 上的实测 Sharpe（incumbent + 这张 card 起作用），不是因子单独贡献。
-<br><em>sealed 增量 Sharpe (pathwise CI)</em> 只在该 card 是<em>当次 campaign 接受</em>时计量（同一 run 内 per-card validation 跑过）；之后再被 auto-inject 进 baseline 的卡片不重复计量。当前只有 v12 接受的 <code>vol_regime_zscore</code> 和 v20 接受的 <code>body_to_range</code> 有 sealed 数据。剩下 9 个是后续 campaign 接受、本 run 之外的 sealed CI 还没回填——§9 的 B3 已用「单因子 vs 裸 baseline」定义给全部 11 个补了经验 null p 值，strict pathwise 复检见 § 11 路线图 ①。
-<br>所有 11 个因子的<em>sealed CI lower 都未严格大于 0</em>。最接近的是 <code>vol_regime_zscore</code>（lower -0.091，点估计 +0.249）。这是 permissive gate growth-phase 路径的预期产物——sharpe 不显著下降即可入库，意在<em>多样性</em>而非<em>每张都严格显著</em>。</p>
+<br><em>sealed 增量 Sharpe (pathwise CI)</em> 只在该 card 是<em>当次 campaign 接受</em>时计量（同一 run 内 per-card validation 跑过）；之后再被 auto-inject 进 baseline 的卡片不重复计量。当前只有 v12 接受的 <code>vol_regime_zscore</code> 和 v20 接受的 <code>body_to_range</code> 有 sealed 数据。剩下 9 个是后续 campaign 接受、本 run 之外的 sealed CI 还没回填，§9 的 B3 已用「单因子 vs 裸 baseline」定义给全部 11 个补了经验 null p 值，strict pathwise 复检见 § 11 路线图 ①。
+<br>所有 11 个因子的<em>sealed CI lower 都未严格大于 0</em>。最接近的是 <code>vol_regime_zscore</code>（lower -0.091，点估计 +0.249）。这是 permissive gate growth-phase 路径的预期产物，sharpe 不显著下降即可入库，意在<em>多样性</em>而非<em>每张都严格显著</em>。</p>
 
-<p>类别分布：trend × 5、momentum × 3、microstructure × 2、regime × 2（vol_regime_zscore + fractal_efficiency）。覆盖 7 类 seed template 中的 4 类——剩下 mean_reversion / volatility / drawdown / volume 类还没被接受过任何 add_indicator，是下一阶段探索的重点方向。</p>
+<p>类别分布：trend × 5、momentum × 3、microstructure × 2、regime × 2（vol_regime_zscore + fractal_efficiency）。覆盖 7 类 seed template 中的 4 类，剩下 mean_reversion / volatility / drawdown / volume 类还没被接受过任何 add_indicator，是下一阶段探索的重点方向。</p>
 
 <h3>每个因子的三种形式 · 都在文件系统里</h3>
 
@@ -1226,7 +1226,7 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
 ├── index.jsonl                                     # 一行一 card，append-only
 └── sync_log.jsonl                                  # 同步审计</pre>
 
-<p>每个 dossier 都遵循 <code>knowledge/factors/dossiers/</code> 的 schema：严密的因子定义、金融学意义阐释、参数化实现方式、实测训练表现、数据预处理与清洗要求、稳健性与过拟合检验、因子衰减速度与最优持有期、可与哪些因子概念组合融合、适用市场与品种范围、因子逻辑分类体系——每段都用 <code>observation:</code> 或 <code>inference:</code> 标签区分实证与推测。这套 schema 与 <code>knowledge/factors/</code> 同构是<em>对 Editor 而言透明</em>的——Editor 不知道一个 dossier 是种子还是产出，只看它能搜到的因子描述。</p>
+<p>每个 dossier 都遵循 <code>knowledge/factors/dossiers/</code> 的 schema：严密的因子定义、金融学意义阐释、参数化实现方式、实测训练表现、数据预处理与清洗要求、稳健性与过拟合检验、因子衰减速度与最优持有期、可与哪些因子概念组合融合、适用市场与品种范围、因子逻辑分类体系，每段都用 <code>observation:</code> 或 <code>inference:</code> 标签区分实证与推测。这套 schema 与 <code>knowledge/factors/</code> 同构是<em>对 Editor 而言透明</em>的，Editor 不知道一个 dossier 是种子还是产出，只看它能搜到的因子描述。</p>
 
 </section>
 
@@ -1258,7 +1258,7 @@ runs/                     # 运行时: per-trial editor.yaml + reflector.yaml
 
 <div class="aside note">
 <span class="aside-label">分辨力下限 · ΔSR ≈ 0.30 年化</span>
-PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 sealed bar + block_len 10，Bailey-LdP 的 Sharpe 标准误公式给出 σ̂(SR) ≈ 0.5 年化，α=0.05、80% 功效下可靠分辨的最小增量约 <strong>ΔSR ≈ 0.30</strong>。低于此值的因子在本窗口上与零不可区分——它们“未被反驳”不应被读作“已被证实”。vol_regime_zscore 的 +0.249 正好坐在这条线下方，所以无论怎么校正，它的 CI 必然包含 0。
+PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 sealed bar + block_len 10，Bailey-LdP 的 Sharpe 标准误公式给出 σ̂(SR) ≈ 0.5 年化，α=0.05、80% 功效下可靠分辨的最小增量约 <strong>ΔSR ≈ 0.30</strong>。低于此值的因子在本窗口上与零不可区分，它们“未被反驳”不应被读作“已被证实”。vol_regime_zscore 的 +0.249 正好坐在这条线下方，所以无论怎么校正，它的 CI 必然包含 0。
 </div>
 
 <h3>合成 null 标定 · pipeline 在已知零假设上的行为</h3>
@@ -1276,18 +1276,18 @@ PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 se
   </tbody>
 </table>
 
-<p><strong>provider ablation</strong>：codex_cli (gpt-5.5) 与 mimo_tp (mimo-v2.5-pro) 用相同 bootstrap 种子（看到完全相同的 null 数据），gate 接受率 8.9% vs 7.8%，差异在 n=15 下统计不显著（差值 95% CI ≈ ±0.07）。advisor 担心的 “LLM 训练先验差异” 在此规模上没有显现。次生发现：LLM 在 null 数据上<em>极少提 add_indicator</em>，绝大多数接受是 remove_filter / simplify——它最“高产”的动作是把已注入的库内因子剥回去。</p>
+<p><strong>provider ablation</strong>：codex_cli (gpt-5.5) 与 mimo_tp (mimo-v2.5-pro) 用相同 bootstrap 种子（看到完全相同的 null 数据），gate 接受率 8.9% vs 7.8%，差异在 n=15 下统计不显著（差值 95% CI ≈ ±0.07）。advisor 担心的 “LLM 训练先验差异” 在此规模上没有显现。次生发现：LLM 在 null 数据上<em>极少提 add_indicator</em>，绝大多数接受是 remove_filter / simplify，它最“高产”的动作是把已注入的库内因子剥回去。</p>
 
 <div class="aside warn">
 <span class="aside-label">过程中发现并修复的三个 bug</span>
-<strong>(a) auto-inject 未 commit</strong>：库因子被注入 baseline 但其 <code>.py</code> 未进 git，导致 sealed validation 的 <code>git show &lt;parent&gt;:indicators/&lt;fn&gt;.py</code> 报 exit 128。Step 4 那唯一一张到达 sealed 的 add_indicator 就是这样 error 的——所以 Step 4 的 sealed 特异度其实<em>没测到</em>。修复后 B2 的 6 张全部干净计算。<br>
+<strong>(a) auto-inject 未 commit</strong>：库因子被注入 baseline 但其 <code>.py</code> 未进 git，导致 sealed validation 的 <code>git show &lt;parent&gt;:indicators/&lt;fn&gt;.py</code> 报 exit 128。Step 4 那唯一一张到达 sealed 的 add_indicator 就是这样 error 的，所以 Step 4 的 sealed 特异度其实<em>没测到</em>。修复后 B2 的 6 张全部干净计算。<br>
 <strong>(b) null campaign 污染真实库</strong>：campaign 的 <code>sync_from_run</code> 把 bootstrap 数据上接受的卡片写回了源 <code>alpha_cards_library/</code>（一张 -99.99% 回撤的 dispersion_regime 卡片）。手动 revert 后给 null script 加了 per-rep scratch library 隔离。<br>
 <strong>(c) source_commit 指向被拒绝的 commit</strong>（codex review 补发现）：discovery 对每个 trial（含 reject）都会 commit 并推进 HEAD，旧代码用 <code>head_sha()</code> 作为 <code>parent_commit</code>。于是 reject 紧跟 accept add_indicator 时，新卡片的 <code>source_commit</code> 指向被拒绝的 trial commit，sealed per-card validation 的「without card」基线被一条已废弃 edit 污染。已改为单独跟踪 <code>incumbent_commit_sha</code>，仅在 accept commit 成功后刷新。影响：v26 现场 pathwise per_card 数字可能各偏一条 reject edit（<code>vol_regime_zscore</code> 不受影响，其 parent 本就是裸 baseline，B3 已 bit-for-bit 复现）。v26 的 /tmp repos 已丢失无法精确重算，但 B3 的「单因子 vs 裸 baseline」定义完全绕开 <code>source_commit</code>，独立确认 H1=False。
 </div>
 
 <h3>B3 · 每张卡片的经验 null 分布</h3>
 
-<p>合成 null 即便 budget 15 也只产出 6 张 add_indicator（LLM 在噪声上不爱造因子），n 太小。B3 改用纯计算：绕开 LLM，对 11 张卡片<em>每张</em>在 N=200 个 bootstrap 抽样上直接算 sealed CI，给它的真实观测 CI 一个经验百分位。定义改为「单因子 vs 裸 baseline」（v26 的 pathwise trial commits 已随 /tmp 丢失，无法重放；新定义 observed 与 null 两臂一致可比）。交叉验证：vol_regime_zscore 是 v26 首个被接受的因子、其 pathwise parent 就是裸 baseline，两定义恰好重合，B3 观测 CI 与 v26 数字 bit-for-bit 一致——机制正确性的硬证据。</p>
+<p>合成 null 即便 budget 15 也只产出 6 张 add_indicator（LLM 在噪声上不爱造因子），n 太小。B3 改用纯计算：绕开 LLM，对 11 张卡片<em>每张</em>在 N=200 个 bootstrap 抽样上直接算 sealed CI，给它的真实观测 CI 一个经验百分位。定义改为「单因子 vs 裸 baseline」（v26 的 pathwise trial commits 已随 /tmp 丢失，无法重放；新定义 observed 与 null 两臂一致可比）。交叉验证：vol_regime_zscore 是 v26 首个被接受的因子、其 pathwise parent 就是裸 baseline，两定义恰好重合，B3 观测 CI 与 v26 数字 bit-for-bit 一致，机制正确性的硬证据。</p>
 
 <table>
   <thead>
@@ -1303,24 +1303,24 @@ PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 se
   </tbody>
 </table>
 
-<p><em>经验 p(point)</em> = 200 个 null 抽样里点估计 ΔSharpe ≥ 该卡片观测值的比例。<strong>家族级</strong>（Westfall-Young，以 bootstrap 抽样为独立单元）：minP adjusted p = <strong>0.27</strong>、maxT adjusted p = <strong>0.295</strong>——<em>都不显著</em>。</p>
+<p><em>经验 p(point)</em> = 200 个 null 抽样里点估计 ΔSharpe ≥ 该卡片观测值的比例。<strong>家族级</strong>（Westfall-Young，以 bootstrap 抽样为独立单元）：minP adjusted p = <strong>0.27</strong>、maxT adjusted p = <strong>0.295</strong>，<em>都不显著</em>。</p>
 
 <p><strong>三个诚实结论</strong>：</p>
 <ul>
   <li><strong>vol_regime_zscore 经验 p = 0.24，不显著</strong>。它点估计最高，但波动率也最大：24% 的 null 抽样能靠运气刷出更高的点估计（B2 里 null 点估计最高刷到了 +0.559，比真实最佳还高）。这正是“点估计会骗人、必须看 CI / 看 null 分布”的活体演示。</li>
   <li><strong>fractal_efficiency 个体经验 p = 0.010 看着诱人</strong>，但 (a) 它的 CI_lower = 0（在裸 baseline 上几乎不改变仓位，信号脆弱）；(b) 0.010 是从整个 v26 搜索里选出来的，没校正更大的搜索空间；(c) 不过家族级校正。</li>
-  <li><strong>没有任何卡片通过家族级校正</strong>（最好的 adjusted p ≈ 0.27）。在本窗口本定义下 H1 = False——但现在这是个有经验 null 撑腰的判断，而不是“CI 恰好跨 0”的偶然。</li>
+  <li><strong>没有任何卡片通过家族级校正</strong>（最好的 adjusted p ≈ 0.27）。在本窗口本定义下 H1 = False，但现在这是个有经验 null 撑腰的判断，而不是“CI 恰好跨 0”的偶然。</li>
 </ul>
 
 <div class="aside">
 <span class="aside-label">B3 不能做什么（写报告必须承认）</span>
-不测 pipeline 级 FDR（那需要 LLM 在环，是 Step 4 / B2 的事）；不验证 SPA / DSR 作为独立程序的校准；不解决 Stage 2 paper-trading 那个唯一干净的 OOS 问题；11 张卡片的家族对家族级校正功效本来就弱。还有一条不可由统计补救的根本约束：<strong>SPY 2021-2024 对 LLM 不是真 OOS</strong>——这段时期的因子文献在它训练数据里。真正干净的 OOS 只能由 Stage 2 在 &gt;2024-12-31 数据上的 paper trading 提供。</div>
+不测 pipeline 级 FDR（那需要 LLM 在环，是 Step 4 / B2 的事）；不验证 SPA / DSR 作为独立程序的校准；不解决 Stage 2 paper-trading 那个唯一干净的 OOS 问题；11 张卡片的家族对家族级校正功效本来就弱。还有一条不可由统计补救的根本约束：<strong>SPY 2021-2024 对 LLM 不是真 OOS</strong>，这段时期的因子文献在它训练数据里。真正干净的 OOS 只能由 Stage 2 在 &gt;2024-12-31 数据上的 paper trading 提供。</div>
 
 <p>完整回顾（含 codex / claude / mimo 三 provider 配额耗尽的 run 日志）见 <code>docs/SIGNIFICANCE_HARDENING.md</code> 与 <code>docs/synthetic_null_results/</code>。脚本：<code>scripts/synthetic_null_calibration.py</code>（pipeline 级）、<code>scripts/per_card_null_distribution.py</code>（B3 per-card）。</p>
 
 <h3>B4 · codex review 复查 · 修复的现场验证</h3>
 
-<p>codex review 提出的 bug (c)（<code>source_commit</code> 指向被拒绝的 commit）当时只在代码层修复，无法在 v26 上重算——其 <code>/tmp</code> repo 已丢失。本次复查用 <code>--provider codex_cli</code> 重新跑了两次 3 轮 campaign（dev 多次开封一次、publication <code>--seal-only-last</code> 一次，共 60 trial），既验证了修复在真实运行中的行为，也意外得到一个把本节论点讲透的实例。<strong>这两次 run 不是新的 H1 证据</strong>——单窗口、effective n=1、家族级检验未拒绝；它们的价值是验证机制。</p>
+<p>codex review 提出的 bug (c)（<code>source_commit</code> 指向被拒绝的 commit）当时只在代码层修复，无法在 v26 上重算，其 <code>/tmp</code> repo 已丢失。本次复查用 <code>--provider codex_cli</code> 重新跑了两次 3 轮 campaign（dev 多次开封一次、publication <code>--seal-only-last</code> 一次，共 60 trial），既验证了修复在真实运行中的行为，也意外得到一个把本节论点讲透的实例。<strong>这两次 run 不是新的 H1 证据</strong>，单窗口、effective n=1、家族级检验未拒绝；它们的价值是验证机制。</p>
 
 <p>第一个收获是 bug (c) 的现场确认。publication run 的 iter 0 序列恰好是 <em>trial 0 拒绝 → trial 1 拒绝 → trial 2 接受</em> <code>vol_regime_zscore</code>，正是该 bug 的触发条件。核对新卡片的 <code>source_commit</code>：它指向 <code>d4732d9</code>（"campaign baseline"，其 <code>indicators/</code> 只有 <code>sma.py</code>），即 trial 0 之前的纯净 incumbent，而非两条被拒 commit 中的任何一条。</p>
 
@@ -1380,7 +1380,7 @@ PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 se
 <div class="figure-caption"><strong>Figure C.</strong> <code>source_commit</code> 修复在真实 git 谱系上的指向。<code>vol_regime_zscore</code> 卡片紧跟两条被拒 commit 之后产生；旧代码用 <code>head_sha()</code> 会把「without card」基线落在 <code>trial 1</code> 的被拒 edit 上（红色虚线），修复后改为单独跟踪、仅在 accept 后刷新的 <code>incumbent_commit_sha</code>，指回纯净 baseline <code>d4732d9</code>（绿线）。全程 60 trial 无 <code>validation_error</code>，sealed per-card 计算干净。</div>
 </div>
 
-<p>第二个收获更切题。publication run 末轮开封的 sealed 窗口里，两张卡片的 pathwise 增量 Sharpe 95% 区间出现了一个分歧案例，恰好演示<em>为什么单边 p 值不够、必须叠加区间下界</em>——这正是 codex review 同时改的 H1 合取判据（<code>bh_validated ∧ ci_lower &gt; 0</code>）所拦截的情形。</p>
+<p>第二个收获更切题。publication run 末轮开封的 sealed 窗口里，两张卡片的 pathwise 增量 Sharpe 95% 区间出现了一个分歧案例，恰好演示<em>为什么单边 p 值不够、必须叠加区间下界</em>，这正是 codex review 同时改的 H1 合取判据（<code>bh_validated ∧ ci_lower &gt; 0</code>）所拦截的情形。</p>
 
 <div class="figure">
 <div class="chart-wrap" style="background: var(--paper-warm); padding: 32px 28px;">
@@ -1429,10 +1429,10 @@ PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 se
 <text x="410" y="281" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#8b3a2f">家族级 SPA p = 0.084 · 5% 下不拒绝 → 无 strong H1（validated_factor_count = 1 &lt; τ = 3）</text>
 </svg>
 </div>
-<div class="figure-caption"><strong>Figure D.</strong> publication run 末轮 sealed 窗口的两张卡片。<code>body_to_range</code> 的单边 bootstrap p = 0.063 过了 BH（q=0.10）那一关，但它的 95% 双侧区间 <code>[-0.050, +0.345]</code> 仍跨零——旧的「仅看 <code>bh_validated</code>」会把它计入 H1（count = 2），合取判据（<code>bh ∧ ci_lower&gt;0</code>）把它剔除（count = 1），方向是收紧、不放松，与预注册一致。<code>vol_regime_zscore</code> 两关都过，但这是 volatility_target sizing 的<em>不同 incumbent</em> 载体，与 §9 上文裸 baseline 上的 +0.249 不矛盾：σ̂(SR) ≈ 0.5 的分辨力下限未变，点估计上移只因载体策略不同。底栏才是结论——即便一张卡片的区间排除了零，<strong>家族级 SPA（p = 0.084）依旧不拒绝</strong>，没有 strong H1。</div>
+<div class="figure-caption"><strong>Figure D.</strong> publication run 末轮 sealed 窗口的两张卡片。<code>body_to_range</code> 的单边 bootstrap p = 0.063 过了 BH（q=0.10）那一关，但它的 95% 双侧区间 <code>[-0.050, +0.345]</code> 仍跨零，旧的「仅看 <code>bh_validated</code>」会把它计入 H1（count = 2），合取判据（<code>bh ∧ ci_lower&gt;0</code>）把它剔除（count = 1），方向是收紧、不放松，与预注册一致。<code>vol_regime_zscore</code> 两关都过，但这是 volatility_target sizing 的<em>不同 incumbent</em> 载体，与 §9 上文裸 baseline 上的 +0.249 不矛盾：σ̂(SR) ≈ 0.5 的分辨力下限未变，点估计上移只因载体策略不同。底栏才是结论，即便一张卡片的区间排除了零，<strong>家族级 SPA（p = 0.084）依旧不拒绝</strong>，没有 strong H1。</div>
 </div>
 
-<p>第三张图把 gate 的选择性摊开。两次 run 共 60 个 trial，只有 8 个被接受；占压倒多数的拒绝理由是「无显著改善」，其余按多目标 gate 的各条约束分布（过拟合 gap、交易数过少、回撤回归）。这与 §9 合成 null 上观察到的「gate 大多数时候在拒绝」一致——选择性本身是它能压住搜索偶然的前提。</p>
+<p>第三张图把 gate 的选择性摊开。两次 run 共 60 个 trial，只有 8 个被接受；占压倒多数的拒绝理由是「无显著改善」，其余按多目标 gate 的各条约束分布（过拟合 gap、交易数过少、回撤回归）。这与 §9 合成 null 上观察到的「gate 大多数时候在拒绝」一致，选择性本身是它能压住搜索偶然的前提。</p>
 
 <div class="figure">
 <div class="chart-wrap" style="background: var(--paper-warm); padding: 32px 28px;">
@@ -1473,10 +1473,10 @@ PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 se
 <text x="720" y="263" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#a4a4a8">60</text>
 </svg>
 </div>
-<div class="figure-caption"><strong>Figure E.</strong> 两次 codex_cli run 合并的 gate 决策分布（共 60 trial）。接受率 13%；52 次拒绝里「无显著改善」占 41 次，其余落在过拟合 gap、交易数过少、回撤回归等多目标约束上。strict gate 的选择性是显著性硬化的第一道闸门——在它之后才轮到 BH / SPA / DSR。</div>
+<div class="figure-caption"><strong>Figure E.</strong> 两次 codex_cli run 合并的 gate 决策分布（共 60 trial）。接受率 13%；52 次拒绝里「无显著改善」占 41 次，其余落在过拟合 gap、交易数过少、回撤回归等多目标约束上。strict gate 的选择性是显著性硬化的第一道闸门，在它之后才轮到 BH / SPA / DSR。</div>
 </div>
 
-<p><strong>B4 的边界同样要写清</strong>：这两次 run 是单一 SPY sealed 窗口（effective n=1），1 张卡片过 per-card 关、远低于 strong 所需的 τ=3，家族级 SPA 不拒绝，且整条策略 sealed Sharpe 0.513 仍不及买入持有 0.861（ΔSharpe = -0.348，CI 含两侧符号）。它们确认的是<em>机制</em>——修复正确、合取判据按预期收紧、gate 保持选择性——而非推翻本节「H1 = False」的结论。真正干净的多窗口 OOS 仍只能由 Stage 2 的 paper trading 提供。</p>
+<p><strong>B4 的边界同样要写清</strong>：这两次 run 是单一 SPY sealed 窗口（effective n=1），1 张卡片过 per-card 关、远低于 strong 所需的 τ=3，家族级 SPA 不拒绝，且整条策略 sealed Sharpe 0.513 仍不及买入持有 0.861（ΔSharpe = -0.348，CI 含两侧符号）。它们确认的是<em>机制</em>，修复正确、合取判据按预期收紧、gate 保持选择性，而非推翻本节「H1 = False」的结论。真正干净的多窗口 OOS 仍只能由 Stage 2 的 paper trading 提供。</p>
 
 </section>
 
@@ -1517,7 +1517,7 @@ PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 se
 
 <h3>re-discovery 协议</h3>
 
-<p>每次 re-discovery 必须使用一个<em>新的、不重叠的</em> sealed 窗口（PROPOSAL §17）。旧 sealed 窗口被该次 Discovery 用过一次就永久作废——不允许复用。这是为什么 Stage 2 开局新增了 <code>scripts/campaign.py --seal-only-last</code>：development 模式（每轮 seal）只用于 dashboard 调试，发表 evidence 需要明示 publication 模式（一轮一 sealed）。下一步规划里会再加 walk-forward K 个不重叠子窗口，给主 H1 一个有效样本量 &gt; 1 的版本。</p>
+<p>每次 re-discovery 必须使用一个<em>新的、不重叠的</em> sealed 窗口（PROPOSAL §17）。旧 sealed 窗口被该次 Discovery 用过一次就永久作废，不允许复用。这是为什么 Stage 2 开局新增了 <code>scripts/campaign.py --seal-only-last</code>：development 模式（每轮 seal）只用于 dashboard 调试，发表 evidence 需要明示 publication 模式（一轮一 sealed）。下一步规划里会再加 walk-forward K 个不重叠子窗口，给主 H1 一个有效样本量 &gt; 1 的版本。</p>
 
 <h3>所有 stage 不变量</h3>
 
@@ -1525,7 +1525,7 @@ PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 se
   <li>策略 artifact 在 Stage 2/3/4 期间<em>不修改</em>。改策略的唯一方式是触发一次新的 Discovery（带新 sealed 窗口）。</li>
   <li>因子库 (<code>knowledge/factors/</code>) + 已验证 card 库 (<code>alpha_cards/</code>) 在 stage 之间共享，但只读。</li>
   <li>cost 模型在所有 stage 一致：5.5 bps 每边（5.0 基础 + 0.5 滑点 proxy）。</li>
-  <li>任何 stage 的 bug fix 都视为<em>重置当前 milestone</em>——不能"修了 bug 重跑 Stage 2"假装这是同一次 evidence。</li>
+  <li>任何 stage 的 bug fix 都视为<em>重置当前 milestone</em>，不能"修了 bug 重跑 Stage 2"假装这是同一次 evidence。</li>
 </ol>
 
 </section>
@@ -1558,7 +1558,7 @@ PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 se
 <div class="rung">
   <div class="rung-tag">③ 因子互补性度量</div>
   <div class="rung-body">
-    <strong>给 library 加 covariance / rank correlation 指标</strong>。当前 11 个因子里多个分类是 trend 类（ema_above_sma, donchian_position, aroon, kama_ratio）。如果它们之间高度相关，等效维度 &lt; 11。给 library 中每对因子在 train 窗口算 rank correlation，可视化成热力图，下一次 Editor 给"低相关补充"信号——把 dashboard 的 library 表加一列"该因子和现有因子的最大相关系数"。
+    <strong>给 library 加 covariance / rank correlation 指标</strong>。当前 11 个因子里多个分类是 trend 类（ema_above_sma, donchian_position, aroon, kama_ratio）。如果它们之间高度相关，等效维度 &lt; 11。给 library 中每对因子在 train 窗口算 rank correlation，可视化成热力图，下一次 Editor 给"低相关补充"信号，把 dashboard 的 library 表加一列"该因子和现有因子的最大相关系数"。
   </div>
 </div>
 
@@ -1570,6 +1570,25 @@ PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 se
 </div>
 
 </div>
+
+<h3>路径 ①② 的首次执行 · seal-only-last v1</h3>
+
+<p>codex review 复查顺带把 rung ② 提到的 <code>--seal-only-last</code> v1 路径执行了一次。用 <code>--provider codex_cli</code> 做了两次 3 轮 campaign：一次 dev 模式（每轮都开封 sealed 窗口），一次 publication 模式（仅末轮开封一次），都在 strict gate 下进行，接受的因子相同（<code>vol_regime_zscore</code> 与 <code>body_to_range</code>），差别只在 sealed 窗口的独立性。这是 strict gate、volatility_target 载体下的新 run，与上文 v26 permissive 库「strict-validated 0 张」并不矛盾：载体策略不同，分辨力下限未变。完整图表见 §9 B4。</p>
+
+<table>
+  <thead>
+    <tr><th>维度</th><th>dev（每轮开封）</th><th>publication（--seal-only-last）</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>sealed 开封次数</td><td>3（同一 split_C 重复，非独立）</td><td class="yes">1（末轮唯一开封）</td></tr>
+    <tr><td>H1（末轮）</td><td>validated = 1 · weak = True</td><td>validated = 1 · weak = True</td></tr>
+    <tr><td>vol_regime sealed CI</td><td class="num">[+0.023, +0.764]</td><td class="num">[+0.023, +0.958]</td></tr>
+    <tr><td>合取拦截 body_to_range</td><td>bh = True 但 CI 跨零，剔除</td><td>同（CI [-0.050, +0.345]）</td></tr>
+    <tr><td>家族级 SPA p</td><td class="num">0.065 / 0.160 / 0.007（逐轮漂移）</td><td class="num">0.084（不拒绝）</td></tr>
+  </tbody>
+</table>
+
+<p>dev 模式三轮的 SPA p 在 0.065、0.160、0.007 之间漂移，正是因为同一窗口被反复开封、incumbent 又在轮间变化，这恰好说明<strong>为什么多次开封不能当独立证据</strong>。publication 模式的单次开封给出诚实的家族级 p = 0.084，在 5% 下不拒绝。据此，rung ② 的 v1（单窗口）已执行一次，得到一张 per-card 过关、但家族级不显著的弱阳性；rung ② 的 v2（walk-forward K = 4 不重叠子窗口）仍是把 H1 strong 从单点升级为多点证据的下一步。</p>
 
 <h3>不会做的事 · 排除项</h3>
 
@@ -1646,9 +1665,9 @@ PROPOSAL §10.5 新增的注脚把这条写死了：<code>T = 1006</code> 个 se
   <h2>结语</h2>
 </div>
 
-<p class="lede">第一阶段证明了<em>可信的实验协议是可以建出来的</em>；codexreview 分支证明了<em>建好的协议里能稳定长出可记录的因子</em>。15 次 campaign 从 0 alpha cards 推到 11 个不同因子（每个含 Python 源码 + JSON dossier + sealed CI 记录）。中间 7 次 gate 演化，每一次都为了堵住 LLM 找到的新捷径——这本身是 HL 范式的活体演示：被维护的<em>软件系统</em>每一轮都比上一轮聪明一点点。</p>
+<p class="lede">第一阶段证明了<em>可信的实验协议是可以建出来的</em>；codexreview 分支证明了<em>建好的协议里能稳定长出可记录的因子</em>。15 次 campaign 从 0 alpha cards 推到 11 个不同因子（每个含 Python 源码 + JSON dossier + sealed CI 记录）。中间 7 次 gate 演化，每一次都为了堵住 LLM 找到的新捷径，这本身是 HL 范式的活体演示：被维护的<em>软件系统</em>每一轮都比上一轮聪明一点点。</p>
 
-<p>诚实地说：到本报告定稿为止，主 H1（strict gate 下严格 sealed CI &gt; 0 的 card 数）尚未在 11 个因子上系统复检。permissive 下点估计有正有负，CI lower 还跨着零。下一阶段要做的是 strict 复检 + walk-forward 多窗口，把"library accumulation"路径推到"H1 evidence"路径。<em>这是科学验证；之前 codexreview 分支做完的是工程流程的搭建。</em>两件事不能互相替代——但工程流程已经完整稳固，科学验证有清晰的起点。</p>
+<p>诚实地说：到本报告定稿为止，主 H1（strict gate 下严格 sealed CI &gt; 0 的 card 数）尚未在 11 个因子上系统复检。permissive 下点估计有正有负，CI lower 还跨着零。下一阶段要做的是 strict 复检 + walk-forward 多窗口，把"library accumulation"路径推到"H1 evidence"路径。<em>这是科学验证；之前 codexreview 分支做完的是工程流程的搭建。</em>两件事不能互相替代，但工程流程已经完整稳固，科学验证有清晰的起点。</p>
 
 <p style="font-family: var(--serif); font-style: italic; font-size: 18px; color: var(--ink-soft); text-align: center; max-width: 580px; margin: 32px auto 0;">
 The library grew from 0 to 11 factors,<br>
